@@ -110,8 +110,9 @@ namespace Client.Game
             dispatcher.Register<MapPlayerLeaveNtf>(MsgId.MapPlayerLeaveNtf, OnMapPlayerLeaveNtf);
             dispatcher.Register<MapPlayerMoveNtf>(MsgId.MapPlayerMoveNtf, OnMapPlayerMoveNtf);
             dispatcher.Register<MapMoveAck>(MsgId.MapMoveAck, OnMapMoveAck);
+            dispatcher.Register<ChangeMapAck>(MsgId.ChangeMapAck, OnChangeMapAck);
 
-            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步处理器已注册");
+            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步 + 切图处理器已注册");
         }
 
         private void UnregisterAoiHandlers()
@@ -124,6 +125,7 @@ namespace Client.Game
             dispatcher.Unregister(MsgId.MapPlayerLeaveNtf);
             dispatcher.Unregister(MsgId.MapPlayerMoveNtf);
             dispatcher.Unregister(MsgId.MapMoveAck);
+            dispatcher.Unregister(MsgId.ChangeMapAck);
         }
 
         private void OnMapObjectsNtf(MapObjectsNtf ntf)
@@ -156,6 +158,72 @@ namespace Client.Game
                     PlayerController.CorrectPosition(ack.X, ack.Y);
                     Debug.Log(string.Format("[GameSceneEntry] 移动被服务端纠正: ({0},{1})", ack.X, ack.Y));
                 }
+            }
+        }
+
+        private void OnChangeMapAck(ChangeMapAck ack)
+        {
+            if (ack.Code != MapErrorCode.Ok)
+            {
+                string errMsg = GetMapErrorText(ack.Code);
+                UIToast.Show("传送失败: " + errMsg);
+                Debug.Log("[GameSceneEntry] 切图失败 Code=" + ack.Code);
+                return;
+            }
+
+            Debug.Log(string.Format("[GameSceneEntry] 切图成功 Map={0} Spawn=({1},{2})", ack.MapCfgId, ack.X, ack.Y));
+
+            // 更新缓存的地图数据
+            GameData.CurrentMap = new EnterMapData
+            {
+                MapCfgId = ack.MapCfgId,
+                Line = ack.Line,
+                SpawnX = ack.X,
+                SpawnY = ack.Y
+            };
+
+            RebuildScene(ack.MapCfgId, ack.X, ack.Y);
+        }
+
+        private void RebuildScene(int mapCfgId, int spawnX, int spawnY)
+        {
+            // 清除其他玩家
+            OtherPlayerManager.Instance.ClearAll();
+
+            // 销毁旧地图
+            if (MapGround != null)
+            {
+                Destroy(MapGround.gameObject);
+                MapGround = null;
+            }
+
+            // 创建新地图
+            var mapConfig = DefaultMapConfigs.GetById(mapCfgId);
+            var mapObj = new GameObject("Map");
+            var mapGround = mapObj.AddComponent<MapGround>();
+            mapGround.Generate(mapConfig);
+            MapGround = mapGround;
+
+            // 重置玩家位置
+            if (PlayerController != null)
+            {
+                PlayerController.Init(mapConfig, spawnX, spawnY);
+            }
+
+            Debug.Log(string.Format("[GameSceneEntry] 场景重建完成 Map={0} ({1}x{2})",
+                mapConfig.Name, mapConfig.Width, mapConfig.Height));
+        }
+
+        private static string GetMapErrorText(int code)
+        {
+            switch (code)
+            {
+                case 1: return "未登录";
+                case 2: return "目标地图不存在";
+                case 3: return "已在当前地图";
+                case 4: return "不在地图中";
+                case 5: return "无效坐标";
+                default: return "未知错误(" + code + ")";
             }
         }
 

@@ -242,6 +242,19 @@ namespace Client.Game
             mbRect.anchorMax = Vector2.one;
             mbRect.offsetMin = Vector2.zero;
             mbRect.offsetMax = Vector2.zero;
+
+            // 传送按钮（小地图下方）
+            var teleportBtn = UIBuilder.CreateButton(transform, "TeleportBtn", "传送", 80, 26, 13,
+                UIBuilder.AccentBlue, UIBuilder.TextWhite);
+            var tpRect = teleportBtn.GetComponent<RectTransform>();
+            tpRect.anchorMin = new Vector2(1, 1);
+            tpRect.anchorMax = new Vector2(1, 1);
+            tpRect.pivot = new Vector2(1, 1);
+            tpRect.anchoredPosition = new Vector2(-60, -250);
+            teleportBtn.onClick.AddListener(() =>
+            {
+                UIManager.Instance.ShowPanel<ChangeMapPanel>();
+            });
         }
 
         private void CreateChatArea()
