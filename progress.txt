@@ -18,3 +18,5 @@
 2026-04-12 F010 COMPLETED - 进图联调：选角成功→发送EnterMapReq→收到EnterMapAck→缓存地图数据→切GameScene→用服务端数据初始化地图和玩家位置，编译通过
 2026-04-12 F011 COMPLETED - AOI视野同步：MapAoiNotifier将AOI事件转为网络通知，OtherPlayerManager管理远程玩家实体，GameSceneEntry注册4个AOI NTF处理器，编译通过
 2026-04-12 F012 COMPLETED - 移动同步：PlayerController格子变更时发送MapMoveReq，GameSceneEntry注册MapMoveAck处理器纠偏位置，双端编译通过
+2026-04-12 F013 COMPLETED - 其他玩家视图：OtherPlayerView+OtherPlayerManager代码随F011已实现，标记为通过
+2026-04-12 F020 COMPLETED - 断线重连：NetClient握手后发ReconnectReq+HandleReconnectResp+HandleKickNtf，GameSceneEntry监听重连事件，双端编译通过
