@@ -148,7 +148,7 @@
         "接收 MapMoveAck 确认移动合法",
         "服务端校验失败时回退到服务端位置"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",

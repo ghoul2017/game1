@@ -106,8 +106,9 @@ namespace Client.Game
             dispatcher.Register<MapPlayerEnterNtf>(MsgId.MapPlayerEnterNtf, OnMapPlayerEnterNtf);
             dispatcher.Register<MapPlayerLeaveNtf>(MsgId.MapPlayerLeaveNtf, OnMapPlayerLeaveNtf);
             dispatcher.Register<MapPlayerMoveNtf>(MsgId.MapPlayerMoveNtf, OnMapPlayerMoveNtf);
+            dispatcher.Register<MapMoveAck>(MsgId.MapMoveAck, OnMapMoveAck);
 
-            Debug.Log("[GameSceneEntry] AOI 视野同步处理器已注册");
+            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步处理器已注册");
         }
 
         private void UnregisterAoiHandlers()
@@ -119,6 +120,7 @@ namespace Client.Game
             dispatcher.Unregister(MsgId.MapPlayerEnterNtf);
             dispatcher.Unregister(MsgId.MapPlayerLeaveNtf);
             dispatcher.Unregister(MsgId.MapPlayerMoveNtf);
+            dispatcher.Unregister(MsgId.MapMoveAck);
         }
 
         private void OnMapObjectsNtf(MapObjectsNtf ntf)
@@ -139,6 +141,19 @@ namespace Client.Game
         private void OnMapPlayerMoveNtf(MapPlayerMoveNtf ntf)
         {
             OtherPlayerManager.Instance.MovePlayer(ntf.RoleId, ntf.X, ntf.Y);
+        }
+
+        private void OnMapMoveAck(MapMoveAck ack)
+        {
+            if (ack.Code != MapErrorCode.Ok)
+            {
+                // 服务端校验失败，回退到服务端位置
+                if (PlayerController != null)
+                {
+                    PlayerController.CorrectPosition(ack.X, ack.Y);
+                    Debug.Log(string.Format("[GameSceneEntry] 移动被服务端纠正: ({0},{1})", ack.X, ack.Y));
+                }
+            }
         }
     }
 }

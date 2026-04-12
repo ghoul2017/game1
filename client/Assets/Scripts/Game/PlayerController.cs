@@ -1,4 +1,7 @@
 using UnityEngine;
+using Client.Network;
+using GameShared.Network;
+using GameShared.Protos;
 
 namespace Client.Game
 {
@@ -9,6 +12,8 @@ namespace Client.Game
         public int CurrentGridY { get; private set; }
 
         private MapConfig currentMap;
+        private int _lastSyncGridX;
+        private int _lastSyncGridY;
 
         [HideInInspector]
         public Vector2 joystickInput;
@@ -19,6 +24,8 @@ namespace Client.Game
             transform.position = MapData.GridToWorld(gridX, gridY);
             CurrentGridX = gridX;
             CurrentGridY = gridY;
+            _lastSyncGridX = gridX;
+            _lastSyncGridY = gridY;
         }
 
         private void Update()
@@ -52,7 +59,32 @@ namespace Client.Game
                 var (gx, gy) = MapData.WorldToGrid(transform.position);
                 CurrentGridX = gx;
                 CurrentGridY = gy;
+
+                // 格子变更时同步给服务端
+                if (gx != _lastSyncGridX || gy != _lastSyncGridY)
+                {
+                    SendMoveReq(gx, gy);
+                    _lastSyncGridX = gx;
+                    _lastSyncGridY = gy;
+                }
             }
+        }
+
+        private void SendMoveReq(int x, int y)
+        {
+            var nc = NetClient.Instance;
+            if (nc == null || !nc.IsConnected) return;
+
+            nc.Send(new MapMoveReq { X = x, Y = y });
+        }
+
+        public void CorrectPosition(int serverX, int serverY)
+        {
+            transform.position = MapData.GridToWorld(serverX, serverY);
+            CurrentGridX = serverX;
+            CurrentGridY = serverY;
+            _lastSyncGridX = serverX;
+            _lastSyncGridY = serverY;
         }
     }
 }
