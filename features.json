@@ -136,7 +136,7 @@
         "接收 MapPlayerLeaveNtf，隐藏离开视野的玩家",
         "接收 MapPlayerMoveNtf，更新其他玩家位置"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",

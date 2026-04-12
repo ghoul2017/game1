@@ -61,11 +61,12 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
         resp.X = x;
         resp.Y = y;
 
-        // 发送视野内对象列表
+        // 先发送响应，让客户端设置场景，再发送视野内对象列表
+        session.Send(resp);
         SendVisibleObjects(session.RoleId, map, x, y);
 
         Log.Info($"玩家进入地图 RoleId:{session.RoleId} MapId:{req.MapCfgId}");
-        return Task.FromResult<IMessage?>(resp);
+        return Task.FromResult<IMessage?>(null);
     }
 
     private void SendVisibleObjects(long roleId, GameMap map, int x, int y)
@@ -164,7 +165,9 @@ public class ChangeMapHandler : MessageHandler<ChangeMapReq>
         resp.X = x;
         resp.Y = y;
 
-        // 发送视野内对象列表
+        // 先发送响应，再发送视野内对象列表
+        session.Send(resp);
+
         var objects = targetMap.GetObjectsInRange(x, y, 4);
         var ntf = new MapObjectsNtf
         {
@@ -186,12 +189,13 @@ public class ChangeMapHandler : MessageHandler<ChangeMapReq>
         }
 
         Log.Info($"玩家切图 RoleId:{session.RoleId} → MapId:{req.TargetMapCfgId}");
-        return Task.FromResult<IMessage?>(resp);
+        return Task.FromResult<IMessage?>(null);
     }
 }
 
 /// <summary>
 /// 地图移动 Handler
+/// AOI 事件通过 MapAoiNotifier 自动通知视野内玩家，此处不再手动广播。
 /// </summary>
 public class MapMoveHandler : MessageHandler<MapMoveReq>
 {
@@ -214,30 +218,6 @@ public class MapMoveHandler : MessageHandler<MapMoveReq>
         resp.Code = MapErrorCode.Ok;
         resp.X = req.X;
         resp.Y = req.Y;
-
-        // 广播移动给同地图其他玩家
-        var mapObj = MapManager.Instance.GetPlayerMapObj(session.RoleId);
-        if (mapObj != null)
-        {
-            var moveNtf = new MapPlayerMoveNtf
-            {
-                RoleId = session.RoleId,
-                X = req.X,
-                Y = req.Y
-            };
-
-            var map = MapManager.Instance.GetPlayerMap(session.RoleId);
-            if (map != null)
-            {
-                foreach (var otherPlayer in map.GetAllPlayers())
-                {
-                    if (otherPlayer.RoleId != session.RoleId)
-                    {
-                        PlayerManager.Instance.SendToPlayer(otherPlayer.RoleId, moveNtf);
-                    }
-                }
-            }
-        }
 
         return Task.FromResult<IMessage?>(resp);
     }

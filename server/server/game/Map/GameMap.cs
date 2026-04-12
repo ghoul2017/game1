@@ -56,6 +56,7 @@ public class GameMap
         BirthX = birthX;
         BirthY = birthY;
         Aoi = new TowerAoi();
+        Aoi.AddListener(new MapAoiNotifier());
     }
 
     /// <summary>地图唯一标识（cfgId * 1000 + line）</summary>
