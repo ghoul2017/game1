@@ -1,4 +1,4 @@
-using server.common.config;
+using GameShared.Config;
 
 namespace Server.Game.Fight;
 

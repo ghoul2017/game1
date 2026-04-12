@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using server.common.config;
+using GameShared.Config;
 using Server.Core.Log;
 
 namespace Server.Config;

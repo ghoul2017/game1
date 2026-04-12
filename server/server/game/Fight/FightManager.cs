@@ -1,4 +1,4 @@
-using server.common.config;
+using GameShared.Config;
 using Server.Config;
 using Server.Core;
 using Server.Core.Log;

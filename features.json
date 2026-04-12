@@ -308,7 +308,7 @@
         "同步 ItemConfig/SkillConfig/MapConfig 到客户端",
         "客户端通过 ConfigManager 访问配置数据"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
