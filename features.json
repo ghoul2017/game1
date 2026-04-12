@@ -12,7 +12,7 @@
         "实现异步TCP连接、断线检测、自动重连",
         "集成心跳机制（定时发送HeartbeatReq）"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F002",
