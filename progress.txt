@@ -25,3 +25,4 @@
 2026-04-12 F015 COMPLETED - 邮件面板联调：MailPanel左侧列表+右侧详情+全部已读/领取附件/删除已读+MailNewNtf新邮件通知，MainPanel邮件按钮接入，双端编译通过
 2026-04-12 F016 COMPLETED - 聊天系统联调：MainPanel聊天区域接入网络（ChatReq/ChatAck/ChatNtf/SystemChatNtf），世界/私聊频道切换，双端编译通过
 2026-04-12 F023 COMPLETED - 切图联调：ChangeMapPanel地图选择+传送按钮+ChangeMapAck场景重建，双端编译通过
+2026-04-12 F017 COMPLETED - 任务系统联调：TaskPanel左右布局+任务列表+接取/提交/放弃+TaskChangedNtf增量更新，双端编译通过

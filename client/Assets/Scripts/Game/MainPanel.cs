@@ -203,6 +203,8 @@ namespace Client.Game
                         UIManager.Instance.ShowPanel<BagPanel>();
                     else if (name == "邮件")
                         UIManager.Instance.ShowPanel<MailPanel>();
+                    else if (name == "任务")
+                        UIManager.Instance.ShowPanel<TaskPanel>();
                     else
                         Debug.Log("[MainPanel] 点击: " + name);
                 });

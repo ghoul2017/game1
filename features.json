@@ -217,7 +217,7 @@
         "放弃任务（TaskGiveUpReq/Ack）",
         "任务变更通知（TaskChangedNtf）"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F018",
