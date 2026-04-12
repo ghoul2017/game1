@@ -13,13 +13,12 @@ public class MailModel : IModule
 
     public int Order => 58;
 
-    public Task InitAsync()
+    public async Task InitAsync()
     {
         var mailPersistFactory = new ProtobufPersistFactory<RoleMailList>();
-        EntityFactory.Instance.Register(mailPersistFactory);
+        await EntityFactory.Instance.RegisterAsync(mailPersistFactory);
 
         Log.Info("邮件模块初始化完成 — RoleMailList 实体工厂已注册");
-        return Task.CompletedTask;
     }
 
     public Task StartAsync(CancellationToken ct)

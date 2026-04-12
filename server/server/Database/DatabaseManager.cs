@@ -39,11 +39,15 @@ public class DatabaseManager
         }
         catch (Exception ex)
         {
-            Log.Error("Redis 初始化失败", ex);
+            Log.Warn($"Redis 初始化异常: {ex.Message}");
         }
 
         PlayerRepo = new PlayerRepository(MySql);
         RoleRepo = new RoleRepository(MySql);
+
+        // 自动建表
+        await PlayerRepo.EnsureTableAsync();
+        await RoleRepo.EnsureTableAsync();
 
         Log.Info("数据库模块初始化完成");
     }

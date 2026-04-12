@@ -13,13 +13,12 @@ public class TaskModel : IModule
 
     public int Order => 60;
 
-    public Task InitAsync()
+    public async Task InitAsync()
     {
         var taskPersistFactory = new ProtobufPersistFactory<RoleTaskList>();
-        EntityFactory.Instance.Register(taskPersistFactory);
+        await EntityFactory.Instance.RegisterAsync(taskPersistFactory);
 
         Log.Info("任务模块初始化完成 — RoleTaskList 实体工厂已注册");
-        return Task.CompletedTask;
     }
 
     public Task StartAsync(CancellationToken ct)

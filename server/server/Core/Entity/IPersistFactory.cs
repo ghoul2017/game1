@@ -37,4 +37,7 @@ public interface IPersistFactory<T> where T : class, IEntity
 
     /// <summary>从数据库连接加载实体</summary>
     Task<T?> LoadAsync(DbConnection conn, long id);
+
+    /// <summary>确保数据库表存在（启动时自动调用）</summary>
+    Task EnsureTableAsync();
 }

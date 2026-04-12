@@ -24,12 +24,13 @@ public class EntityFactory
     private EntityFactory() { }
 
     /// <summary>注册一个实体类型的持久化工厂</summary>
-    public void Register<T>(IPersistFactory<T> factory) where T : class, IEntity
+    public async Task RegisterAsync<T>(IPersistFactory<T> factory) where T : class, IEntity
     {
+        await factory.EnsureTableAsync();
         _factories[typeof(T)] = factory;
         _caches[typeof(T)] = new EntityCache<T>();
         _tasks[typeof(T)] = new PersistTask<T>(factory);
-        Log.Info($"注册实体工厂: {typeof(T).Name}, 表={factory.SelectSql}, 周期={factory.TaskPeriodMs}ms");
+        Log.Info($"注册实体工厂: {typeof(T).Name}, 周期={factory.TaskPeriodMs}ms");
     }
 
     /// <summary>从缓存或数据库获取实体</summary>

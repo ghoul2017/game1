@@ -13,13 +13,12 @@ public class BagModel : IModule
 
     public int Order => 56;
 
-    public Task InitAsync()
+    public async Task InitAsync()
     {
         var bagPersistFactory = new ProtobufPersistFactory<RoleBag>();
-        EntityFactory.Instance.Register(bagPersistFactory);
+        await EntityFactory.Instance.RegisterAsync(bagPersistFactory);
 
         Log.Info("背包模块初始化完成 — RoleBag 实体工厂已注册");
-        return Task.CompletedTask;
     }
 
     public Task StartAsync(CancellationToken ct)

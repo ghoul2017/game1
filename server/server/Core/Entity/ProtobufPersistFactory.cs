@@ -2,6 +2,8 @@ using System.Data.Common;
 using System.Text;
 using Dapper;
 using ProtoBuf;
+using Server.Core.Log;
+using Server.Database;
 
 namespace Server.Core.Entity;
 
@@ -12,6 +14,9 @@ namespace Server.Core.Entity;
 /// </summary>
 public class ProtobufPersistFactory<T> : IPersistFactory<T> where T : class, IEntity
 {
+    private static readonly ILog Log = LogManager.GetLogger<ProtobufPersistFactory<T>>();
+    private readonly string _tableName;
+
     public Type PersistClass => typeof(T);
 
     public int TaskPeriodMs { get; }
@@ -24,11 +29,24 @@ public class ProtobufPersistFactory<T> : IPersistFactory<T> where T : class, IEn
     public ProtobufPersistFactory(int taskPeriodMs = 60000)
     {
         TaskPeriodMs = taskPeriodMs;
-        var tableName = GetTableName();
-        InsertSql = $"INSERT INTO {tableName} (id, data) VALUES (@Id, @Data)";
-        UpdateSql = $"UPDATE {tableName} SET data = @Data WHERE id = @Id";
-        DeleteSql = $"DELETE FROM {tableName} WHERE id = @Id";
-        SelectSql = $"SELECT id, data FROM {tableName} WHERE id = @Id";
+        _tableName = GetTableName();
+        InsertSql = $"INSERT INTO {_tableName} (id, data) VALUES (@Id, @Data)";
+        UpdateSql = $"UPDATE {_tableName} SET data = @Data WHERE id = @Id";
+        DeleteSql = $"DELETE FROM {_tableName} WHERE id = @Id";
+        SelectSql = $"SELECT id, data FROM {_tableName} WHERE id = @Id";
+    }
+
+    /// <summary>确保表存在（启动时调用）</summary>
+    public async Task EnsureTableAsync()
+    {
+        using var conn = DatabaseManager.Instance.MySql.CreateConnection();
+        await conn.ExecuteAsync($@"
+            CREATE TABLE IF NOT EXISTS {_tableName} (
+                id BIGINT NOT NULL,
+                data LONGBLOB,
+                PRIMARY KEY (id)
+            )");
+        Log.Info($"{_tableName} 表就绪");
     }
 
     public object GetInsertParams(T entity)

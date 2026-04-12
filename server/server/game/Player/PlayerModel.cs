@@ -15,14 +15,13 @@ public class PlayerModel : IModule
 
     public int Order => 55;
 
-    public Task InitAsync()
+    public async Task InitAsync()
     {
-        // 注册 Role 实体的持久化工厂
+        // 注册 Role 实体的持久化工厂（自动建表）
         var rolePersistFactory = new ProtobufPersistFactory<Role>();
-        EntityFactory.Instance.Register(rolePersistFactory);
+        await EntityFactory.Instance.RegisterAsync(rolePersistFactory);
 
         Log.Info("玩家模块初始化完成 — Role 实体工厂已注册");
-        return Task.CompletedTask;
     }
 
     public Task StartAsync(CancellationToken ct)

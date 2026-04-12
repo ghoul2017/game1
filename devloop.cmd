@@ -1,7 +1,7 @@
 @echo off
-REM devloop.cmd - 无人值守自动开发循环
-REM 用法: devloop.cmd [最大循环次数]
-REM 示例: devloop.cmd 5
+REM devloop.cmd - Unattended auto dev loop
+REM Usage: devloop.cmd [max_loops]
+REM Example: devloop.cmd 5
 
 setlocal
 
@@ -13,18 +13,18 @@ set LOOP_COUNT=0
 :LOOP
 set /a LOOP_COUNT+=1
 echo ========================================
-echo [DevLoop] 第 %LOOP_COUNT%/%MAX_LOOPS% 轮
+echo [DevLoop] Round %LOOP_COUNT%/%MAX_LOOPS%
 echo ========================================
 
-claude -p "运行 /devloop" --dangerously-skip-permissions
+call claude -p "Run /dev" --dangerously-skip-permissions
 
 if %ERRORLEVEL% NEQ 0 (
-    echo [DevLoop] 第 %LOOP_COUNT% 轮执行出错，停止循环
+    echo [DevLoop] Round %LOOP_COUNT% failed, stopping
     goto END
 )
 
 if %LOOP_COUNT% GEQ %MAX_LOOPS% (
-    echo [DevLoop] 已达到最大循环次数 %MAX_LOOPS%，停止
+    echo [DevLoop] Max loops %MAX_LOOPS% reached, stopping
     goto END
 )
 
@@ -32,6 +32,6 @@ goto LOOP
 
 :END
 echo ========================================
-echo [DevLoop] 完成。共执行 %LOOP_COUNT% 轮
+echo [DevLoop] Done. Total rounds: %LOOP_COUNT%
 echo ========================================
 endlocal

@@ -1,14 +1,33 @@
 using Dapper;
+using Server.Core.Log;
 
 namespace Server.Database.MySql.Repositories;
 
 public class PlayerRepository : IPlayerRepository
 {
+    private static readonly ILog Log = LogManager.GetLogger<PlayerRepository>();
     private readonly MySqlManager _db;
 
     public PlayerRepository(MySqlManager db)
     {
         _db = db;
+    }
+
+    /// <summary>确保 player 表存在</summary>
+    public async Task EnsureTableAsync()
+    {
+        using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS player (
+                Id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                Username VARCHAR(32) NOT NULL UNIQUE,
+                Password VARCHAR(64) NOT NULL,
+                Nickname VARCHAR(32) NOT NULL,
+                Level INT DEFAULT 1,
+                CreateTime DATETIME NOT NULL,
+                INDEX idx_username (Username)
+            )");
+        Log.Info("player 表就绪");
     }
 
     public async Task<Player?> GetByIdAsync(long id)
