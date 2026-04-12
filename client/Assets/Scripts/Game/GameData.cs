@@ -39,6 +39,13 @@ namespace Client.Game
         /// 进图数据缓存（EnterMapAck 返回后填充）
         /// </summary>
         public static EnterMapData CurrentMap { get; set; }
+
+        // Fight state
+        public static int CurrentHp { get; set; }
+        public static int MaxHp { get; set; } = 100;
+        public static int CurrentPkMode { get; set; } = 0;
+        public static long SelectedTargetId { get; set; }
+        public static string SelectedTargetName { get; set; } = "";
     }
 
     public class EnterMapData

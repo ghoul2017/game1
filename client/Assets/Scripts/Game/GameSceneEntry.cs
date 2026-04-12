@@ -11,6 +11,7 @@ namespace Client.Game
     {
         public static PlayerController PlayerController { get; private set; }
         public static MapGround MapGround { get; private set; }
+        private static MainPanel _mainPanel;
 
         private void Start()
         {
@@ -22,7 +23,7 @@ namespace Client.Game
             InitializeScene();
             RegisterAoiHandlers();
             RegisterReconnectEvents();
-            UIManager.Instance.ShowPanel<MainPanel>();
+            _mainPanel = UIManager.Instance.ShowPanel<MainPanel>();
         }
 
         private void OnDestroy()
@@ -30,6 +31,47 @@ namespace Client.Game
             UnregisterAoiHandlers();
             UnregisterReconnectEvents();
             OtherPlayerManager.Instance.ClearAll();
+            _mainPanel = null;
+        }
+
+        private void Update()
+        {
+            HandleTargetSelection();
+        }
+
+        private void HandleTargetSelection()
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                // Skip if clicking UI
+                if (UnityEngine.EventSystems.EventSystem.current != null
+                    && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                    return;
+
+                var cam = Camera.main;
+                if (cam == null) return;
+
+                var ray = cam.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out var hit, 100f))
+                {
+                    var otherView = hit.collider.GetComponentInParent<OtherPlayerView>();
+                    if (otherView != null)
+                    {
+                        GameData.SelectedTargetId = otherView.RoleId;
+                        GameData.SelectedTargetName = otherView.name;
+                        if (_mainPanel != null)
+                            _mainPanel.UpdateTargetDisplay(otherView.RoleId, otherView.name);
+                        Debug.Log("[GameSceneEntry] 选中目标: " + otherView.name);
+                        return;
+                    }
+                }
+
+                // Clicked on empty space - deselect
+                GameData.SelectedTargetId = 0;
+                GameData.SelectedTargetName = "";
+                if (_mainPanel != null)
+                    _mainPanel.UpdateTargetDisplay(0, "");
+            }
         }
 
         private void InitializeScene()

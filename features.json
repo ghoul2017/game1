@@ -231,7 +231,7 @@
         "接收 KilledByNtf 处理死亡（重生/回城）",
         "PK模式切换（SetPkModeReq/PkModeChangedNtf）"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F019",

@@ -13,6 +13,8 @@ namespace Client.Game
     {
         private Vector3 _targetPos;
         private Canvas _nameplateCanvas;
+        private RectTransform _hpFillRect;
+        private int _maxHp = 100;
 
         public long RoleId { get; private set; }
 
@@ -30,6 +32,16 @@ namespace Client.Game
         public void MoveTo(int x, int y)
         {
             _targetPos = MapData.GridToWorld(x, y);
+        }
+
+        public void UpdateHp(int hp, int maxHp)
+        {
+            _maxHp = maxHp > 0 ? maxHp : 100;
+            if (_hpFillRect != null)
+            {
+                float ratio = (float)hp / _maxHp;
+                _hpFillRect.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1f);
+            }
         }
 
         private void Update()
@@ -89,14 +101,16 @@ namespace Client.Game
             var bgObj = new GameObject("Bg");
             bgObj.transform.SetParent(canvasObj.transform, false);
             var bgRect = bgObj.AddComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(160, 30);
-            var bgImage = bgObj.AddComponent<Image>();
-            bgImage.color = new Color(0, 0, 0, 0.5f);
+            bgRect.sizeDelta = new Vector2(160, 48);
+            bgObj.AddComponent<Image>().color = new Color(0, 0, 0, 0.5f);
 
             var textObj = new GameObject("NameText");
             textObj.transform.SetParent(canvasObj.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
-            textRect.sizeDelta = new Vector2(160, 30);
+            textRect.anchorMin = new Vector2(0, 0.5f);
+            textRect.anchorMax = new Vector2(1, 1);
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
             var nameText = textObj.AddComponent<Text>();
             nameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             nameText.text = name;
@@ -105,8 +119,28 @@ namespace Client.Game
             nameText.alignment = TextAnchor.MiddleCenter;
             nameText.fontStyle = FontStyle.Bold;
 
+            // HP条背景
+            var hpBgObj = new GameObject("HpBg");
+            hpBgObj.transform.SetParent(canvasObj.transform, false);
+            var hpBgRect = hpBgObj.AddComponent<RectTransform>();
+            hpBgRect.anchorMin = new Vector2(0.5f, 0);
+            hpBgRect.anchorMax = new Vector2(0.5f, 0);
+            hpBgRect.pivot = new Vector2(0.5f, 0);
+            hpBgRect.sizeDelta = new Vector2(140, 10);
+            hpBgObj.AddComponent<Image>().color = new Color(0.2f, 0.1f, 0.1f, 0.8f);
+
+            // HP条填充
+            var hpFillObj = new GameObject("HpFill");
+            hpFillObj.transform.SetParent(hpBgObj.transform, false);
+            _hpFillRect = hpFillObj.AddComponent<RectTransform>();
+            _hpFillRect.anchorMin = Vector2.zero;
+            _hpFillRect.anchorMax = Vector2.one;
+            _hpFillRect.offsetMin = Vector2.zero;
+            _hpFillRect.offsetMax = Vector2.zero;
+            hpFillObj.AddComponent<Image>().color = new Color(0.8f, 0.2f, 0.2f);
+
             var canvasRect = canvasObj.GetComponent<RectTransform>();
-            canvasRect.sizeDelta = new Vector2(160, 30);
+            canvasRect.sizeDelta = new Vector2(160, 48);
 
             canvasObj.transform.localScale = Vector3.one * 0.015f;
         }
@@ -184,6 +218,12 @@ namespace Client.Game
         {
             if (!_players.TryGetValue(roleId, out var view)) return;
             view.MoveTo(x, y);
+        }
+
+        public void UpdatePlayerHp(long roleId, int hp, int maxHp)
+        {
+            if (!_players.TryGetValue(roleId, out var view)) return;
+            view.UpdateHp(hp, maxHp);
         }
 
         public void ClearAll()

@@ -7,12 +7,24 @@ namespace Client.Game
     {
         private Canvas nameplateCanvas;
         private Text nameText;
+        private RectTransform hpFillRect;
+        private int _maxHp = 100;
 
         public void CreateModel(string roleName, int level)
         {
             CreateBody();
             CreateHead();
             CreateNameplate(roleName, level);
+        }
+
+        public void UpdateHp(int hp, int maxHp)
+        {
+            _maxHp = maxHp > 0 ? maxHp : 100;
+            if (hpFillRect != null)
+            {
+                float ratio = (float)hp / _maxHp;
+                hpFillRect.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1f);
+            }
         }
 
         private void CreateBody()
@@ -61,7 +73,7 @@ namespace Client.Game
             var bgObj = new GameObject("Bg");
             bgObj.transform.SetParent(canvasObj.transform, false);
             var bgRect = bgObj.AddComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(160, 30);
+            bgRect.sizeDelta = new Vector2(160, 48);
             var bgImage = bgObj.AddComponent<Image>();
             bgImage.color = new Color(0, 0, 0, 0.5f);
 
@@ -69,7 +81,10 @@ namespace Client.Game
             var textObj = new GameObject("NameText");
             textObj.transform.SetParent(canvasObj.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
-            textRect.sizeDelta = new Vector2(160, 30);
+            textRect.anchorMin = new Vector2(0, 0.5f);
+            textRect.anchorMax = new Vector2(1, 1);
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
             nameText = textObj.AddComponent<Text>();
             nameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             nameText.text = $"{roleName} Lv.{level}";
@@ -78,9 +93,29 @@ namespace Client.Game
             nameText.alignment = TextAnchor.MiddleCenter;
             nameText.fontStyle = FontStyle.Bold;
 
+            // HP条背景
+            var hpBgObj = new GameObject("HpBg");
+            hpBgObj.transform.SetParent(canvasObj.transform, false);
+            var hpBgRect = hpBgObj.AddComponent<RectTransform>();
+            hpBgRect.anchorMin = new Vector2(0.5f, 0);
+            hpBgRect.anchorMax = new Vector2(0.5f, 0);
+            hpBgRect.pivot = new Vector2(0.5f, 0);
+            hpBgRect.sizeDelta = new Vector2(140, 10);
+            hpBgObj.AddComponent<Image>().color = new Color(0.2f, 0.1f, 0.1f, 0.8f);
+
+            // HP条填充
+            var hpFillObj = new GameObject("HpFill");
+            hpFillObj.transform.SetParent(hpBgObj.transform, false);
+            hpFillRect = hpFillObj.AddComponent<RectTransform>();
+            hpFillRect.anchorMin = Vector2.zero;
+            hpFillRect.anchorMax = Vector2.one;
+            hpFillRect.offsetMin = Vector2.zero;
+            hpFillRect.offsetMax = Vector2.zero;
+            hpFillObj.AddComponent<Image>().color = new Color(0.2f, 0.8f, 0.3f);
+
             // 设置 Canvas 大小
             var canvasRect = canvasObj.GetComponent<RectTransform>();
-            canvasRect.sizeDelta = new Vector2(160, 30);
+            canvasRect.sizeDelta = new Vector2(160, 48);
 
             // 缩放：让名字板在世界空间中大小合适
             canvasObj.transform.localScale = Vector3.one * 0.015f;

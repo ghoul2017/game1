@@ -26,3 +26,4 @@
 2026-04-12 F016 COMPLETED - 聊天系统联调：MainPanel聊天区域接入网络（ChatReq/ChatAck/ChatNtf/SystemChatNtf），世界/私聊频道切换，双端编译通过
 2026-04-12 F023 COMPLETED - 切图联调：ChangeMapPanel地图选择+传送按钮+ChangeMapAck场景重建，双端编译通过
 2026-04-12 F017 COMPLETED - 任务系统联调：TaskPanel左右布局+任务列表+接取/提交/放弃+TaskChangedNtf增量更新，双端编译通过
+2026-04-12 F018 COMPLETED - 战斗系统联调：技能栏4按钮+UseSkillReq/Ack+HpChangedNtf血条+KilledByNtf死亡复活+PK模式切换+点击选中目标，双端编译通过

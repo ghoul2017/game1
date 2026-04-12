@@ -22,6 +22,12 @@ namespace Client.Game
         private Text coordText;
         private VirtualJoystick joystick;
 
+        // Fight UI
+        private Slider hpSlider;
+        private Text hpText;
+        private Text pkModeText;
+        private Text targetText;
+
         public override void OnInit()
         {
             // 半透明全屏背景（让3D场景透出）
@@ -33,6 +39,10 @@ namespace Client.Game
             CreateSystemButtons();
             CreateBottomBar();
             CreateJoystick();
+            CreateHpBar();
+            CreateSkillBar();
+            CreatePkModeIndicator();
+            CreateTargetIndicator();
 
             canvasGroup.alpha = 0f;
             gameObject.SetActive(false);
@@ -48,11 +58,15 @@ namespace Client.Game
                 if (roleLevelText != null) roleLevelText.text = $"Lv.{role.Level}";
             }
             RegisterChatHandlers();
+            RegisterFightHandlers();
+            UpdateHpDisplay();
+            UpdatePkModeDisplay();
         }
 
         public override void OnHide()
         {
             UnregisterChatHandlers();
+            UnregisterFightHandlers();
         }
 
         private void Update()
@@ -205,6 +219,8 @@ namespace Client.Game
                         UIManager.Instance.ShowPanel<MailPanel>();
                     else if (name == "任务")
                         UIManager.Instance.ShowPanel<TaskPanel>();
+                    else if (name == "技能")
+                        UIToast.Show("使用右下角技能栏释放技能");
                     else
                         Debug.Log("[MainPanel] 点击: " + name);
                 });
@@ -505,6 +521,272 @@ namespace Client.Game
         private void CreateJoystick()
         {
             joystick = VirtualJoystick.Create(transform);
+        }
+
+        // ==================== Fight UI ====================
+
+        private void CreateHpBar()
+        {
+            var hpBgObj = new GameObject("HpBar");
+            hpBgObj.transform.SetParent(transform, false);
+            var hpBgRect = hpBgObj.AddComponent<RectTransform>();
+            hpBgObj.AddComponent<Image>().color = new Color(0.1f, 0.1f, 0.2f, 0.8f);
+            hpBgRect.anchorMin = new Vector2(0, 1);
+            hpBgRect.anchorMax = new Vector2(0, 1);
+            hpBgRect.pivot = new Vector2(0, 1);
+            hpBgRect.anchoredPosition = new Vector2(15, -80);
+            hpBgRect.sizeDelta = new Vector2(220, 14);
+
+            hpSlider = hpBgObj.AddComponent<Slider>();
+            hpSlider.interactable = false;
+            hpSlider.value = 1f;
+
+            var fillArea = new GameObject("Fill Area");
+            fillArea.transform.SetParent(hpBgObj.transform, false);
+            var faRect = fillArea.GetComponent<RectTransform>();
+            faRect.anchorMin = Vector2.zero;
+            faRect.anchorMax = Vector2.one;
+            faRect.offsetMin = Vector2.zero;
+            faRect.offsetMax = Vector2.zero;
+
+            var fillObj = new GameObject("Fill");
+            fillObj.transform.SetParent(fillArea.transform, false);
+            var fRect = fillObj.GetComponent<RectTransform>();
+            fRect.anchorMin = Vector2.zero;
+            fRect.anchorMax = Vector2.one;
+            fRect.offsetMin = Vector2.zero;
+            fRect.offsetMax = Vector2.zero;
+            var fillImg = fillObj.AddComponent<Image>();
+            fillImg.color = new Color(0.2f, 0.8f, 0.3f);
+
+            hpSlider.fillRect = fRect;
+            hpSlider.targetGraphic = fillImg;
+
+            hpText = UIBuilder.CreateText(transform, "HpText", "100/100", 12,
+                UIBuilder.TextWhite, TextAnchor.MiddleRight);
+            var htRect = hpText.GetComponent<RectTransform>();
+            htRect.anchorMin = new Vector2(0, 1);
+            htRect.anchorMax = new Vector2(0, 1);
+            htRect.pivot = new Vector2(0, 1);
+            htRect.anchoredPosition = new Vector2(240, -80);
+            htRect.sizeDelta = new Vector2(80, 14);
+        }
+
+        private void CreateSkillBar()
+        {
+            var skillBar = new GameObject("SkillBar");
+            skillBar.transform.SetParent(transform, false);
+            var sbRect = skillBar.AddComponent<RectTransform>();
+            sbRect.anchorMin = new Vector2(1, 0);
+            sbRect.anchorMax = new Vector2(1, 0);
+            sbRect.pivot = new Vector2(1, 0);
+            sbRect.anchoredPosition = new Vector2(-10, 165);
+            sbRect.sizeDelta = new Vector2(280, 60);
+            skillBar.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.1f, 0.7f);
+
+            int[] skillIds = { 1, 2, 3, 4 };
+            string[] skillNames = { "普攻", "技能1", "技能2", "技能3" };
+            Color[] skillColors = {
+                new Color(0.6f, 0.15f, 0.15f, 0.9f),
+                new Color(0.15f, 0.3f, 0.6f, 0.9f),
+                new Color(0.15f, 0.5f, 0.25f, 0.9f),
+                new Color(0.5f, 0.2f, 0.6f, 0.9f)
+            };
+
+            for (int i = 0; i < 4; i++)
+            {
+                var btn = UIBuilder.CreateButton(skillBar.transform, "Skill_" + i, skillNames[i],
+                    60, 48, 13, skillColors[i], UIBuilder.TextWhite);
+                btn.GetComponent<RectTransform>().anchoredPosition = new Vector2(-10 - i * 65, 0);
+                int sid = skillIds[i];
+                btn.onClick.AddListener(() => OnUseSkill(sid));
+            }
+        }
+
+        private void CreatePkModeIndicator()
+        {
+            var btn = UIBuilder.CreateButton(transform, "PkModeBtn", "[ 和平 ]", 80, 24, 13,
+                new Color(0.1f, 0.3f, 0.1f, 0.8f), new Color(0.3f, 0.8f, 0.3f));
+            var pkRect = btn.GetComponent<RectTransform>();
+            pkRect.anchorMin = new Vector2(1, 1);
+            pkRect.anchorMax = new Vector2(1, 1);
+            pkRect.pivot = new Vector2(1, 1);
+            pkRect.anchoredPosition = new Vector2(-95, -60);
+            pkModeText = btn.GetComponentInChildren<Text>();
+            btn.onClick.AddListener(OnTogglePkMode);
+        }
+
+        private void CreateTargetIndicator()
+        {
+            var targetBg = new GameObject("TargetIndicator");
+            targetBg.transform.SetParent(transform, false);
+            var trRect = targetBg.AddComponent<RectTransform>();
+            trRect.anchorMin = new Vector2(0.5f, 1);
+            trRect.anchorMax = new Vector2(0.5f, 1);
+            trRect.pivot = new Vector2(0.5f, 1);
+            trRect.anchoredPosition = new Vector2(0, -90);
+            trRect.sizeDelta = new Vector2(200, 28);
+            targetBg.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.1f, 0.7f);
+
+            targetText = UIBuilder.CreateText(targetBg.transform, "TargetText", "", 14,
+                new Color(1f, 0.4f, 0.4f), TextAnchor.MiddleCenter);
+            UIBuilder.SetStretch(targetText.GetComponent<RectTransform>());
+        }
+
+        // ==================== Fight Actions ====================
+
+        private void OnUseSkill(int skillId)
+        {
+            var pc = GameSceneEntry.PlayerController;
+            if (pc == null) return;
+
+            var req = new UseSkillReq();
+            req.SkillId = skillId;
+            req.X = pc.CurrentGridX;
+            req.Y = pc.CurrentGridY;
+            req.TargetId = GameData.SelectedTargetId;
+            NetClient.Instance.Send(req);
+        }
+
+        private void OnTogglePkMode()
+        {
+            int nextMode = (GameData.CurrentPkMode + 1) % 4;
+            var req = new SetPkModeReq();
+            req.PkMode = nextMode;
+            NetClient.Instance.Send(req);
+        }
+
+        // ==================== Fight Network Handlers ====================
+
+        private void RegisterFightHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc == null || nc.Dispatcher == null) return;
+            nc.Dispatcher.Register<UseSkillAck>(MsgId.UseSkillAck, HandleUseSkillAck);
+            nc.Dispatcher.Register<HpChangedNtf>(MsgId.HpChangedNtf, HandleHpChangedNtf);
+            nc.Dispatcher.Register<KilledByNtf>(MsgId.KilledByNtf, HandleKilledByNtf);
+            nc.Dispatcher.Register<PkModeChangedNtf>(MsgId.PkModeChangedNtf, HandlePkModeChangedNtf);
+        }
+
+        private void UnregisterFightHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc == null || nc.Dispatcher == null) return;
+            nc.Dispatcher.Unregister(MsgId.UseSkillAck);
+            nc.Dispatcher.Unregister(MsgId.HpChangedNtf);
+            nc.Dispatcher.Unregister(MsgId.KilledByNtf);
+            nc.Dispatcher.Unregister(MsgId.PkModeChangedNtf);
+        }
+
+        private void HandleUseSkillAck(UseSkillAck ack)
+        {
+            if (ack.Code != 0)
+            {
+                UIToast.Show(GetFightErrorText(ack.Code));
+                return;
+            }
+            Debug.Log(string.Format("[MainPanel] 技能释放成功 Skill={0} Target={1} Hits={2}",
+                ack.SkillId, ack.MainTargetId, ack.Targets.Count));
+        }
+
+        private void HandleHpChangedNtf(HpChangedNtf ntf)
+        {
+            long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;
+
+            if (ntf.ObjectId == selfId)
+            {
+                // 自己的血量变化
+                GameData.CurrentHp = ntf.Hp;
+                UpdateHpDisplay();
+
+                // 同步更新PlayerView的HP条
+                var pv = GameSceneEntry.PlayerController != null
+                    ? GameSceneEntry.PlayerController.GetComponent<PlayerView>() : null;
+                if (pv != null)
+                    pv.UpdateHp(ntf.Hp, GameData.MaxHp);
+            }
+            else
+            {
+                // 其他玩家的血量变化
+                OtherPlayerManager.Instance.UpdatePlayerHp(ntf.ObjectId, ntf.Hp, 100);
+            }
+        }
+
+        private void HandleKilledByNtf(KilledByNtf ntf)
+        {
+            string killerDesc = ntf.IsMonster ? "怪物" : ntf.KillerName;
+            UIMessageBox.Show("阵亡", string.Format("你被 {0} 击杀了！", killerDesc),
+                () =>
+                {
+                    // 复活：回城（重新进图）
+                    var mapData = GameData.CurrentMap;
+                    if (mapData != null && NetClient.Instance != null)
+                    {
+                        var req = new EnterMapReq();
+                        req.MapCfgId = mapData.MapCfgId;
+                        req.Line = mapData.Line;
+                        NetClient.Instance.Send(req);
+                    }
+                }, showCancel: false, confirmText: "回城复活");
+        }
+
+        private void HandlePkModeChangedNtf(PkModeChangedNtf ntf)
+        {
+            GameData.CurrentPkMode = ntf.PkMode;
+            UpdatePkModeDisplay();
+        }
+
+        // ==================== Fight UI Updates ====================
+
+        private void UpdateHpDisplay()
+        {
+            int hp = GameData.CurrentHp;
+            int maxHp = GameData.MaxHp;
+            if (hpSlider != null)
+                hpSlider.value = maxHp > 0 ? (float)hp / maxHp : 0f;
+            if (hpText != null)
+                hpText.text = string.Format("{0}/{1}", hp, maxHp);
+        }
+
+        private void UpdatePkModeDisplay()
+        {
+            if (pkModeText != null)
+                pkModeText.text = "[ " + GetPkModeName(GameData.CurrentPkMode) + " ]";
+        }
+
+        public void UpdateTargetDisplay(long targetId, string targetName)
+        {
+            if (targetText != null)
+                targetText.text = targetId > 0 ? "目标: " + targetName : "";
+        }
+
+        private static string GetPkModeName(int mode)
+        {
+            switch (mode)
+            {
+                case PkMode.Peace: return "和平";
+                case PkMode.Team: return "组队";
+                case PkMode.Guild: return "帮派";
+                case PkMode.All: return "全体";
+                default: return "未知";
+            }
+        }
+
+        private static string GetFightErrorText(int code)
+        {
+            switch (code)
+            {
+                case 1: return "不在战斗状态";
+                case 2: return "已死亡";
+                case 3: return "技能不存在";
+                case 4: return "技能配置未找到";
+                case 5: return "技能冷却中";
+                case 6: return "目标不存在";
+                case 7: return "目标已死亡";
+                case 8: return "超出攻击范围";
+                case 9: return "MP不足";
+                default: return "操作失败(" + code + ")";
+            }
         }
     }
 }
