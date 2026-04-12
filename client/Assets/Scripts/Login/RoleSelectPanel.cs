@@ -4,6 +4,8 @@ using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 using Client.Core;
 using Client.Game;
+using Client.Network;
+using GameShared.Protos;
 
 namespace Client.Login
 {
@@ -14,6 +16,22 @@ namespace Client.Login
         private GameObject[] roleSlots = new GameObject[4];
         private Button enterBtn;
         private Text selectTip;
+        private Text slotsCountText;
+
+        // Create role dialog
+        private GameObject createRoleDialog;
+        private InputField createNameInput;
+        private int selectedJob = 0;
+        private Text[] jobLabels = new Text[4];
+        private int createSlotIndex;
+
+        private static readonly string[] JobNames = { "战士", "法师", "弓手", "刺客" };
+        private static readonly Color[] JobColors = {
+            new Color(0.9f, 0.4f, 0.3f),  // 战士 - 红
+            new Color(0.3f, 0.5f, 0.95f), // 法师 - 蓝
+            new Color(0.3f, 0.85f, 0.4f), // 弓手 - 绿
+            new Color(0.75f, 0.3f, 0.85f) // 刺客 - 紫
+        };
 
         public override void OnInit()
         {
@@ -41,8 +59,9 @@ namespace Client.Login
             tdRect.offsetMin = Vector2.zero;
             tdRect.offsetMax = Vector2.zero;
 
-            var slotsArea = UIBuilder.CreateSection(transform, "SlotsArea", "已有角色 (2/4)", 1150, 420);
+            var slotsArea = UIBuilder.CreateSection(transform, "SlotsArea", "已有角色 (0/4)", 1150, 420);
             slotsArea.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 30);
+            slotsCountText = slotsArea.GetComponentInChildren<Text>();
 
             for (int i = 0; i < 4; i++)
             {
@@ -80,12 +99,251 @@ namespace Client.Login
             fRect.anchoredPosition = new Vector2(0, 15);
             fRect.sizeDelta = new Vector2(500, 20);
 
-            LoadMockRoles();
+            // Create role dialog (hidden by default)
+            CreateRoleDialog();
+
             RefreshSlots();
 
             canvasGroup.alpha = 0f;
             gameObject.SetActive(false);
         }
+
+        public override void OnShow()
+        {
+            RegisterHandlers();
+            RequestRoleList();
+        }
+
+        public override void OnHide()
+        {
+            UnregisterHandlers();
+            HideCreateDialog();
+        }
+
+        private void RegisterHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc != null && nc.Dispatcher != null)
+            {
+                nc.Dispatcher.Register<RoleListResp>(MsgId.RoleListResp, HandleRoleListResp);
+                nc.Dispatcher.Register<CreateRoleResp>(MsgId.CreateRoleResp, HandleCreateRoleResp);
+                nc.Dispatcher.Register<SelectRoleResp>(MsgId.SelectRoleResp, HandleSelectRoleResp);
+            }
+        }
+
+        private void UnregisterHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc != null && nc.Dispatcher != null)
+            {
+                nc.Dispatcher.Unregister(MsgId.RoleListResp);
+                nc.Dispatcher.Unregister(MsgId.CreateRoleResp);
+                nc.Dispatcher.Unregister(MsgId.SelectRoleResp);
+            }
+        }
+
+        private void RequestRoleList()
+        {
+            selectTip.text = "正在获取角色列表...";
+            selectTip.color = UIBuilder.TextDim;
+            enterBtn.interactable = false;
+            var nc = NetClient.Instance;
+            if (nc != null && nc.IsConnected)
+                nc.Send(new RoleListReq());
+            else
+                selectTip.text = "网络未连接，请返回重试";
+        }
+
+        // --- Network Handlers ---
+
+        private void HandleRoleListResp(RoleListResp resp)
+        {
+            if (resp.Code == 0)
+            {
+                roles.Clear();
+                foreach (var info in resp.Roles)
+                {
+                    roles.Add(new RoleData
+                    {
+                        RoleId = info.RoleId,
+                        Name = info.Name,
+                        Level = info.Level,
+                        Job = GameData.GetJobName(info.Job)
+                    });
+                }
+                selectedRoleIndex = -1;
+                enterBtn.interactable = false;
+                selectTip.text = roles.Count > 0 ? "请选择一个角色进入游戏" : "没有角色，请创建新角色";
+                selectTip.color = UIBuilder.TextDim;
+                RefreshSlots();
+            }
+            else
+            {
+                selectTip.text = resp.Message;
+                selectTip.color = Color.red;
+            }
+        }
+
+        private void HandleCreateRoleResp(CreateRoleResp resp)
+        {
+            if (resp.Code == 0)
+            {
+                var info = resp.Role;
+                roles.Add(new RoleData
+                {
+                    RoleId = info.RoleId,
+                    Name = info.Name,
+                    Level = info.Level,
+                    Job = GameData.GetJobName(info.Job)
+                });
+                selectedRoleIndex = roles.Count - 1;
+                enterBtn.interactable = true;
+                selectTip.text = $"已创建并选择: {info.Name} ({GameData.GetJobName(info.Job)})";
+                selectTip.color = UIBuilder.Gold;
+                HideCreateDialog();
+                RefreshSlots();
+            }
+            else
+            {
+                selectTip.text = resp.Message;
+                selectTip.color = Color.red;
+            }
+        }
+
+        private void HandleSelectRoleResp(SelectRoleResp resp)
+        {
+            if (resp.Code == 0)
+            {
+                GameData.CurrentRole = new RoleData
+                {
+                    RoleId = resp.RoleId,
+                    Name = resp.Name,
+                    Level = resp.Level,
+                    Job = GameData.GetJobName(resp.Job)
+                };
+                Debug.Log($"[RoleSelectPanel] 进入游戏: {resp.Name} Lv.{resp.Level}");
+                UIManager.Instance.ClearAll();
+                SceneManager.LoadScene("GameScene");
+            }
+            else
+            {
+                selectTip.text = resp.Message;
+                selectTip.color = Color.red;
+                enterBtn.interactable = true;
+            }
+        }
+
+        // --- Create Role Dialog ---
+
+        private void CreateRoleDialog()
+        {
+            createRoleDialog = UIBuilder.CreatePanel(transform, "CreateRoleDialog", 380, 320,
+                new Color(0.05f, 0.05f, 0.12f, 0.98f)).gameObject;
+            createRoleDialog.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 30);
+
+            var border = UIBuilder.CreatePanel(createRoleDialog.transform, "Border", 384, 324,
+                new Color(0f, 0f, 0f, 0f));
+            border.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+            var borderImg = border.GetComponent<Image>();
+            borderImg.color = UIBuilder.GoldDark;
+
+            var dlgContent = createRoleDialog.transform;
+
+            var dlgTitle = UIBuilder.CreateText(dlgContent, "DialogTitle", "创 建 角 色", 22, UIBuilder.Gold,
+                TextAnchor.MiddleCenter, FontStyle.Bold);
+            dlgTitle.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 130);
+            dlgTitle.GetComponent<RectTransform>().sizeDelta = new Vector2(300, 30);
+
+            var nameLbl = UIBuilder.CreateText(dlgContent, "NameLabel", "角色名称", 15, UIBuilder.TextDim,
+                TextAnchor.MiddleLeft);
+            nameLbl.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 85);
+            nameLbl.GetComponent<RectTransform>().sizeDelta = new Vector2(320, 20);
+
+            createNameInput = UIBuilder.CreateInputField(dlgContent, "NameInput", "请输入角色名(1-12字)", 320, 38, 16);
+            createNameInput.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 50);
+
+            var jobLbl = UIBuilder.CreateText(dlgContent, "JobLabel", "选择职业", 15, UIBuilder.TextDim,
+                TextAnchor.MiddleLeft);
+            jobLbl.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 15);
+            jobLbl.GetComponent<RectTransform>().sizeDelta = new Vector2(320, 20);
+
+            for (int i = 0; i < 4; i++)
+            {
+                int jobIdx = i;
+                var jobBtn = UIBuilder.CreateButton(dlgContent, $"JobBtn_{i}", JobNames[i], 70, 34, 14,
+                    new Color(0.12f, 0.12f, 0.2f, 1f), JobColors[i]);
+                float jx = (i - 1.5f) * 80;
+                jobBtn.GetComponent<RectTransform>().anchoredPosition = new Vector2(jx, -25);
+                jobLabels[i] = jobBtn.GetComponentInChildren<Text>();
+                jobBtn.onClick.AddListener(() =>
+                {
+                    selectedJob = jobIdx;
+                    UpdateJobSelection();
+                });
+            }
+            UpdateJobSelection();
+
+            var confirmBtn = UIBuilder.CreateButton(dlgContent, "ConfirmBtn", "确 认 创 建", 140, 42, 16,
+                UIBuilder.AccentBlue, UIBuilder.Gold);
+            confirmBtn.GetComponent<RectTransform>().anchoredPosition = new Vector2(80, -80);
+            confirmBtn.onClick.AddListener(OnConfirmCreateRole);
+
+            var cancelBtn = UIBuilder.CreateButton(dlgContent, "CancelBtn", "取 消", 100, 42, 16,
+                UIBuilder.ButtonNormal, UIBuilder.TextGray);
+            cancelBtn.GetComponent<RectTransform>().anchoredPosition = new Vector2(-60, -80);
+            cancelBtn.onClick.AddListener(HideCreateDialog);
+
+            createRoleDialog.SetActive(false);
+        }
+
+        private void UpdateJobSelection()
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                if (jobLabels[i] != null)
+                {
+                    jobLabels[i].fontSize = (i == selectedJob) ? 16 : 14;
+                    jobLabels[i].fontStyle = (i == selectedJob) ? FontStyle.Bold : FontStyle.Normal;
+                }
+            }
+        }
+
+        private void ShowCreateDialog(int slotIndex)
+        {
+            createSlotIndex = slotIndex;
+            selectedJob = 0;
+            if (createNameInput != null) createNameInput.text = "";
+            UpdateJobSelection();
+            createRoleDialog.SetActive(true);
+        }
+
+        private void HideCreateDialog()
+        {
+            if (createRoleDialog != null)
+                createRoleDialog.SetActive(false);
+        }
+
+        private void OnConfirmCreateRole()
+        {
+            string name = (createNameInput != null) ? createNameInput.text.Trim() : "";
+            if (string.IsNullOrEmpty(name))
+            {
+                selectTip.text = "请输入角色名称";
+                selectTip.color = Color.red;
+                return;
+            }
+            if (name.Length > 12)
+            {
+                selectTip.text = "角色名称最多12个字符";
+                selectTip.color = Color.red;
+                return;
+            }
+            selectTip.text = "正在创建角色...";
+            selectTip.color = UIBuilder.TextDim;
+            NetClient.Instance.Send(new CreateRoleReq { Name = name, Job = selectedJob });
+        }
+
+        // --- Slot UI ---
 
         private GameObject CreateRoleSlot(Transform parent, int index)
         {
@@ -140,14 +398,11 @@ namespace Client.Login
             return slot;
         }
 
-        private void LoadMockRoles()
-        {
-            roles.Add(new RoleData { RoleId = 1, Name = "剑心", Level = 35, Job = "剑士" });
-            roles.Add(new RoleData { RoleId = 2, Name = "月影", Level = 22, Job = "法师" });
-        }
-
         private void RefreshSlots()
         {
+            if (slotsCountText != null)
+                slotsCountText.text = $"已有角色 ({roles.Count}/4)";
+
             for (int i = 0; i < 4; i++)
             {
                 var slot = roleSlots[i];
@@ -161,9 +416,11 @@ namespace Client.Login
                 if (i < roles.Count)
                 {
                     nameLabel.text = roles[i].Name;
-                    infoLabel.text = $"Lv.{roles[i].Level}";
+                    nameLabel.color = UIBuilder.TextWhite;
+                    infoLabel.text = string.Format("Lv.{0}", roles[i].Level);
                     avatarText.text = roles[i].Name[0].ToString();
-                    jobTag.text = $"[ {roles[i].Job} ]";
+                    avatarText.fontSize = 48;
+                    jobTag.text = string.Format("[ {0} ]", roles[i].Job);
                 }
                 else
                 {
@@ -181,53 +438,35 @@ namespace Client.Login
 
         private void OnSlotClick(int index)
         {
-            selectedRoleIndex = index;
-            if (index >= roles.Count)
+            if (index < roles.Count)
             {
-                CreateNewRole(index);
-                return;
-            }
-            enterBtn.interactable = true;
-            selectTip.text = $"已选择: {roles[index].Name} (Lv.{roles[index].Level} {roles[index].Job})";
-            selectTip.color = UIBuilder.Gold;
-            RefreshSlots();
-        }
-
-        private void CreateNewRole(int slotIndex)
-        {
-            string[] defaultNames = { "勇者", "旅人", "冒险家", "探索者" };
-            string[] jobs = { "战士", "法师", "弓手", "刺客" };
-            int nameIndex = slotIndex - roles.Count;
-            if (nameIndex < defaultNames.Length)
-            {
-                roles.Add(new RoleData
-                {
-                    RoleId = System.DateTime.Now.Ticks,
-                    Name = defaultNames[nameIndex],
-                    Level = 1,
-                    Job = jobs[nameIndex]
-                });
-                selectedRoleIndex = roles.Count - 1;
+                selectedRoleIndex = index;
                 enterBtn.interactable = true;
-                selectTip.text = $"已创建并选择: {defaultNames[nameIndex]} ({jobs[nameIndex]})";
+                selectTip.text = string.Format("已选择: {0} (Lv.{1} {2})", roles[index].Name, roles[index].Level, roles[index].Job);
                 selectTip.color = UIBuilder.Gold;
                 RefreshSlots();
+            }
+            else
+            {
+                ShowCreateDialog(index);
             }
         }
 
         private void OnEnterGame()
         {
             if (selectedRoleIndex < 0 || selectedRoleIndex >= roles.Count) return;
+            enterBtn.interactable = false;
             var role = roles[selectedRoleIndex];
-            Debug.Log($"[RoleSelectPanel] 选择角色: {role.Name} (Lv.{role.Level} {role.Job})");
-            GameData.CurrentRole = role;
-            UIManager.Instance.ClearAll();
-            SceneManager.LoadScene("GameScene");
+            Debug.Log(string.Format("[RoleSelectPanel] 请求进入游戏: {0} (Lv.{1} {2})", role.Name, role.Level, role.Job));
+            selectTip.text = "正在进入游戏...";
+            selectTip.color = UIBuilder.TextDim;
+            NetClient.Instance.Send(new SelectRoleReq { RoleId = role.RoleId });
         }
 
         private void OnBack()
         {
             selectedRoleIndex = -1;
+            HideCreateDialog();
             UIManager.Instance.ReplacePanel<LoginPanel>();
         }
     }

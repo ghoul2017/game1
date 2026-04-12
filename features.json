@@ -98,7 +98,7 @@
         "支持创建新角色（CreateRoleReq/Resp）",
         "支持选择角色（SelectRoleReq/Resp）"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
