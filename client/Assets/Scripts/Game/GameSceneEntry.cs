@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Client.Core;
 using Client.Network;
 using GameShared.Network;
@@ -20,12 +21,14 @@ namespace Client.Game
 
             InitializeScene();
             RegisterAoiHandlers();
+            RegisterReconnectEvents();
             UIManager.Instance.ShowPanel<MainPanel>();
         }
 
         private void OnDestroy()
         {
             UnregisterAoiHandlers();
+            UnregisterReconnectEvents();
             OtherPlayerManager.Instance.ClearAll();
         }
 
@@ -154,6 +157,65 @@ namespace Client.Game
                     Debug.Log(string.Format("[GameSceneEntry] 移动被服务端纠正: ({0},{1})", ack.X, ack.Y));
                 }
             }
+        }
+
+        // ==================== Reconnect Events ====================
+
+        private void RegisterReconnectEvents()
+        {
+            var netClient = NetClient.Instance;
+            if (netClient == null) return;
+
+            netClient.OnReconnected += HandleReconnected;
+            netClient.OnReconnectFailed += HandleReconnectFailed;
+            netClient.OnKicked += HandleKicked;
+            Debug.Log("[GameSceneEntry] 重连事件已注册");
+        }
+
+        private void UnregisterReconnectEvents()
+        {
+            var netClient = NetClient.Instance;
+            if (netClient == null) return;
+
+            netClient.OnReconnected -= HandleReconnected;
+            netClient.OnReconnectFailed -= HandleReconnectFailed;
+            netClient.OnKicked -= HandleKicked;
+        }
+
+        private void HandleReconnected()
+        {
+            Debug.Log("[GameSceneEntry] 重连成功，重新进入地图");
+
+            // 清除旧的视野数据
+            OtherPlayerManager.Instance.ClearAll();
+
+            // 重新发送进图请求，获取最新AOI数据
+            var mapData = GameData.CurrentMap;
+            if (mapData != null && NetClient.Instance != null)
+            {
+                var req = new EnterMapReq();
+                req.MapCfgId = mapData.MapCfgId;
+                req.Line = mapData.Line;
+                NetClient.Instance.Send(req);
+            }
+        }
+
+        private void HandleReconnectFailed(string message)
+        {
+            Debug.Log("[GameSceneEntry] 重连失败: " + message + "，返回登录");
+            GoBackToLogin();
+        }
+
+        private void HandleKicked(int reason)
+        {
+            Debug.Log("[GameSceneEntry] 被踢下线，reason=" + reason);
+            GoBackToLogin();
+        }
+
+        private void GoBackToLogin()
+        {
+            OtherPlayerManager.Instance.ClearAll();
+            SceneManager.LoadScene("SampleScene");
         }
     }
 }

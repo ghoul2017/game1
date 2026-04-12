@@ -160,7 +160,7 @@
         "显示其他玩家的角色模型+名字板",
         "平滑插值移动（根据 MapPlayerMoveNtf）"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",
@@ -258,7 +258,7 @@
         "接收 ReconnectResp 恢复游戏状态",
         "重连失败回到登录界面"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F021",

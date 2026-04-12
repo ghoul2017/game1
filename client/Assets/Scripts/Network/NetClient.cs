@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
+using Client.Game;
 using GameShared.Network;
 using GameShared.Protos;
 using UnityEngine;
@@ -66,11 +67,15 @@ namespace Client.Network
         private int _reconnectAttempts;
         private float _nextReconnectTime;
         private bool _userDisconnect;
+        private bool _hadSession;
 
         // --- Events ---
         public event Action OnConnected;
         public event Action OnDisconnected;
         public event Action<string> OnError;
+        public event Action OnReconnected;
+        public event Action<string> OnReconnectFailed;
+        public event Action<int> OnKicked;
 
         // --- External ---
         private MessageDispatcher _dispatcher;
@@ -152,6 +157,7 @@ namespace Client.Network
             if (port != null) this.port = port.Value;
 
             _userDisconnect = false;
+            _hadSession = false;
             _reconnectAttempts = 0;
             DoConnect();
         }
@@ -241,7 +247,10 @@ namespace Client.Network
 
                     // Register handshake response handler
                     if (_dispatcher != null)
+                    {
                         _dispatcher.Register<HandshakeResp>(MsgId.HandshakeResp, HandleHandshakeResp);
+                        _dispatcher.Register<KickNtf>(MsgId.KickNtf, HandleKickNtf);
+                    }
 
                     // Send handshake request
                     Send(new HandshakeReq());
@@ -279,6 +288,10 @@ namespace Client.Network
         {
             if (_state != ConnState.Connected && _state != ConnState.Handshaking) return;
 
+            // Remember if we had an authenticated session for reconnect
+            if (!string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
+                _hadSession = true;
+
             DoDisconnect();
 
             if (!_userDisconnect && autoReconnect && _reconnectAttempts < maxReconnectAttempts)
@@ -306,6 +319,8 @@ namespace Client.Network
             {
                 _dispatcher.Unregister(MsgId.HandshakeResp);
                 _dispatcher.Unregister(MsgId.HeartbeatResp);
+                _dispatcher.Unregister(MsgId.ReconnectResp);
+                _dispatcher.Unregister(MsgId.KickNtf);
             }
 
             _running = false;
@@ -394,18 +409,35 @@ namespace Client.Network
 
             if (resp.Code == 0)
             {
-                Debug.Log("[NetClient] Handshake OK, connected to " + host + ":" + port);
-                _state = ConnState.Connected;
+                if (_hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
+                {
+                    // Had previous session — attempt application-level reconnect
+                    Debug.Log("[NetClient] Handshake OK, sending ReconnectReq...");
+                    if (_dispatcher != null)
+                        _dispatcher.Register<ReconnectResp>(MsgId.ReconnectResp, HandleReconnectResp);
 
-                // Register heartbeat handler for ping measurement
-                if (_dispatcher != null)
-                    _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+                    var req = new ReconnectReq();
+                    req.Token = GameData.Token;
+                    req.RoleId = GameData.CurrentRole.RoleId;
+                    Send(req);
+                }
+                else
+                {
+                    // Fresh connection
+                    Debug.Log("[NetClient] Handshake OK, connected to " + host + ":" + port);
+                    _state = ConnState.Connected;
 
-                OnConnected?.Invoke();
+                    // Register heartbeat handler for ping measurement
+                    if (_dispatcher != null)
+                        _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+
+                    OnConnected?.Invoke();
+                }
             }
             else
             {
                 Debug.LogWarning("[NetClient] Handshake failed: " + resp.Message);
+                _hadSession = false;
                 HandleDisconnect("Handshake rejected: " + resp.Message);
             }
         }
@@ -424,6 +456,61 @@ namespace Client.Network
             long nowTicks = DateTime.UtcNow.Ticks;
             long rttTicks = nowTicks - resp.ClientTime;
             PingMs = (int)(rttTicks / System.TimeSpan.TicksPerMillisecond);
+        }
+
+        // ==================== Reconnect ====================
+
+        private void HandleReconnectResp(ReconnectResp resp)
+        {
+            if (_dispatcher != null)
+                _dispatcher.Unregister(MsgId.ReconnectResp);
+
+            _hadSession = false;
+
+            if (resp.Code == 0)
+            {
+                Debug.Log("[NetClient] Reconnect OK, role=" + resp.Name);
+
+                // Update role data from server
+                if (GameData.CurrentRole == null)
+                    GameData.CurrentRole = new RoleData();
+                GameData.CurrentRole.RoleId = resp.RoleId;
+                GameData.CurrentRole.Name = resp.Name;
+                GameData.CurrentRole.Level = resp.Level;
+
+                _state = ConnState.Connected;
+                if (_dispatcher != null)
+                    _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+
+                OnReconnected?.Invoke();
+            }
+            else
+            {
+                Debug.LogWarning("[NetClient] Reconnect failed: " + resp.Message);
+                GameData.Token = "";
+                GameData.CurrentRole = null;
+                GameData.CurrentMap = null;
+
+                _state = ConnState.Connected;
+                if (_dispatcher != null)
+                    _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+
+                OnReconnectFailed?.Invoke(resp.Message);
+            }
+        }
+
+        // ==================== Kick ====================
+
+        private void HandleKickNtf(KickNtf ntf)
+        {
+            Debug.Log("[NetClient] Kicked, reason=" + ntf.Reason);
+            _userDisconnect = true;
+            _hadSession = false;
+            GameData.Token = "";
+            GameData.CurrentRole = null;
+            GameData.CurrentMap = null;
+            OnKicked?.Invoke(ntf.Reason);
+            HandleDisconnect("Kicked by server");
         }
 
         // ==================== Helpers ====================
