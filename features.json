@@ -73,7 +73,7 @@
         "在客户端创建 MsgId 常量类（或直接引用服务端 MsgId.cs）",
         "确保客户端和服务端 MsgId 值一致"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",
