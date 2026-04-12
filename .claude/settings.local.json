@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Agent",
+      "Bash(git:*)",
+      "Bash(dotnet:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(pwd:*)",
+      "Bash(cd:*)",
+      "Bash(grep -v \"^\\\\.$\")",
+      "Bash(grep -v \"^\\\\.\\\\.$\")",
+      "Bash(dotnet build:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); features=d[''''features'''']; cats={}; total=len\\(features\\); done=sum\\(1 for f in features if f[''''passes'''']\\); [cats.update\\({f[''''category'''']: cats.get\\(f[''''category''''],0\\)+1}\\) for f in features]; print\\(f''''Total: {total}''''\\); print\\(f''''Completed: {done}''''\\); print\\(f''''Pending: {total-done}''''\\); [print\\(f''''  {k}: {v}''''\\) for k,v in sorted\\(cats.items\\(\\)\\)]\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\(''features.json''\\)\\); features=d[''features'']; cats={}; total=len\\(features\\); done=sum\\(1 for f in features if f[''passes'']\\); print\\(f''Total: {total}, Done: {done}, Pending: {total-done}''\\)\")",
+      "Bash(grep -c '\"\"passes\"\": false' E:/worku/game1/features.json)",
+      "Bash(grep -c '\"\"passes\"\": true' E:/worku/game1/features.json)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(rm -rf:*)"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+# Unity generated
+Library/
+Temp/
+obj/
+
+# Unity auto-generated IDE files
+*.csproj
+
+# Unity IDE
+.vs/
+.idea/
+
+# Build output
+Build/
+Builds/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# User settings (local only)
+UserSettings/
+CLAUDE.local.md
+.claude/settings.local.json
+
+# .NET build artifacts
+bin/
+
+# JetBrains Rider
+.idea/
+
+# Visual Studio cache
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+Logs/

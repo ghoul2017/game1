@@ -1,0 +1,5 @@
+# 开发进度记录
+# 格式：[日期] [功能ID] 状态 - 描述
+# 状态：INIT / COMPLETED / FAILED / SKIPPED
+
+2026-04-12 INIT COMPLETED - 项目初始化完成，服务端构建通过，客户端结构验证通过

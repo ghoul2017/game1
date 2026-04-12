@@ -1,0 +1,23 @@
+# 项目级 .gitignore
+# 客户端
+client/Library/
+client/Temp/
+client/obj/
+client/.vs/
+client/.idea/
+client/UserSettings/
+client/Logs/
+
+# 服务端
+server/bin/
+server/obj/
+server/logs/
+server/.idea/
+server/.vs/
+
+# 通用
+**/CLAUDE.local.md
+.idea/
+.vs/
+*.user
+*.suo
