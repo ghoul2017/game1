@@ -37,7 +37,7 @@
         "按 MsgId 注册 Handler 回调",
         "收到服务端消息后自动路由到对应 Handler"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",
