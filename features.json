@@ -62,7 +62,7 @@
         "使用相同的 [ProtoContract]/[ProtoMember] 标注",
         "确保序列化结果与服务端兼容"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",
