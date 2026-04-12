@@ -20,3 +20,4 @@
 2026-04-12 F012 COMPLETED - 移动同步：PlayerController格子变更时发送MapMoveReq，GameSceneEntry注册MapMoveAck处理器纠偏位置，双端编译通过
 2026-04-12 F013 COMPLETED - 其他玩家视图：OtherPlayerView+OtherPlayerManager代码随F011已实现，标记为通过
 2026-04-12 F020 COMPLETED - 断线重连：NetClient握手后发ReconnectReq+HandleReconnectResp+HandleKickNtf，GameSceneEntry监听重连事件，双端编译通过
+2026-04-12 F021 COMPLETED - 被踢下线处理：HandleKicked显示UIMessageBox弹窗（映射LogoutReason枚举到中文提示），确认后回登录界面，双端编译通过

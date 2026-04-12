@@ -209,7 +209,24 @@ namespace Client.Game
         private void HandleKicked(int reason)
         {
             Debug.Log("[GameSceneEntry] 被踢下线，reason=" + reason);
-            GoBackToLogin();
+            string reasonText = GetKickReasonText(reason);
+            UIMessageBox.Show("下线通知", reasonText, () =>
+            {
+                GoBackToLogin();
+            }, showCancel: false, confirmText: "确定");
+        }
+
+        private static string GetKickReasonText(int reason)
+        {
+            switch (reason)
+            {
+                case 2: return "您的账号在其他设备登录，已被迫下线。";
+                case 3: return "您的账号已被封禁，请联系客服。";
+                case 4: return "您已被GM强制踢下线。";
+                case 5: return "网络连接超时，请检查网络后重试。";
+                case 1: return "服务器正在维护，请稍后重试。";
+                default: return "您已与服务器断开连接。";
+            }
         }
 
         private void GoBackToLogin()

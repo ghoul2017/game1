@@ -270,7 +270,7 @@
         "显示被踢原因（顶号/封禁等）",
         "断开连接，回到 LoginPanel"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F022",
