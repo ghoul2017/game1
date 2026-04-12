@@ -26,7 +26,7 @@ cd E:/worku/game1/server && dotnet build 2>&1
 ### 4. 验证客户端项目结构
 - 检查 `client/Assets/Scripts/` 目录存在且包含核心文件
 - 检查 `client/Assets/Scripts/Network/` 目录存在（即使为空）
-- 检查 `client/Assets/Scripts/Shared/Messages/` 目录存在（即使为空）
+- 检查 `shared/` 目录存在（客户端通过 junction 链接到 `client/Assets/Scripts/GameShared/`）
 
 ### 5. 创建 progress.txt
 ```

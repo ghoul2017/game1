@@ -8,7 +8,7 @@ obj/
 *.suo
 
 # ===== Claude Code =====
-*/settings.local.json
+.claude/settings.local.json
 CLAUDE.local.md
 .claude/dev_tracker.json
 logs/
