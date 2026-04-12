@@ -182,7 +182,13 @@ namespace Client.Game
                     115, 42, 16, UIBuilder.ButtonNormal, UIBuilder.TextWhite);
                 btn.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 140 - i * 55);
                 string name = btnNames[i];
-                btn.onClick.AddListener(() => Debug.Log($"[MainPanel] 点击: {name}"));
+                btn.onClick.AddListener(() =>
+                {
+                    if (name == "背包")
+                        UIManager.Instance.ShowPanel<BagPanel>();
+                    else
+                        Debug.Log("[MainPanel] 点击: " + name);
+                });
             }
         }
 

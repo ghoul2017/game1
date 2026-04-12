@@ -174,7 +174,7 @@
         "支持使用物品（BagUseItemReq/Ack）",
         "监听 BagItemChangedNtf 实时更新"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",
