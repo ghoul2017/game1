@@ -25,7 +25,7 @@
         "实现 TryDecode: 从字节流中解析完整消息（粘包处理）",
         "与服务端 PacketCodec 保持一致"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",

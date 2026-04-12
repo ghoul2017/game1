@@ -16,7 +16,7 @@ echo ========================================
 echo [DevLoop] 第 %LOOP_COUNT%/%MAX_LOOPS% 轮
 echo ========================================
 
-claude -p "运行 /devloop" --allowedTools "Read,Edit,Write,Glob,Grep,Agent,Bash(git:*),Bash(dotnet:*),Bash(ls:*),Bash(mkdir:*),Bash(cat:*),Bash(find:*),Bash(pwd:*),Bash(cd:*),Bash(cmd.exe:*)"
+claude -p "运行 /devloop" --dangerously-skip-permissions
 
 if %ERRORLEVEL% NEQ 0 (
     echo [DevLoop] 第 %LOOP_COUNT% 轮执行出错，停止循环
