@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Client.Core;
+using Client.Network;
+using Client.Game;
+using GameShared.Protos;
 
 namespace Client.Login
 {
@@ -10,6 +13,9 @@ namespace Client.Login
         private InputField passwordInput;
         private Text errorText;
         private Toggle rememberToggle;
+        private Button loginBtn;
+        private Text loginBtnText;
+        private bool isLoggingIn;
 
         private const string PREF_USERNAME = "login_username";
         private const string PREF_REMEMBER = "login_remember";
@@ -90,10 +96,11 @@ namespace Client.Login
             var div2 = UIBuilder.CreateDivider(content, "Div2", 350);
             div2.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -95);
 
-            var loginBtn = UIBuilder.CreateButton(content, "LoginBtn", "进 入 游 戏", 300, 52, 24,
+            loginBtn = UIBuilder.CreateButton(content, "LoginBtn", "进 入 游 戏", 300, 52, 24,
                 UIBuilder.AccentBlue, UIBuilder.Gold);
             loginBtn.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -140);
             loginBtn.onClick.AddListener(OnLoginClick);
+            loginBtnText = loginBtn.GetComponentInChildren<Text>();
 
             var serverInfo = UIBuilder.CreateText(content, "ServerInfo", "[ 推荐服务器 ]  亚服一区  延迟: 12ms", 13,
                 UIBuilder.TextDim, TextAnchor.MiddleCenter);
@@ -127,6 +134,36 @@ namespace Client.Login
         public override void OnShow()
         {
             errorText.text = "";
+            isLoggingIn = false;
+            SetButtonEnabled(true);
+            RegisterHandlers();
+        }
+
+        public override void OnHide()
+        {
+            CleanupConnectEvents();
+            UnregisterHandlers();
+        }
+
+        private void RegisterHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc != null && nc.Dispatcher != null)
+                nc.Dispatcher.Register<LoginResp>(MsgId.LoginResp, HandleLoginResp);
+        }
+
+        private void UnregisterHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc != null && nc.Dispatcher != null)
+                nc.Dispatcher.Unregister(MsgId.LoginResp);
+        }
+
+        private void SetButtonEnabled(bool enabled)
+        {
+            if (loginBtn != null) loginBtn.interactable = enabled;
+            if (loginBtnText != null)
+                loginBtnText.text = enabled ? "进 入 游 戏" : "登录中...";
         }
 
         private void OnLoginClick()
@@ -147,8 +184,89 @@ namespace Client.Login
 
             errorText.text = "";
             SaveCredentials();
-            Debug.Log($"[LoginPanel] 模拟登录: {username}");
-            UIManager.Instance.ReplacePanel<RoleSelectPanel>();
+
+            if (isLoggingIn) return;
+            isLoggingIn = true;
+            SetButtonEnabled(false);
+
+            var nc = NetClient.Instance;
+            if (nc == null || nc.Dispatcher == null)
+            {
+                errorText.text = "网络未初始化";
+                isLoggingIn = false;
+                SetButtonEnabled(true);
+                return;
+            }
+
+            RegisterHandlers();
+
+            if (nc.IsConnected)
+            {
+                DoLogin(username, password);
+            }
+            else
+            {
+                errorText.text = "正在连接服务器...";
+                _pendingUser = username;
+                _pendingPass = password;
+                nc.OnConnected += OnServerConnected;
+                nc.OnError += OnServerError;
+                if (!nc.IsConnecting)
+                    nc.Connect();
+            }
+        }
+
+        private string _pendingUser;
+        private string _pendingPass;
+
+        private void OnServerConnected()
+        {
+            if (_pendingUser != null)
+                DoLogin(_pendingUser, _pendingPass);
+            CleanupConnectEvents();
+        }
+
+        private void OnServerError(string reason)
+        {
+            errorText.text = "连接服务器失败";
+            isLoggingIn = false;
+            SetButtonEnabled(true);
+            CleanupConnectEvents();
+        }
+
+        private void CleanupConnectEvents()
+        {
+            var nc = NetClient.Instance;
+            if (nc != null)
+            {
+                nc.OnConnected -= OnServerConnected;
+                nc.OnError -= OnServerError;
+            }
+            _pendingUser = null;
+            _pendingPass = null;
+        }
+
+        private void DoLogin(string username, string password)
+        {
+            errorText.text = "正在登录...";
+            NetClient.Instance.Send(new LoginReq { Username = username, Password = password });
+        }
+
+        private void HandleLoginResp(LoginResp resp)
+        {
+            if (resp.Code == 0)
+            {
+                GameData.PlayerId = resp.PlayerId;
+                GameData.Token = resp.Token;
+                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + resp.PlayerId);
+                UIManager.Instance.ReplacePanel<RoleSelectPanel>();
+            }
+            else
+            {
+                errorText.text = resp.Message;
+                isLoggingIn = false;
+                SetButtonEnabled(true);
+            }
         }
 
         private void LoadSavedCredentials()

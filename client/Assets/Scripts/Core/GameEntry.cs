@@ -9,7 +9,11 @@ namespace Client.Core
         private void Start()
         {
             Debug.Log("[GameEntry] 游戏启动");
+
             NetClient.EnsureCreated();
+            NetClient.Instance.SetDispatcher(new MessageDispatcher());
+            MsgTypeRegistry.Init();
+
             UIManager.EnsureCreated();
             UIManager.Instance.ShowPanel<LoadingPanel>();
         }

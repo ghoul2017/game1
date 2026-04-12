@@ -9,3 +9,5 @@
 2026-04-12 F005 COMPLETED - 8模块消息类同步到客户端，ProtoMember编号一致，编译通过
 2026-04-12 F003 COMPLETED - 客户端消息路由分发器 MessageDispatcher，编译通过
 2026-04-12 REFACTOR COMPLETED - 消息和网络基础代码迁移到 shared/，双端共享一份代码（GameShared.Network/GameShared.Protos）
+2026-04-12 F001 COMPLETED - 客户端TCP连接管理器 NetClient，异步连接+心跳+断线重连，编译通过
+2026-04-12 F007 COMPLETED - 登录流程联调：LoginPanel接入NetClient发送LoginReq，处理LoginResp存储会话，编译通过

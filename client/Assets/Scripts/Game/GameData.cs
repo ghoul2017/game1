@@ -13,5 +13,7 @@ namespace Client.Game
     public static class GameData
     {
         public static RoleData CurrentRole { get; set; }
+        public static long PlayerId { get; set; }
+        public static string Token { get; set; } = "";
     }
 }

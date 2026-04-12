@@ -85,7 +85,7 @@
         "接收 LoginResp，处理登录成功/失败",
         "登录成功后存储 userId 和 session 信息"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",

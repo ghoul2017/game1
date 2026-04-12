@@ -120,6 +120,8 @@ namespace Client.Network
 
         // ==================== Public API ====================
 
+        public MessageDispatcher Dispatcher { get { return _dispatcher; } }
+
         public void SetDispatcher(MessageDispatcher dispatcher)
         {
             _dispatcher = dispatcher;
