@@ -33,10 +33,10 @@ namespace Client.Network
         public float maxReconnectDelay = 30f;
 
         // --- State ---
-        private enum ConnState { Disconnected, Connecting, Connected, Reconnecting }
+        private enum ConnState { Disconnected, Connecting, Handshaking, Connected, Reconnecting }
 
         public bool IsConnected { get { return _state == ConnState.Connected && IsSocketAlive(); } }
-        public bool IsConnecting { get { return _state == ConnState.Connecting || _state == ConnState.Reconnecting; } }
+        public bool IsConnecting { get { return _state == ConnState.Connecting || _state == ConnState.Reconnecting || _state == ConnState.Handshaking; } }
 
         private ConnState _state = ConnState.Disconnected;
 
@@ -96,6 +96,16 @@ namespace Client.Network
                 DoConnect();
             }
 
+            // Handshake timeout
+            if (_state == ConnState.Handshaking)
+            {
+                if (Time.time - _lastRecvTime > recvTimeout)
+                {
+                    Debug.LogWarning("[NetClient] Handshake timeout");
+                    HandleDisconnect("Handshake timeout");
+                }
+            }
+
             // Heartbeat
             if (_state == ConnState.Connected)
             {
@@ -129,7 +139,7 @@ namespace Client.Network
 
         public void Connect(string host = null, int? port = null)
         {
-            if (_state == ConnState.Connecting || _state == ConnState.Connected)
+            if (_state == ConnState.Connecting || _state == ConnState.Connected || _state == ConnState.Handshaking)
                 return;
 
             if (host != null) this.host = host;
@@ -148,7 +158,7 @@ namespace Client.Network
 
         public void Send(IMessage msg)
         {
-            if (_state != ConnState.Connected || _stream == null)
+            if ((_state != ConnState.Connected && _state != ConnState.Handshaking) || _stream == null)
             {
                 Debug.LogWarning("[NetClient] Cannot send: not connected");
                 return;
@@ -217,12 +227,18 @@ namespace Client.Network
                 _mainQueue.Enqueue(() =>
                 {
                     if (!_running) return;
-                    _state = ConnState.Connected;
+                    _state = ConnState.Handshaking;
                     _reconnectAttempts = 0;
                     _lastSendTime = Time.time;
                     _lastRecvTime = Time.time;
-                    Debug.Log("[NetClient] Connected to " + host + ":" + port);
-                    OnConnected?.Invoke();
+                    Debug.Log("[NetClient] TCP connected, sending handshake...");
+
+                    // Register handshake response handler
+                    if (_dispatcher != null)
+                        _dispatcher.Register<HandshakeResp>(MsgId.HandshakeResp, HandleHandshakeResp);
+
+                    // Send handshake request
+                    Send(new HandshakeReq());
                 });
             }
             catch (Exception ex)
@@ -255,7 +271,7 @@ namespace Client.Network
 
         private void HandleDisconnect(string reason)
         {
-            if (_state != ConnState.Connected) return;
+            if (_state != ConnState.Connected && _state != ConnState.Handshaking) return;
 
             DoDisconnect();
 
@@ -279,6 +295,10 @@ namespace Client.Network
 
         private void DoDisconnect()
         {
+            // Cleanup handshake handler if still registered
+            if (_dispatcher != null)
+                _dispatcher.Unregister(MsgId.HandshakeResp);
+
             _running = false;
             _state = ConnState.Disconnected;
 
@@ -352,6 +372,27 @@ namespace Client.Network
 
             if (offset > 0)
                 _pendingData.RemoveRange(0, offset);
+        }
+
+        // ==================== Handshake ====================
+
+        private void HandleHandshakeResp(HandshakeResp resp)
+        {
+            // Unregister handler
+            if (_dispatcher != null)
+                _dispatcher.Unregister(MsgId.HandshakeResp);
+
+            if (resp.Code == 0)
+            {
+                Debug.Log("[NetClient] Handshake OK, connected to " + host + ":" + port);
+                _state = ConnState.Connected;
+                OnConnected?.Invoke();
+            }
+            else
+            {
+                Debug.LogWarning("[NetClient] Handshake failed: " + resp.Message);
+                HandleDisconnect("Handshake rejected: " + resp.Message);
+            }
         }
 
         // ==================== Heartbeat ====================

@@ -110,7 +110,7 @@
         "接收 HandshakeResp 确认握手完成",
         "握手失败时断线重连"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F010",
