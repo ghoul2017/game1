@@ -186,6 +186,8 @@ namespace Client.Game
                 {
                     if (name == "背包")
                         UIManager.Instance.ShowPanel<BagPanel>();
+                    else if (name == "邮件")
+                        UIManager.Instance.ShowPanel<MailPanel>();
                     else
                         Debug.Log("[MainPanel] 点击: " + name);
                 });
