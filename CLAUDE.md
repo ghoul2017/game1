@@ -10,6 +10,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **序列化**: protobuf-net（`[ProtoContract]`/`[ProtoMember]`），无 .proto 文件
 - **服务端权威**: 所有游戏逻辑由服务端完成，客户端仅负责 UI 展示和表现
 
+## 技术栈
+
+| 模块 | 技术 |
+|---|---|
+| 网络 | System.Net.Sockets + async/await |
+| 协议 | TCP 二进制协议 `[MsgId:2B][Length:4B][Payload]`，小端序 |
+| 序列化 | protobuf-net (`[ProtoContract]`/`[ProtoMember]`) |
+| 读表 | CsvHelper + [ConfigTable] 自动扫描 + FileSystemWatcher 热更新 |
+| MySQL | MySqlConnector + Dapper |
+| MongoDB | MongoDB.Driver |
+| Redis | StackExchange.Redis |
+| 日志 | 自研 ILog + Appender 机制（参考 SLF4J + Logback） |
+| 实体 | IEntity + EntityFactory + IPersistFactory（参考 Java DataCache/DataCenter） |
+| 事件 | EventBus 发布订阅（类型安全，支持同步/异步/IEventListener） |
+
+## 核心架构模式
+
+参考 Java 游戏服务器的架构风格，写 C# 代码时遵循以下设计模式：
+
+| 模式 | 说明 | C# 适配 |
+|---|---|---|
+| Manager 单例 | 每个子系统一个 `XxxManager` 单例，持有状态+业务逻辑 | 静态 Instance + 私有构造 |
+| Message-Handler | Protobuf 消息 + Handler 类，命令模式分发 | protobuf-net + `IMessage` + `MessageHandler<TReq>` |
+| Registry 注册 | 消息/Handler/Module 通过注册表管理（反射扫描或手动） | 反射自动扫描 + Dictionary 映射 |
+| Write-Behind Cache | 内存缓存 + 定时批量持久化（60s） | Timer + dirty 标记 |
+| Per-User 线程队列 | 每个玩家串行队列，跨玩家并行 | Channel\<T\> |
+| Config 表系统 | CSV 配置 + 注解映射 + 缓存池 + 热更新 | CsvHelper + FileSystemWatcher |
+
 ## 构建与运行
 
 ### 服务端
@@ -209,6 +237,16 @@ devloop.cmd [N]  # 循环开发，默认 8 轮
 - **E:\work\sgserver** — 成熟三国游戏服务器（Java 8, Maven 多模块）
 - **E:\work\server** — 游戏服务器雏形（Java 21, Maven 多模块）
 
+### 进化日志
+
+- `2026-04-10` 初始化：review-commit agent, /rc 命令, /dev 命令, /devloop 命令, devloop.cmd 脚本
+- `2026-04-10` M14 背包系统：MsgId 引用冲突，更新命名约定（使用 global:: 前缀）
+- `2026-04-11` M17 任务系统：`Server.Game.Task` 与 `System.Threading.Tasks.Task` 冲突，改用 `TaskSystem`
+- `2026-04-11` 消息系统重构：IMessage + MessageHandler\<TReq\> + Router 自动扫描
+- `2026-04-11` Config 系统重构：`[ConfigTable]` 自动扫描 + ConfigManager API + xlsx2cs 工具
+- `2026-04-11` 目录结构重构：Handler 按模块合并，Proto 按模块合并，MsgId 重编 10101 起步
+- `2026-04-12` 共享代码迁移：消息/MsgId/IMessage/PacketCodec 迁移到 `shared/`（`GameShared.*`）
+
 ### 工具链
 
 #### Commands（`.claude/commands/`）
@@ -220,6 +258,9 @@ devloop.cmd [N]  # 循环开发，默认 8 轮
 | `/devloop` | 循环开发（带配额守卫） |
 | `/status` | 查看进度报告 |
 | `/rc` | review + commit |
+| `/newsystem <name>` | 生成新游戏系统目录骨架 |
+| `/newmsg <name>` | 生成消息类 + Handler + 注册 MsgId |
+| `/evolve` | 主动触发工具链自我进化 |
 
 #### Agents（`.claude/agents/`）
 
