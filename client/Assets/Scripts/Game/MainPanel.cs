@@ -1,12 +1,21 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 using Client.Core;
+using Client.Network;
+using GameShared.Protos;
 
 namespace Client.Game
 {
     public class MainPanel : UIPanel
     {
         private Text chatDisplay;
+        private InputField chatInput;
+        private Text chatTitle;
+        private int currentChannel = ChatChannel.World;
+        private const int MAX_CHAT_LINES = 50;
+        private readonly List<string> chatLines = new List<string>();
+
         private Text roleNameText;
         private Text roleJobText;
         private Text roleLevelText;
@@ -38,6 +47,12 @@ namespace Client.Game
                 if (roleJobText != null) roleJobText.text = $"[ {role.Job} ]";
                 if (roleLevelText != null) roleLevelText.text = $"Lv.{role.Level}";
             }
+            RegisterChatHandlers();
+        }
+
+        public override void OnHide()
+        {
+            UnregisterChatHandlers();
         }
 
         private void Update()
@@ -248,13 +263,32 @@ namespace Client.Game
             dRect.offsetMin = Vector2.zero;
             dRect.offsetMax = Vector2.zero;
 
-            var chatTitle = UIBuilder.CreateText(chatPanel.transform, "ChatTitle", "[ 聊天频道 ] 世界", 13,
-                UIBuilder.TextDim, TextAnchor.MiddleLeft);
+            // 频道切换按钮
+            var worldBtn = UIBuilder.CreateButton(chatPanel.transform, "WorldBtn", "世界", 55, 20, 12,
+                UIBuilder.AccentBlue, UIBuilder.TextWhite);
+            var wbRect = worldBtn.GetComponent<RectTransform>();
+            wbRect.anchorMin = new Vector2(0, 1);
+            wbRect.anchorMax = new Vector2(0, 1);
+            wbRect.pivot = new Vector2(0, 1);
+            wbRect.anchoredPosition = new Vector2(10, -3);
+            worldBtn.onClick.AddListener(() => SwitchChannel(ChatChannel.World));
+
+            var privateBtn = UIBuilder.CreateButton(chatPanel.transform, "PrivateBtn", "私聊", 55, 20, 12,
+                UIBuilder.ButtonNormal, UIBuilder.TextGray);
+            var pbRect = privateBtn.GetComponent<RectTransform>();
+            pbRect.anchorMin = new Vector2(0, 1);
+            pbRect.anchorMax = new Vector2(0, 1);
+            pbRect.pivot = new Vector2(0, 1);
+            pbRect.anchoredPosition = new Vector2(70, -3);
+            privateBtn.onClick.AddListener(() => SwitchChannel(ChatChannel.Private));
+
+            chatTitle = UIBuilder.CreateText(chatPanel.transform, "ChatTitle", "[ 世界 ]", 13,
+                UIBuilder.Gold, TextAnchor.MiddleLeft);
             var ctRect = chatTitle.GetComponent<RectTransform>();
             ctRect.anchorMin = new Vector2(0, 1);
             ctRect.anchorMax = new Vector2(1, 1);
             ctRect.pivot = new Vector2(0, 1);
-            ctRect.anchoredPosition = new Vector2(150, -3);
+            ctRect.anchoredPosition = new Vector2(130, -3);
             ctRect.sizeDelta = new Vector2(300, 18);
 
             chatDisplay = UIBuilder.CreateText(chatPanel.transform, "ChatDisplay",
@@ -266,7 +300,7 @@ namespace Client.Game
             cdRect.offsetMin = new Vector2(15, 45);
             cdRect.offsetMax = new Vector2(-15, -20);
 
-            var chatInput = UIBuilder.CreateInputField(chatPanel.transform, "ChatInput", "输入聊天内容...", 480, 33, 15);
+            chatInput = UIBuilder.CreateInputField(chatPanel.transform, "ChatInput", "输入聊天内容...", 480, 33, 15);
             var ciRect = chatInput.GetComponent<RectTransform>();
             ciRect.anchorMin = new Vector2(0, 0);
             ciRect.anchorMax = new Vector2(0, 0);
@@ -281,16 +315,98 @@ namespace Client.Game
             sbRect.pivot = new Vector2(0, 0);
             sbRect.anchoredPosition = new Vector2(645, 6);
 
-            sendBtn.onClick.AddListener(() =>
+            sendBtn.onClick.AddListener(OnSendChat);
+
+            // 初始化聊天记录
+            chatLines.Add("<color=#FFD700>[系统]</color> 欢迎来到游戏世界！");
+            chatLines.Add("<color=#FFD700>[系统]</color> 祝你冒险愉快！");
+        }
+
+        private void SwitchChannel(int channel)
+        {
+            currentChannel = channel;
+            string chName = channel == ChatChannel.World ? "世界" : "私聊";
+            if (chatTitle != null)
+                chatTitle.text = "[ " + chName + " ]";
+        }
+
+        private void OnSendChat()
+        {
+            if (chatInput == null) return;
+            string msg = chatInput.text.Trim();
+            if (string.IsNullOrEmpty(msg)) return;
+
+            var req = new ChatReq();
+            req.Channel = currentChannel;
+            req.Content = msg;
+            NetClient.Instance.Send(req);
+            chatInput.text = "";
+        }
+
+        // ==================== Chat Network Handlers ====================
+
+        private void RegisterChatHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc == null || nc.Dispatcher == null) return;
+            nc.Dispatcher.Register<ChatAck>(MsgId.ChatAck, HandleChatAck);
+            nc.Dispatcher.Register<ChatNtf>(MsgId.ChatNtf, HandleChatNtf);
+            nc.Dispatcher.Register<SystemChatNtf>(MsgId.SystemChatNtf, HandleSystemChatNtf);
+        }
+
+        private void UnregisterChatHandlers()
+        {
+            var nc = NetClient.Instance;
+            if (nc == null || nc.Dispatcher == null) return;
+            nc.Dispatcher.Unregister(MsgId.ChatAck);
+            nc.Dispatcher.Unregister(MsgId.ChatNtf);
+            nc.Dispatcher.Unregister(MsgId.SystemChatNtf);
+        }
+
+        private void HandleChatAck(ChatAck ack)
+        {
+            if (ack.Code != 0)
             {
-                string msg = chatInput.text.Trim();
-                if (!string.IsNullOrEmpty(msg))
-                {
-                    string name = GameData.CurrentRole?.Name ?? "玩家";
-                    chatDisplay.text += $"\n<color=#88CCFF>[{name}]</color> {msg}";
-                    chatInput.text = "";
-                }
-            });
+                UIToast.Show(GetChatErrorText(ack.Code));
+            }
+        }
+
+        private void HandleChatNtf(ChatNtf ntf)
+        {
+            string chTag = ntf.Channel == ChatChannel.World ? "世界" : "私聊";
+            string line = string.Format("<color=#88CCFF>[{0}][{1}]</color> {2}",
+                chTag, ntf.SenderName, ntf.Content);
+            AppendChatLine(line);
+        }
+
+        private void HandleSystemChatNtf(SystemChatNtf ntf)
+        {
+            string line = string.Format("<color=#FFD700>[系统]</color> {0}", ntf.Content);
+            AppendChatLine(line);
+        }
+
+        private void AppendChatLine(string line)
+        {
+            chatLines.Add(line);
+            if (chatLines.Count > MAX_CHAT_LINES)
+                chatLines.RemoveAt(0);
+
+            if (chatDisplay != null)
+                chatDisplay.text = string.Join("\n", chatLines.ToArray());
+        }
+
+        private static string GetChatErrorText(int code)
+        {
+            switch (code)
+            {
+                case 3001: return "聊天内容不能为空";
+                case 3002: return "发言太快，请稍后再试";
+                case 3003: return "无效的聊天频道";
+                case 3004: return "无效的私聊目标";
+                case 3005: return "目标玩家不在线";
+                case 3006: return "未登录";
+                default: return "发送失败(" + code + ")";
+            }
         }
 
         private void CreateSystemButtons()

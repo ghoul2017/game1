@@ -189,7 +189,7 @@
         "删除邮件（MailDeleteReq/Ack）",
         "新邮件通知（MailNewNtf）"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F016",
@@ -202,7 +202,7 @@
         "接收 ChatNtf 显示其他玩家消息",
         "接收 SystemChatNtf 显示系统公告"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F017",
