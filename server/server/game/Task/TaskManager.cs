@@ -1,4 +1,4 @@
-using server.common.protos;
+using GameShared.Protos;
 using Server.Core.Entity;
 using Server.Core.Log;
 using Server.Game.Player;

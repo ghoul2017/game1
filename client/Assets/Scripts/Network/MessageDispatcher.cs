@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Client.Shared.Messages;
+using System.IO;
+using GameShared.Network;
+using GameShared.Protos;
+using ProtoBuf;
 
 namespace Client.Network
 {
@@ -19,7 +22,9 @@ namespace Client.Network
         {
             _handlers[msgId] = payload =>
             {
-                var msg = MessageSerializer.Deserialize<T>(payload);
+                T msg;
+                using (var ms = new MemoryStream(payload))
+                    msg = Serializer.Deserialize<T>(ms);
                 handler(msg);
             };
         }

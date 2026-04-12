@@ -1,86 +1,97 @@
-using System.Collections.Generic;
 using ProtoBuf;
+using GameShared.Network;
+using System.Collections.Generic;
 
-namespace Client.Shared.Messages
+namespace GameShared.Protos
 {
-    // ─── 查询任务列表 ───
+    #region 查询任务列表
 
     [ProtoContract]
     public class QueryTaskListReq : IMessage
     {
-        public ushort MsgId => MsgId.QueryTaskListReq;
+        public ushort MsgId => GameShared.Protos.MsgId.QueryTaskListReq;
     }
 
     [ProtoContract]
     public class QueryTaskListAck : IMessage
     {
-        public ushort MsgId => MsgId.QueryTaskListAck;
+        public ushort MsgId => GameShared.Protos.MsgId.QueryTaskListAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
     }
 
-    // ─── 接取任务 ───
+    #endregion
+
+    #region 接取任务
 
     [ProtoContract]
     public class TaskAcceptReq : IMessage
     {
-        public ushort MsgId => MsgId.TaskAcceptReq;
+        public ushort MsgId => GameShared.Protos.MsgId.TaskAcceptReq;
         [ProtoMember(1)] public int TaskId { get; set; }
     }
 
     [ProtoContract]
     public class TaskAcceptAck : IMessage
     {
-        public ushort MsgId => MsgId.TaskAcceptAck;
+        public ushort MsgId => GameShared.Protos.MsgId.TaskAcceptAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public TaskInfo Task { get; set; } = new TaskInfo();
     }
 
-    // ─── 提交任务 ───
+    #endregion
+
+    #region 提交任务
 
     [ProtoContract]
     public class TaskSubmitReq : IMessage
     {
-        public ushort MsgId => MsgId.TaskSubmitReq;
+        public ushort MsgId => GameShared.Protos.MsgId.TaskSubmitReq;
         [ProtoMember(1)] public int TaskId { get; set; }
     }
 
     [ProtoContract]
     public class TaskSubmitAck : IMessage
     {
-        public ushort MsgId => MsgId.TaskSubmitAck;
+        public ushort MsgId => GameShared.Protos.MsgId.TaskSubmitAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int TaskId { get; set; }
         [ProtoMember(3)] public List<TaskRewardInfo> Rewards { get; set; } = new List<TaskRewardInfo>();
     }
 
-    // ─── 放弃任务 ───
+    #endregion
+
+    #region 放弃任务
 
     [ProtoContract]
     public class TaskGiveUpReq : IMessage
     {
-        public ushort MsgId => MsgId.TaskGiveUpReq;
+        public ushort MsgId => GameShared.Protos.MsgId.TaskGiveUpReq;
         [ProtoMember(1)] public int TaskId { get; set; }
     }
 
     [ProtoContract]
     public class TaskGiveUpAck : IMessage
     {
-        public ushort MsgId => MsgId.TaskGiveUpAck;
+        public ushort MsgId => GameShared.Protos.MsgId.TaskGiveUpAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int TaskId { get; set; }
     }
 
-    // ─── 任务变更通知 ───
+    #endregion
+
+    #region 任务变更通知
 
     [ProtoContract]
     public class TaskChangedNtf : IMessage
     {
-        public ushort MsgId => MsgId.TaskChangedNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.TaskChangedNtf;
         [ProtoMember(1)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
     }
 
-    // ─── 通用任务信息 ───
+    #endregion
+
+    #region 通用任务信息
 
     [ProtoContract]
     public class TaskInfo
@@ -107,4 +118,6 @@ namespace Client.Shared.Messages
         [ProtoMember(1)] public int ConfigId { get; set; }
         [ProtoMember(2)] public int Count { get; set; }
     }
+
+    #endregion
 }

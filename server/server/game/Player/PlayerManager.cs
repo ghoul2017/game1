@@ -1,6 +1,7 @@
 using Server.Core.Entity;
 using Server.Core.Log;
 using Server.Network;
+using GameShared.Network;
 
 namespace Server.Game.Player;
 

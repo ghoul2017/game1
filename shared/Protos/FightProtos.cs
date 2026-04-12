@@ -1,14 +1,15 @@
-using System.Collections.Generic;
 using ProtoBuf;
+using GameShared.Network;
+using System.Collections.Generic;
 
-namespace Client.Shared.Messages
+namespace GameShared.Protos
 {
-    // ─── 使用技能 ───
+    #region 使用技能
 
     [ProtoContract]
     public class UseSkillReq : IMessage
     {
-        public ushort MsgId => MsgId.UseSkillReq;
+        public ushort MsgId => GameShared.Protos.MsgId.UseSkillReq;
         [ProtoMember(1)] public int SkillId { get; set; }
         [ProtoMember(2)] public int X { get; set; }
         [ProtoMember(3)] public int Y { get; set; }
@@ -27,7 +28,7 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class UseSkillAck : IMessage
     {
-        public ushort MsgId => MsgId.UseSkillAck;
+        public ushort MsgId => GameShared.Protos.MsgId.UseSkillAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public long AttackerId { get; set; }
         [ProtoMember(3)] public int SkillId { get; set; }
@@ -39,7 +40,9 @@ namespace Client.Shared.Messages
         [ProtoMember(9)] public List<SkillTargetInfo> Targets { get; set; } = new List<SkillTargetInfo>();
     }
 
-    // ─── HP变化通知 ───
+    #endregion
+
+    #region HP变化通知
 
     public static class HpChangeReason
     {
@@ -53,25 +56,29 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class HpChangedNtf : IMessage
     {
-        public ushort MsgId => MsgId.HpChangedNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.HpChangedNtf;
         [ProtoMember(1)] public long ObjectId { get; set; }
         [ProtoMember(2)] public int DeltaHp { get; set; }
         [ProtoMember(3)] public int Hp { get; set; }
         [ProtoMember(4)] public int Reason { get; set; }
     }
 
-    // ─── 被击杀通知 ───
+    #endregion
+
+    #region 被击杀通知
 
     [ProtoContract]
     public class KilledByNtf : IMessage
     {
-        public ushort MsgId => MsgId.KilledByNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.KilledByNtf;
         [ProtoMember(1)] public long KillerId { get; set; }
         [ProtoMember(2)] public string KillerName { get; set; } = "";
         [ProtoMember(3)] public bool IsMonster { get; set; }
     }
 
-    // ─── PK模式 ───
+    #endregion
+
+    #region PK模式
 
     public static class PkMode
     {
@@ -84,14 +91,16 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class SetPkModeReq : IMessage
     {
-        public ushort MsgId => MsgId.SetPkModeReq;
+        public ushort MsgId => GameShared.Protos.MsgId.SetPkModeReq;
         [ProtoMember(1)] public int PkMode { get; set; }
     }
 
     [ProtoContract]
     public class PkModeChangedNtf : IMessage
     {
-        public ushort MsgId => MsgId.PkModeChangedNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.PkModeChangedNtf;
         [ProtoMember(1)] public int PkMode { get; set; }
     }
+
+    #endregion
 }

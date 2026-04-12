@@ -1,8 +1,9 @@
 using ProtoBuf;
+using GameShared.Network;
 
-namespace Client.Shared.Messages
+namespace GameShared.Protos
 {
-    // ─── 聊天频道常量 ───
+    #region 聊天频道常量
 
     public static class ChatChannel
     {
@@ -11,12 +12,14 @@ namespace Client.Shared.Messages
         public const int Private = 3;
     }
 
-    // ─── 发送聊天 ───
+    #endregion
+
+    #region 发送聊天
 
     [ProtoContract]
     public class ChatReq : IMessage
     {
-        public ushort MsgId => MsgId.ChatReq;
+        public ushort MsgId => GameShared.Protos.MsgId.ChatReq;
         [ProtoMember(1)] public int Channel { get; set; }
         [ProtoMember(2)] public string Content { get; set; } = "";
         [ProtoMember(3)] public string TargetName { get; set; } = "";
@@ -25,16 +28,18 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class ChatAck : IMessage
     {
-        public ushort MsgId => MsgId.ChatAck;
+        public ushort MsgId => GameShared.Protos.MsgId.ChatAck;
         [ProtoMember(1)] public int Code { get; set; }
     }
 
-    // ─── 聊天消息通知 ───
+    #endregion
+
+    #region 聊天消息通知
 
     [ProtoContract]
     public class ChatNtf : IMessage
     {
-        public ushort MsgId => MsgId.ChatNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.ChatNtf;
         [ProtoMember(1)] public int Channel { get; set; }
         [ProtoMember(2)] public long SenderId { get; set; }
         [ProtoMember(3)] public string SenderName { get; set; } = "";
@@ -42,13 +47,17 @@ namespace Client.Shared.Messages
         [ProtoMember(5)] public long SendTime { get; set; }
     }
 
-    // ─── 系统广播通知 ───
+    #endregion
+
+    #region 系统广播通知
 
     [ProtoContract]
     public class SystemChatNtf : IMessage
     {
-        public ushort MsgId => MsgId.SystemChatNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.SystemChatNtf;
         [ProtoMember(1)] public string Content { get; set; } = "";
         [ProtoMember(2)] public long SendTime { get; set; }
     }
+
+    #endregion
 }

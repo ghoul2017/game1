@@ -4,7 +4,8 @@ using Server.Core;
 using Server.Core.Log;
 using Server.Game.Map;
 using Server.Network;
-using server.common.protos;
+using GameShared.Network;
+using GameShared.Protos;
 using Server.Game.Player;
 
 namespace Server.Game.Fight;

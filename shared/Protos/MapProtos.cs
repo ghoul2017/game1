@@ -1,9 +1,10 @@
-using System.Collections.Generic;
 using ProtoBuf;
+using GameShared.Network;
+using System.Collections.Generic;
 
-namespace Client.Shared.Messages
+namespace GameShared.Protos
 {
-    // ─── 地图错误码 ───
+    #region 地图错误码
 
     public static class MapErrorCode
     {
@@ -15,12 +16,14 @@ namespace Client.Shared.Messages
         public const int InvalidPosition = 5;
     }
 
-    // ─── 进入地图 ───
+    #endregion
+
+    #region 进入地图
 
     [ProtoContract]
     public class EnterMapReq : IMessage
     {
-        public ushort MsgId => MsgId.EnterMapReq;
+        public ushort MsgId => GameShared.Protos.MsgId.EnterMapReq;
         [ProtoMember(1)] public int MapCfgId { get; set; }
         [ProtoMember(2)] public int Line { get; set; }
     }
@@ -28,7 +31,7 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class EnterMapAck : IMessage
     {
-        public ushort MsgId => MsgId.EnterMapAck;
+        public ushort MsgId => GameShared.Protos.MsgId.EnterMapAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int MapCfgId { get; set; }
         [ProtoMember(3)] public int Line { get; set; }
@@ -36,27 +39,31 @@ namespace Client.Shared.Messages
         [ProtoMember(5)] public int Y { get; set; }
     }
 
-    // ─── 离开地图 ───
+    #endregion
+
+    #region 离开地图
 
     [ProtoContract]
     public class LeaveMapReq : IMessage
     {
-        public ushort MsgId => MsgId.LeaveMapReq;
+        public ushort MsgId => GameShared.Protos.MsgId.LeaveMapReq;
     }
 
     [ProtoContract]
     public class LeaveMapAck : IMessage
     {
-        public ushort MsgId => MsgId.LeaveMapAck;
+        public ushort MsgId => GameShared.Protos.MsgId.LeaveMapAck;
         [ProtoMember(1)] public int Code { get; set; }
     }
 
-    // ─── 切换地图 ───
+    #endregion
+
+    #region 切换地图
 
     [ProtoContract]
     public class ChangeMapReq : IMessage
     {
-        public ushort MsgId => MsgId.ChangeMapReq;
+        public ushort MsgId => GameShared.Protos.MsgId.ChangeMapReq;
         [ProtoMember(1)] public int TargetMapCfgId { get; set; }
         [ProtoMember(2)] public int TargetLine { get; set; }
         [ProtoMember(3)] public int X { get; set; }
@@ -66,7 +73,7 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class ChangeMapAck : IMessage
     {
-        public ushort MsgId => MsgId.ChangeMapAck;
+        public ushort MsgId => GameShared.Protos.MsgId.ChangeMapAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int MapCfgId { get; set; }
         [ProtoMember(3)] public int Line { get; set; }
@@ -74,12 +81,14 @@ namespace Client.Shared.Messages
         [ProtoMember(5)] public int Y { get; set; }
     }
 
-    // ─── 地图移动 ───
+    #endregion
+
+    #region 地图移动
 
     [ProtoContract]
     public class MapMoveReq : IMessage
     {
-        public ushort MsgId => MsgId.MapMoveReq;
+        public ushort MsgId => GameShared.Protos.MsgId.MapMoveReq;
         [ProtoMember(1)] public int X { get; set; }
         [ProtoMember(2)] public int Y { get; set; }
     }
@@ -87,13 +96,15 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class MapMoveAck : IMessage
     {
-        public ushort MsgId => MsgId.MapMoveAck;
+        public ushort MsgId => GameShared.Protos.MsgId.MapMoveAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int X { get; set; }
         [ProtoMember(3)] public int Y { get; set; }
     }
 
-    // ─── 地图对象信息 ───
+    #endregion
+
+    #region 地图对象信息
 
     [ProtoContract]
     public class MapObjectInfo
@@ -105,35 +116,39 @@ namespace Client.Shared.Messages
         [ProtoMember(5)] public int Y { get; set; }
     }
 
-    // ─── 地图通知消息 ───
+    #endregion
+
+    #region 地图通知消息
 
     [ProtoContract]
     public class MapObjectsNtf : IMessage
     {
-        public ushort MsgId => MsgId.MapObjectsNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.MapObjectsNtf;
         [ProtoMember(1)] public List<MapObjectInfo> Objects { get; set; } = new List<MapObjectInfo>();
     }
 
     [ProtoContract]
     public class MapPlayerEnterNtf : IMessage
     {
-        public ushort MsgId => MsgId.MapPlayerEnterNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.MapPlayerEnterNtf;
         [ProtoMember(1)] public MapObjectInfo Player { get; set; } = new MapObjectInfo();
     }
 
     [ProtoContract]
     public class MapPlayerLeaveNtf : IMessage
     {
-        public ushort MsgId => MsgId.MapPlayerLeaveNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.MapPlayerLeaveNtf;
         [ProtoMember(1)] public long RoleId { get; set; }
     }
 
     [ProtoContract]
     public class MapPlayerMoveNtf : IMessage
     {
-        public ushort MsgId => MsgId.MapPlayerMoveNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.MapPlayerMoveNtf;
         [ProtoMember(1)] public long RoleId { get; set; }
         [ProtoMember(2)] public int X { get; set; }
         [ProtoMember(3)] public int Y { get; set; }
     }
+
+    #endregion
 }

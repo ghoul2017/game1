@@ -1,6 +1,7 @@
 using Server.Core.Log;
 using Server.Network;
-using server.common.protos;
+using GameShared.Network;
+using GameShared.Protos;
 
 namespace Server.Game.Fight;
 

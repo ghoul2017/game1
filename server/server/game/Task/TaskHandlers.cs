@@ -1,7 +1,8 @@
-using server.common.protos;
+using GameShared.Protos;
 using Server.Core.Log;
 using Server.Game.Player;
 using Server.Network;
+using GameShared.Network;
 
 namespace Server.Game.TaskSystem;
 

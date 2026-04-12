@@ -1,47 +1,52 @@
-using System.Collections.Generic;
 using ProtoBuf;
+using GameShared.Network;
+using System.Collections.Generic;
 
-namespace Client.Shared.Messages
+namespace GameShared.Protos
 {
-    // ─── 查询背包 ───
+    #region 查询背包
 
     [ProtoContract]
     public class QueryBagReq : IMessage
     {
-        public ushort MsgId => MsgId.QueryBagReq;
+        public ushort MsgId => GameShared.Protos.MsgId.QueryBagReq;
     }
 
     [ProtoContract]
     public class QueryBagAck : IMessage
     {
-        public ushort MsgId => MsgId.QueryBagAck;
+        public ushort MsgId => GameShared.Protos.MsgId.QueryBagAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<BagItemInfo> Items { get; set; } = new List<BagItemInfo>();
         [ProtoMember(3)] public int Capacity { get; set; }
     }
 
-    // ─── 整理背包 ───
+    #endregion
+
+    #region 整理背包
 
     [ProtoContract]
     public class BagTidyReq : IMessage
     {
-        public ushort MsgId => MsgId.BagTidyReq;
+        public ushort MsgId => GameShared.Protos.MsgId.BagTidyReq;
     }
 
     [ProtoContract]
     public class BagTidyAck : IMessage
     {
-        public ushort MsgId => MsgId.BagTidyAck;
+        public ushort MsgId => GameShared.Protos.MsgId.BagTidyAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<BagItemInfo> Items { get; set; } = new List<BagItemInfo>();
     }
 
-    // ─── 交换物品 ───
+    #endregion
+
+    #region 交换物品
 
     [ProtoContract]
     public class BagSwapReq : IMessage
     {
-        public ushort MsgId => MsgId.BagSwapReq;
+        public ushort MsgId => GameShared.Protos.MsgId.BagSwapReq;
         [ProtoMember(1)] public int Index1 { get; set; }
         [ProtoMember(2)] public int Index2 { get; set; }
     }
@@ -49,16 +54,18 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class BagSwapAck : IMessage
     {
-        public ushort MsgId => MsgId.BagSwapAck;
+        public ushort MsgId => GameShared.Protos.MsgId.BagSwapAck;
         [ProtoMember(1)] public int Code { get; set; }
     }
 
-    // ─── 使用物品 ───
+    #endregion
+
+    #region 使用物品
 
     [ProtoContract]
     public class BagUseItemReq : IMessage
     {
-        public ushort MsgId => MsgId.BagUseItemReq;
+        public ushort MsgId => GameShared.Protos.MsgId.BagUseItemReq;
         [ProtoMember(1)] public int Index { get; set; }
         [ProtoMember(2)] public int Count { get; set; }
     }
@@ -66,22 +73,26 @@ namespace Client.Shared.Messages
     [ProtoContract]
     public class BagUseItemAck : IMessage
     {
-        public ushort MsgId => MsgId.BagUseItemAck;
+        public ushort MsgId => GameShared.Protos.MsgId.BagUseItemAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int ConfigId { get; set; }
     }
 
-    // ─── 物品变化通知 ───
+    #endregion
+
+    #region 物品变化通知
 
     [ProtoContract]
     public class BagItemChangedNtf : IMessage
     {
-        public ushort MsgId => MsgId.BagItemChangedNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.BagItemChangedNtf;
         [ProtoMember(1)] public List<BagItemInfo> ChangedItems { get; set; } = new List<BagItemInfo>();
         [ProtoMember(2)] public List<int> RemovedIndices { get; set; } = new List<int>();
     }
 
-    // ─── 通用物品信息 ───
+    #endregion
+
+    #region 通用物品信息
 
     [ProtoContract]
     public class BagItemInfo
@@ -92,4 +103,6 @@ namespace Client.Shared.Messages
         [ProtoMember(4)] public int Index { get; set; }
         [ProtoMember(5)] public bool Bind { get; set; }
     }
+
+    #endregion
 }

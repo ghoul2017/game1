@@ -21,3 +21,4 @@ server/.vs/
 .vs/
 *.user
 *.suo
+client/Assets/Scripts/GameShared/

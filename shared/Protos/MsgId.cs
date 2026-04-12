@@ -1,7 +1,7 @@
-namespace Client.Shared.Messages
+namespace GameShared.Protos
 {
     /// <summary>
-    /// 消息ID常量，与服务端 server.common.protos.MsgId 保持一致
+    /// 消息ID常量，客户端和服务端共享
     /// 分段规则：每模块 100 个ID
     /// </summary>
     public static class MsgId

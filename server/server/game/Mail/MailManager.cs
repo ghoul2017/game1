@@ -4,7 +4,8 @@ using Server.Core.Log;
 using Server.Game.Bag;
 using Server.Game.Player;
 using Server.Network;
-using server.common.protos;
+using GameShared.Network;
+using GameShared.Protos;
 
 namespace Server.Game.Mail;
 

@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using GameShared.Network;
 using Server.Core.Log;
 
 namespace Server.Network;
@@ -139,23 +140,21 @@ public class TcpSession : IDisposable
     private void ProcessBuffer()
     {
         var data = _packetBuffer.ToArray();
-        var span = data.AsSpan();
         var offset = 0;
 
-        while (offset < span.Length)
+        while (offset < data.Length)
         {
-            var result = PacketCodec.TryDecode(span.Slice(offset));
+            var result = PacketCodec.TryDecode(data, offset, data.Length - offset);
             if (result == null)
                 break;
 
-            var (msgId, payload, consumed) = result.Value;
-            offset += consumed;
+            offset += result.Consumed;
 
             // 收到任何消息都更新活跃时间
             UpdateActiveTime();
 
             // 分发给路由器处理（不 await，避免阻塞接收循环）
-            _ = _router.RouteAsync(this, msgId, payload);
+            _ = _router.RouteAsync(this, result.MsgId, result.Payload);
         }
 
         // 保留未消费的数据

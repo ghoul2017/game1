@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using GameShared.Network;
+using GameShared.Protos;
 
-namespace Client.Shared.Messages
+namespace Client.Network
 {
     /// <summary>
     /// MsgId → 消息类型映射，用于服务端推送消息的反序列化
@@ -18,6 +20,17 @@ namespace Client.Shared.Messages
         public static Type GetType(ushort msgId)
         {
             return _types.TryGetValue(msgId, out var type) ? type : null;
+        }
+
+        /// <summary>
+        /// 反序列化消息（根据 MsgId 自动查找类型）
+        /// </summary>
+        public static IMessage Deserialize(ushort msgId, byte[] payload)
+        {
+            var type = GetType(msgId);
+            if (type == null) return null;
+            using var ms = new System.IO.MemoryStream(payload);
+            return (IMessage)ProtoBuf.Serializer.NonGeneric.Deserialize(type, ms);
         }
 
         /// <summary>

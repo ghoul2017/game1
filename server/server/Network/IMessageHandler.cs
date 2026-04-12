@@ -1,3 +1,4 @@
+using GameShared.Network;
 using ProtoBuf;
 using Server.Game.Player;
 

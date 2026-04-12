@@ -1,11 +1,11 @@
 using System;
 using System.IO;
 
-namespace Client.Network
+namespace GameShared.Network
 {
     /// <summary>
     /// 协议格式: [MsgId:2B][Length:4B][Payload:Length字节]
-    /// 小端序，与服务端 PacketCodec 保持一致
+    /// 小端序，客户端和服务端共享
     /// </summary>
     public static class PacketCodec
     {
@@ -62,8 +62,6 @@ namespace Client.Network
             }
         }
 
-        #region Little-Endian Read/Write (Unity 4.7.1 compatible)
-
         internal static ushort ReadUInt16LE(byte[] buf, int offset)
         {
             return (ushort)(buf[offset] | (buf[offset + 1] << 8));
@@ -90,7 +88,5 @@ namespace Client.Network
             buf[offset + 2] = (byte)((value >> 16) & 0xFF);
             buf[offset + 3] = (byte)((value >> 24) & 0xFF);
         }
-
-        #endregion
     }
 }

@@ -1,6 +1,7 @@
+using GameShared.Network;
+using GameShared.Protos;
 using Server.Core.Log;
 using System.Timers;
-using server.common.protos;
 using server.game.user;
 using Timer = System.Timers.Timer;
 

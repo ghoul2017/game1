@@ -1,86 +1,97 @@
-using System.Collections.Generic;
 using ProtoBuf;
+using GameShared.Network;
+using System.Collections.Generic;
 
-namespace Client.Shared.Messages
+namespace GameShared.Protos
 {
-    // ─── 查询邮件列表 ───
+    #region 查询邮件列表
 
     [ProtoContract]
     public class QueryMailListReq : IMessage
     {
-        public ushort MsgId => MsgId.QueryMailListReq;
+        public ushort MsgId => GameShared.Protos.MsgId.QueryMailListReq;
     }
 
     [ProtoContract]
     public class QueryMailListAck : IMessage
     {
-        public ushort MsgId => MsgId.QueryMailListAck;
+        public ushort MsgId => GameShared.Protos.MsgId.QueryMailListAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<MailInfo> Mails { get; set; } = new List<MailInfo>();
     }
 
-    // ─── 标记已读 ───
+    #endregion
+
+    #region 标记已读
 
     [ProtoContract]
     public class MailReadReq : IMessage
     {
-        public ushort MsgId => MsgId.MailReadReq;
+        public ushort MsgId => GameShared.Protos.MsgId.MailReadReq;
         [ProtoMember(1)] public List<long> MailIds { get; set; } = new List<long>();
     }
 
     [ProtoContract]
     public class MailReadAck : IMessage
     {
-        public ushort MsgId => MsgId.MailReadAck;
+        public ushort MsgId => GameShared.Protos.MsgId.MailReadAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<long> ReadMailIds { get; set; } = new List<long>();
     }
 
-    // ─── 领取附件 ───
+    #endregion
+
+    #region 领取附件
 
     [ProtoContract]
     public class MailGetItemReq : IMessage
     {
-        public ushort MsgId => MsgId.MailGetItemReq;
+        public ushort MsgId => GameShared.Protos.MsgId.MailGetItemReq;
         [ProtoMember(1)] public List<long> MailIds { get; set; } = new List<long>();
     }
 
     [ProtoContract]
     public class MailGetItemAck : IMessage
     {
-        public ushort MsgId => MsgId.MailGetItemAck;
+        public ushort MsgId => GameShared.Protos.MsgId.MailGetItemAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<long> ClaimedMailIds { get; set; } = new List<long>();
         [ProtoMember(3)] public List<MailAttachmentInfo> Items { get; set; } = new List<MailAttachmentInfo>();
     }
 
-    // ─── 删除邮件 ───
+    #endregion
+
+    #region 删除邮件
 
     [ProtoContract]
     public class MailDeleteReq : IMessage
     {
-        public ushort MsgId => MsgId.MailDeleteReq;
+        public ushort MsgId => GameShared.Protos.MsgId.MailDeleteReq;
         [ProtoMember(1)] public List<long> MailIds { get; set; } = new List<long>();
     }
 
     [ProtoContract]
     public class MailDeleteAck : IMessage
     {
-        public ushort MsgId => MsgId.MailDeleteAck;
+        public ushort MsgId => GameShared.Protos.MsgId.MailDeleteAck;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<long> DeletedMailIds { get; set; } = new List<long>();
     }
 
-    // ─── 新邮件通知 ───
+    #endregion
+
+    #region 新邮件通知
 
     [ProtoContract]
     public class MailNewNtf : IMessage
     {
-        public ushort MsgId => MsgId.MailNewNtf;
+        public ushort MsgId => GameShared.Protos.MsgId.MailNewNtf;
         [ProtoMember(1)] public MailInfo Mail { get; set; } = new MailInfo();
     }
 
-    // ─── 通用邮件信息 ───
+    #endregion
+
+    #region 通用邮件信息
 
     [ProtoContract]
     public class MailInfo
@@ -101,4 +112,6 @@ namespace Client.Shared.Messages
         [ProtoMember(1)] public int ConfigId { get; set; }
         [ProtoMember(2)] public int Count { get; set; }
     }
+
+    #endregion
 }
