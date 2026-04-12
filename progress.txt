@@ -8,3 +8,4 @@
 2026-04-12 F004 COMPLETED - protobuf-net 3.2.45 (netstandard2.0) DLL 引入客户端，编译通过
 2026-04-12 F005 COMPLETED - 8模块消息类同步到客户端，ProtoMember编号一致，编译通过
 2026-04-12 F003 COMPLETED - 客户端消息路由分发器 MessageDispatcher，编译通过
+2026-04-12 REFACTOR COMPLETED - 消息和网络基础代码迁移到 shared/，双端共享一份代码（GameShared.Network/GameShared.Protos）
