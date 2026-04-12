@@ -33,10 +33,16 @@ namespace Client.Network
         public float maxReconnectDelay = 30f;
 
         // --- State ---
-        private enum ConnState { Disconnected, Connecting, Handshaking, Connected, Reconnecting }
+        public enum ConnState { Disconnected, Connecting, Handshaking, Connected, Reconnecting }
 
         public bool IsConnected { get { return _state == ConnState.Connected && IsSocketAlive(); } }
         public bool IsConnecting { get { return _state == ConnState.Connecting || _state == ConnState.Reconnecting || _state == ConnState.Handshaking; } }
+
+        public ConnState State => _state;
+        public int PingMs { get; private set; }
+        public int CurrentReconnectAttempt => _reconnectAttempts;
+        public int MaxReconnectAttempt => maxReconnectAttempts;
+        public float ReconnectCountdown => _state == ConnState.Reconnecting ? Mathf.Max(0f, _nextReconnectTime - Time.time) : 0f;
 
         private ConnState _state = ConnState.Disconnected;
 
@@ -295,12 +301,16 @@ namespace Client.Network
 
         private void DoDisconnect()
         {
-            // Cleanup handshake handler if still registered
+            // Cleanup handlers
             if (_dispatcher != null)
+            {
                 _dispatcher.Unregister(MsgId.HandshakeResp);
+                _dispatcher.Unregister(MsgId.HeartbeatResp);
+            }
 
             _running = false;
             _state = ConnState.Disconnected;
+            PingMs = 0;
 
             try { _stream?.Close(); } catch { }
             try { _tcp?.Close(); } catch { }
@@ -386,6 +396,11 @@ namespace Client.Network
             {
                 Debug.Log("[NetClient] Handshake OK, connected to " + host + ":" + port);
                 _state = ConnState.Connected;
+
+                // Register heartbeat handler for ping measurement
+                if (_dispatcher != null)
+                    _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+
                 OnConnected?.Invoke();
             }
             else
@@ -402,6 +417,13 @@ namespace Client.Network
             var req = new HeartbeatReq();
             req.ClientTime = DateTime.UtcNow.Ticks;
             Send(req);
+        }
+
+        private void HandleHeartbeatResp(HeartbeatResp resp)
+        {
+            long nowTicks = DateTime.UtcNow.Ticks;
+            long rttTicks = nowTicks - resp.ClientTime;
+            PingMs = (int)(rttTicks / System.TimeSpan.TicksPerMillisecond);
         }
 
         // ==================== Helpers ====================

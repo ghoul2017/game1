@@ -15,6 +15,7 @@ namespace Client.Core
             MsgTypeRegistry.Init();
 
             UIManager.EnsureCreated();
+            NetworkStatusPanel.EnsureCreated();
             UIManager.Instance.ShowPanel<LoadingPanel>();
         }
     }
