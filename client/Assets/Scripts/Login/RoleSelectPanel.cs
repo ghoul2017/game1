@@ -128,6 +128,7 @@ namespace Client.Login
                 nc.Dispatcher.Register<RoleListResp>(MsgId.RoleListResp, HandleRoleListResp);
                 nc.Dispatcher.Register<CreateRoleResp>(MsgId.CreateRoleResp, HandleCreateRoleResp);
                 nc.Dispatcher.Register<SelectRoleResp>(MsgId.SelectRoleResp, HandleSelectRoleResp);
+                nc.Dispatcher.Register<EnterMapAck>(MsgId.EnterMapAck, HandleEnterMapAck);
             }
         }
 
@@ -139,6 +140,7 @@ namespace Client.Login
                 nc.Dispatcher.Unregister(MsgId.RoleListResp);
                 nc.Dispatcher.Unregister(MsgId.CreateRoleResp);
                 nc.Dispatcher.Unregister(MsgId.SelectRoleResp);
+                nc.Dispatcher.Unregister(MsgId.EnterMapAck);
             }
         }
 
@@ -221,13 +223,44 @@ namespace Client.Login
                     Level = resp.Level,
                     Job = GameData.GetJobName(resp.Job)
                 };
-                Debug.Log($"[RoleSelectPanel] 进入游戏: {resp.Name} Lv.{resp.Level}");
+                Debug.Log(string.Format("[RoleSelectPanel] 选角成功: {0} Lv.{1}，正在进入地图...", resp.Name, resp.Level));
+                selectTip.text = "正在进入地图...";
+                selectTip.color = UIBuilder.TextDim;
+
+                // 发送进图请求（默认进入新手村）
+                NetClient.Instance.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
+            }
+            else
+            {
+                selectTip.text = resp.Message;
+                selectTip.color = Color.red;
+                enterBtn.interactable = true;
+            }
+        }
+
+        private void HandleEnterMapAck(EnterMapAck resp)
+        {
+            if (resp.Code == MapErrorCode.Ok)
+            {
+                Debug.Log(string.Format("[RoleSelectPanel] 进图成功: MapCfgId={0} Line={1} Spawn=({2},{3})",
+                    resp.MapCfgId, resp.Line, resp.X, resp.Y));
+
+                // 缓存进图数据
+                GameData.CurrentMap = new EnterMapData
+                {
+                    MapCfgId = resp.MapCfgId,
+                    Line = resp.Line,
+                    SpawnX = resp.X,
+                    SpawnY = resp.Y
+                };
+
                 UIManager.Instance.ClearAll();
                 SceneManager.LoadScene("GameScene");
             }
             else
             {
-                selectTip.text = resp.Message;
+                Debug.LogError(string.Format("[RoleSelectPanel] 进图失败: Code={0}", resp.Code));
+                selectTip.text = string.Format("进入地图失败 (错误码:{0})", resp.Code);
                 selectTip.color = Color.red;
                 enterBtn.interactable = true;
             }

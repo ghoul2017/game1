@@ -34,5 +34,18 @@ namespace Client.Game
         public static RoleData CurrentRole { get; set; }
         public static long PlayerId { get; set; }
         public static string Token { get; set; } = "";
+
+        /// <summary>
+        /// 进图数据缓存（EnterMapAck 返回后填充）
+        /// </summary>
+        public static EnterMapData CurrentMap { get; set; }
+    }
+
+    public class EnterMapData
+    {
+        public int MapCfgId;
+        public int Line;
+        public int SpawnX;
+        public int SpawnY;
     }
 }

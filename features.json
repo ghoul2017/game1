@@ -123,7 +123,7 @@
         "MapGround 根据服务端数据生成地图",
         "PlayerController 在正确出生点初始化"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",

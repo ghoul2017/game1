@@ -21,8 +21,27 @@ namespace Client.Game
 
         private void InitializeScene()
         {
-            // 默认加载新手村
-            var mapConfig = DefaultMapConfigs.GetById(1);
+            MapConfig mapConfig;
+            int spawnX, spawnY;
+
+            // 优先使用服务端进图数据
+            var mapData = GameData.CurrentMap;
+            if (mapData != null)
+            {
+                mapConfig = DefaultMapConfigs.GetById(mapData.MapCfgId);
+                spawnX = mapData.SpawnX;
+                spawnY = mapData.SpawnY;
+                Debug.Log(string.Format("[GameSceneEntry] 使用服务端数据: Map={0} Spawn=({1},{2})",
+                    mapConfig.Name, spawnX, spawnY));
+            }
+            else
+            {
+                // 本地回退（开发/调试用）
+                mapConfig = DefaultMapConfigs.GetById(1);
+                spawnX = mapConfig.BirthX;
+                spawnY = mapConfig.BirthY;
+                Debug.Log("[GameSceneEntry] 无服务端数据，使用本地默认配置");
+            }
 
             // 创建地图
             var mapObj = new GameObject("Map");
@@ -30,12 +49,12 @@ namespace Client.Game
             mapGround.Generate(mapConfig);
             MapGround = mapGround;
 
-            // 创建玩家
+            // 创建玩家（使用服务端返回的出生点）
             var playerObj = new GameObject("Player");
-            playerObj.transform.position = MapData.GridToWorld(mapConfig.BirthX, mapConfig.BirthY);
+            playerObj.transform.position = MapData.GridToWorld(spawnX, spawnY);
 
             var controller = playerObj.AddComponent<PlayerController>();
-            controller.Init(mapConfig, mapConfig.BirthX, mapConfig.BirthY);
+            controller.Init(mapConfig, spawnX, spawnY);
             PlayerController = controller;
 
             var view = playerObj.AddComponent<PlayerView>();

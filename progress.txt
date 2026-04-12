@@ -15,3 +15,4 @@
 2026-04-12 F009 COMPLETED - 握手流程：NetClient连接后自动发送HandshakeReq，收到HandshakeResp后触发OnConnected，失败/超时自动重连，编译通过
 2026-04-12 F024 COMPLETED - 配置表定义共享：迁移到shared/Config/（GameShared.Config），SimpleCsvReader+ClientConfigManager，双端编译通过
 2026-04-12 F022 COMPLETED - 网络状态面板：NetworkStatusPanel常驻右上角（连接状态+Ping+重连倒计时），NetClient暴露State/PingMs，编译通过
+2026-04-12 F010 COMPLETED - 进图联调：选角成功→发送EnterMapReq→收到EnterMapAck→缓存地图数据→切GameScene→用服务端数据初始化地图和玩家位置，编译通过
