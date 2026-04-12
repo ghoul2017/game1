@@ -44,22 +44,12 @@ scripts\xlsx2csv.cmd [args]                   # 同上（cmd 脚本）
 ```
 server/
 ├── common/
-│   ├── protos/       # Protobuf 消息定义（命名空间 server.common.protos）
-│   │       ├── MsgId.cs          # 消息ID常量（10101起步，100一段/模块）
-│   │       ├── UserProtos.cs     # 登录/角色/重连/Kick
-│   │       ├── MiscProtos.cs     # 握手/心跳
-│   │       ├── BagProtos.cs
-│   │       ├── MailProtos.cs
-│   │       ├── ChatProtos.cs
-│   │       ├── TaskProtos.cs
-│   │       ├── MapProtos.cs
-│   │       └── FightProtos.cs
 │   └── config/       # 配置表定义（命名空间 server.common.config，[ConfigTable] 自动扫描）
 │           ├── ConfigTableAttribute.cs  # 配置表标注 attribute
 │           ├── ItemConfig.cs            # 物品配置
 │           ├── SkillConfig.cs           # 技能配置
 │           └── MapConfig.cs             # 地图配置
-├── Network/          # 网络模块（NetworkModule 管理生命周期, TcpServer, MessageRouter, SessionManager, PacketCodec）
+├── Network/          # 网络模块（NetworkModule 管理生命周期, TcpServer, MessageRouter, SessionManager；IMessage/PacketCodec 在 shared/）
 ├── Config/           # 读表模块（ConfigModule 管理生命周期, ConfigManager 自动扫描 [ConfigTable], CsvLoader, 热更新）
 ├── Database/         # 数据库模块（DatabaseModule 统一管理 MySql/Redis 生命周期）
 │   ├── MySql/        #   MySqlManager + PlayerRepository (Dapper)
@@ -111,8 +101,8 @@ scripts/              # cmd 快捷脚本（xlsx2csv.cmd, xlsx2cs.cmd, proto2cs.c
 
 ## 关键约定
 
-- **添加新消息**: 在 `common/protos/` 定义 Protobuf 类实现 `IMessage`（命名空间 `server.common.protos`）+ 在 `MsgId.cs` 分配 ID + 在对应系统目录创建继承 `MessageHandler<TReq>` 的 Handler（自动扫描注册）
-- **目录和命名空间**: 目录名和命名空间一律小写，保持一致（如 `server.common.protos`、`server.game.fight`）。类名仍用 PascalCase。
+- **添加新消息**: 在 `shared/Protos/` 定义 Protobuf 类实现 `IMessage`（命名空间 `GameShared.Protos`）+ 在 `MsgId.cs` 分配 ID + 在对应系统目录创建继承 `MessageHandler<TReq>` 的 Handler（自动扫描注册）
+- **目录和命名空间**: 目录名和命名空间一律小写，保持一致（如 `server.game.fight`）。类名仍用 PascalCase。共享代码使用 `GameShared.*` 命名空间。
 - **添加新配置表**: 在 `common/config/` 定义类并标注 `[ConfigTable("Xxx.csv", KeyName = "主键属性")]`（命名空间 `server.common.config`）→ 放 CSV 到 `Data/Tables/`。ConfigManager 自动扫描 `[ConfigTable]` 并加载，无需手动注册。通过 `ConfigManager.Get<T>(id)` / `GetAll<T>()` / `GetDict<T>()` 访问数据
 - **协议格式**: `[MsgId:UInt16LE][Length:Int32LE][ProtobufPayload]`
 - **日志使用**: `private static readonly ILog Log = LogManager.GetLogger<T>();` → `Log.Info/Warn/Error(msg)`
@@ -126,11 +116,11 @@ scripts/              # cmd 快捷脚本（xlsx2csv.cmd, xlsx2cs.cmd, proto2cs.c
 - **Write-Behind**: Insert/Update/Delete 默认 `immediately=false`，变更进入 PersistTask 脏队列，定时批量写入；设 `immediately=true` 可立即写入。变更合并规则：Insert+Update=Insert, Insert+Delete=忽略, Update+Delete=Delete
 - **会话管理**: SessionManager 单例管理三级映射（sessionId/userId/roleId → TcpSession），登录后调用 `BindUser`，选角后调用 `BindRole`，断线自动清理。顶号自动踢掉旧连接。踢人用 `Kick/KickByRoleId`，广播用 `Broadcast`
 - **数据库表名**: ProtobufPersistFactory 自动生成 `p_<类名蛇形>` 表名（如 RoleBag → p_role_bag），表结构为 `(id BIGINT PK, data LONGBLOB)`
-- **命名空间**: 目录名和命名空间一律小写（如 `server.game.player`、`server.game.task`），类名仍 PascalCase
+- **命名空间**: 目录名和命名空间一律小写（如 `server.game.player`、`server.game.task`），类名仍 PascalCase。共享代码使用 `GameShared.Protos` / `GameShared.Network`
 - **Handler 规范**: Handler 不使用构造函数注入，直接通过单例访问依赖（`DatabaseManager.Instance.Redis`、`SessionManager.Instance` 等）。Handler 无状态，AutoRegister 要求无参构造函数
 - **单例访问**: 不要缓存单例引用到字段或局部变量（如 `var db = DatabaseManager.Instance;`），直接用 `DatabaseManager.Instance.Redis.xxx` 访问
 - **Handler 文件**: 每个模块的 Handler 合并到模块根目录的 `XxxHandlers.cs`（如 `BagHandlers.cs`），不使用 Handlers/ 子目录
-- **Proto 文件**: 每个模块合并为一个 Proto 文件（如 `UserProtos.cs`、`MiscProtos.cs`），不按消息拆分
+- **Proto 文件**: 每个模块合并为一个 Proto 文件（如 `UserProtos.cs`、`MiscProtos.cs`），放在 `shared/Protos/`（双端共享），不按消息拆分
 
 ## 参考项目代码风格
 
@@ -158,7 +148,7 @@ game/Bag/
 └── BagHandlers.cs      # 消息处理器（一个文件包含该模块所有 Handler）
 ```
 
-消息定义统一在 `common/protos/BagProtos.cs`，不再在各系统目录下放 Messages/。
+消息定义统一在 `shared/Protos/BagProtos.cs`（客户端和服务端共享），不再在各系统目录下放 Messages/。
 
 ### 命名约定
 
@@ -196,6 +186,7 @@ game/Bag/
 - `2026-04-10` M14 背包系统：发现子命名空间中 MsgId 引用冲突问题，更新命名约定（使用 global:: 前缀）
 - `2026-04-11` M17 任务系统：发现 `Server.Game.Task` 命名空间与 `System.Threading.Tasks.Task` 类型冲突，改用 `Server.Game.TaskSystem`，补充到命名空间避让约定
 - `2026-04-11` 消息系统重构：所有 Req/Ack/Ntf 实现 IMessage 接口 + MessageHandler<TReq> 泛型基类 + Router 自动扫描注册 + PlayerManager.SendToPlayer 统一发送。proto 文件收拢到 `common/protos/`，命名空间 `server.common.protos`。目录名和命名空间统一小写。
+- `2026-04-12` 共享代码迁移：消息定义、MsgId、IMessage、PacketCodec 迁移到 `shared/`（命名空间 `GameShared.Protos`/`GameShared.Network`）。服务端通过 csproj Compile Include 引用，客户端通过 directory junction 引用。消除双端重复代码。
 - `2026-04-11` Config 系统重构：`[ConfigTable]` attribute 自动扫描 + 配置类收拢到 `common/config/`（ItemConfig/SkillConfig/MapConfig）+ ConfigManager.Get/GetAll/GetDict API + CsvLoader 支持 int[] 分号分隔 + xlsx2cs 工具从 Excel 生成 C# 配置类。删除旧 Config/Tables/ 和 ITable 接口。
 - `2026-04-11` 目录结构重构：Network 只保留核心基础设施，登录/角色 Handler 移至 `game/user/`，握手/心跳移至 `game/misc/`。Protos 按模块合并（LoginProtos+RoleProtos→UserProtos, HandshakeProtos+HeartbeatProtos→MiscProtos）。Handler 文件从 Handlers/ 子目录移到模块根目录。MsgId 重编为 10101 起步每段 100。Handler 去掉构造函数注入改为单例直接访问。DatabaseManager 新增 PlayerRepo/RoleRepo 单例属性。EntityFactory/PersistTask 去掉 _db 字段缓存。
 <!-- EVOLVE_LOG_END -->

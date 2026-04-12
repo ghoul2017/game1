@@ -35,25 +35,26 @@ scripts\xlsx2cs.cmd [args]            # xlsx 转 C# 配置类
 ## 架构总览
 
 ```
+shared/                          # 客户端+服务端共享代码（唯一源文件）
+  Network/                       #   IMessage 接口, PacketCodec 编解码
+  Protos/                        #   MsgId 常量, 全部8模块消息定义
 client/                          # Unity 客户端
   Assets/Scripts/
+    GameShared/                  #   directory junction → shared/（Unity 自动编译）
     Core/                        # 框架层（UIManager, UIPanel, UIBuilder, GameEntry）
     Login/                       # 登录 & 角色选择
     Game/                        # 主界面 & 游戏场景（PlayerController, MapGround 等）
-    Network/                     # 网络层（待实现 — 联合开发重点）
-    Shared/Messages/             # 共享消息定义（待填充）
+    Network/                     # 网络层（MessageDispatcher, MsgTypeRegistry）
     Editor/                      # 编辑器工具
 
 server/                          # .NET 8 服务端
   server/
     Program.cs                   # 入口：模块化启动（日志→数据库→读表→网络）
     Core/                        # 框架（IModule, Entity, EventBus, Log）
-    Network/                     # TCP 网络层（TcpServer, PacketCodec, MessageRouter, SessionManager）
+    Network/                     # TCP 网络层（TcpServer, MessageRouter, SessionManager）
     Config/                      # 配置表系统（CSV + 热更新）
     Database/                    # MySQL + Redis + MongoDB
-    common/
-      protos/                    # Protobuf 消息定义（MsgId + 按模块的 Proto 文件）
-      config/                    # 配置表定义（ItemConfig, SkillConfig, MapConfig）
+    common/config/               # 配置表定义（ItemConfig, SkillConfig, MapConfig）
     game/                        # 游戏子系统（每系统一目录：user, bag, mail, chat, task, map, fight）
   tools/                         # 辅助工具（xlsx2csv, xlsx2cs, proto2cs）
 ```
@@ -66,7 +67,7 @@ game/Bag/
   BagModel.cs         # IModule 生命周期（注册 Handler + EntityFactory）
   RoleBag.cs           # 数据模型
   BagHandlers.cs       # 所有 Handler 合并到一个文件
-消息定义 → common/protos/BagProtos.cs
+消息定义 → shared/Protos/BagProtos.cs（双端共享）
 ```
 
 ### 客户端 UI 架构
@@ -80,15 +81,40 @@ game/Bag/
 
 ### 消息系统
 
-- **消息定义**: 服务端 `server/common/protos/`，客户端需同步对应的消息类到 `client/Assets/Scripts/Shared/Messages/`
+- **消息定义**: `shared/Protos/` 目录，客户端和服务端共享同一份代码
+- **命名空间**: `GameShared.Protos`（消息类）、`GameShared.Network`（IMessage、PacketCodec）
 - **消息命名**: `*Req`（请求）、`*Ack`（响应）、`*Ntf`（通知）
 - **MsgId 分段**: 10101=user, 10201=misc, 10301=bag, 10401=mail, 10501=chat, 10601=task, 10701=map, 10801=fight（每段 100）
-- **客户端网络层**: 待实现，需在 `client/Assets/Scripts/Network/` 中构建 TCP 连接 + PacketCodec + 消息路由
 
 ### 引用规则
 
-- 客户端**可引用**服务端基础模块（Network/Messages、Config、Core 等）
-- 客户端**禁止引用**服务端业务代码（game/ 下的 Player、Bag、Mail、Chat 等子系统）
+- 客户端**可引用**共享代码（`shared/` 下的 Network、Protos 等）
+- 客户端**禁止引用**服务端业务代码（`server/` 下的 Player、Bag、Mail、Chat 等子系统）
+- **新增消息**: 只改 `shared/Protos/` 一处，双端自动生效
+
+### 跨端共享代码方法论
+
+当客户端和服务端都需要同一份代码时，必须遵循以下流程，**严禁复制两份**：
+
+**判断标准** — 以下情况的代码应放入 `shared/`：
+- 双端都需要的数据结构（消息定义、配置表定义、常量）
+- 双端都需要的基础设施（编解码、序列化、工具方法）
+- 任何"改一处就要同步改另一处"的代码
+
+**共享流程**：
+1. 在 `shared/` 下创建文件，使用 `GameShared.*` 命名空间
+2. 代码必须兼容两端：.NET 8 + Unity 2021.3（.NET Framework 4.7.1）
+3. 服务端通过 `server.csproj` 的 `<Compile Include="..\..\shared\**\*.cs" />` 引用
+4. 客户端通过 directory junction（`client/Assets/Scripts/GameShared/` → `shared/`）引用
+5. junction 路径加入 `.gitignore`，避免 git 重复跟踪
+
+**兼容性约束**（shared/ 下的代码必须遵守）：
+- 不使用 C# 10+ 语法（file-scoped namespace、global using）
+- 不使用 C# 12 语法（collection expressions `[]`）
+- 不使用 .NET 5+ only API（`BinaryPrimitives`、`ReadOnlySpan`、`Range`）
+- 不使用默认接口实现（C# 8 特性，netstandard2.0 不支持）
+- 使用 `new List<T>()` 代替 `new()` 或 `[]`
+- 使用手动字节操作代替 `BinaryPrimitives`
 
 ### 坐标映射
 
@@ -97,7 +123,7 @@ game/Bag/
 
 ## 服务端关键约定
 
-- **命名空间**: 目录名和命名空间一律小写（`server.game.player`、`server.common.protos`），类名 PascalCase
+- **命名空间**: 目录名和命名空间一律小写（`server.game.player`、`server.game.fight`），类名 PascalCase。共享代码用 `GameShared.*`
 - **Handler**: 无状态，无参构造，通过 `XxxManager.Instance` 单例访问依赖，不缓存单例引用
 - **模块 Order**: Log=0, Database=10, Config=20, 业务=50~90, Network=100
 - **实体持久化**: IEntity + ProtobufPersistFactory → Write-Behind 缓存（60s 批量写入）
