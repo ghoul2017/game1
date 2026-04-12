@@ -283,7 +283,7 @@
         "显示网络延迟（ping）",
         "断线时显示重连倒计时"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F023",
