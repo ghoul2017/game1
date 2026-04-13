@@ -27,3 +27,4 @@
 2026-04-12 F023 COMPLETED - 切图联调：ChangeMapPanel地图选择+传送按钮+ChangeMapAck场景重建，双端编译通过
 2026-04-12 F017 COMPLETED - 任务系统联调：TaskPanel左右布局+任务列表+接取/提交/放弃+TaskChangedNtf增量更新，双端编译通过
 2026-04-12 F018 COMPLETED - 战斗系统联调：技能栏4按钮+UseSkillReq/Ack+HpChangedNtf血条+KilledByNtf死亡复活+PK模式切换+点击选中目标，双端编译通过
+2026-04-13 F019 COMPLETED - 战斗表现：OtherPlayerView攻击前冲动画+伤害飘字（暴击红色大号）+受击红色闪烁+死亡倒地渐隐+HpChangedNtf驱动死亡/复活表现，UseSkillAck触发其他玩家攻击动画和伤害显示，双端编译通过

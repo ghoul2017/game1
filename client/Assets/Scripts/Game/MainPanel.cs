@@ -685,8 +685,29 @@ namespace Client.Game
                 UIToast.Show(GetFightErrorText(ack.Code));
                 return;
             }
-            Debug.Log(string.Format("[MainPanel] 技能释放成功 Skill={0} Target={1} Hits={2}",
-                ack.SkillId, ack.MainTargetId, ack.Targets.Count));
+
+            long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;
+
+            if (ack.AttackerId != selfId)
+            {
+                // Other player's skill — play attack animation
+                OtherPlayerManager.Instance.PlayAttack(ack.AttackerId, ack.SkillId);
+            }
+
+            // Show damage on all hit targets (both self and other players)
+            foreach (var target in ack.Targets)
+            {
+                if (target.TargetId == selfId)
+                    continue; // Self damage shown via HpChangedNtf
+
+                OtherPlayerManager.Instance.ShowDamage(
+                    target.TargetId,
+                    -target.DeltaHp,
+                    target.IsCritical);
+            }
+
+            Debug.Log(string.Format("[MainPanel] 技能释放成功 Attacker={0} Skill={1} Target={2} Hits={3}",
+                ack.AttackerId, ack.SkillId, ack.MainTargetId, ack.Targets.Count));
         }
 
         private void HandleHpChangedNtf(HpChangedNtf ntf)
@@ -709,6 +730,12 @@ namespace Client.Game
             {
                 // 其他玩家的血量变化
                 OtherPlayerManager.Instance.UpdatePlayerHp(ntf.ObjectId, ntf.Hp, 100);
+
+                // 死亡/复活表现
+                if (ntf.Reason == HpChangeReason.Killed && ntf.Hp <= 0)
+                    OtherPlayerManager.Instance.PlayDeath(ntf.ObjectId);
+                else if (ntf.Reason == HpChangeReason.Revive)
+                    OtherPlayerManager.Instance.PlayRevive(ntf.ObjectId);
             }
         }
 
