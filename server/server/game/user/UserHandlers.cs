@@ -1,3 +1,4 @@
+using Server.Core;
 using Server.Core.Entity;
 using Server.Core.Log;
 using Server.Database;
@@ -59,7 +60,7 @@ public class LoginHandler : MessageHandler<LoginReq>
         // 生成重连 Token
         var token = Guid.NewGuid().ToString("N");
         session.ReconnectToken = token;
-        await DatabaseManager.Instance.Redis.StringSetAsync($"reconnect:{token}", $"{account.Id}", TimeSpan.FromMinutes(5));
+        await TokenStore.Instance.SetAsync($"reconnect:{token}", $"{account.Id}", TimeSpan.FromMinutes(5));
 
         resp.Code = 0;
         resp.Message = "OK";
@@ -132,8 +133,8 @@ public class CreateRoleHandler : MessageHandler<CreateRoleReq>
         if (await DatabaseManager.Instance.RoleRepo.NameExistsAsync(name))
             return new CreateRoleResp { Code = 1004, Message = "角色名已存在" };
 
-        // 生成角色ID
-        var roleId = await DatabaseManager.Instance.Redis.StringIncrementAsync("idgen:role");
+        // 生成角色ID（雪花算法）
+        var roleId = IdGenerator.Instance.NextId();
 
         // 创建 Role 实体（持久化到 p_role）
         var role = new Role
@@ -195,7 +196,7 @@ public class SelectRoleHandler : MessageHandler<SelectRoleReq>
         // 更新重连Token（包含roleId）
         if (!string.IsNullOrEmpty(session.ReconnectToken))
         {
-            await DatabaseManager.Instance.Redis.StringSetAsync(
+            await TokenStore.Instance.SetAsync(
                 $"reconnect:{session.ReconnectToken}",
                 $"{session.UserId}:{role.Id}",
                 TimeSpan.FromMinutes(5));
@@ -240,12 +241,11 @@ public class ReconnectHandler : MessageHandler<ReconnectReq>
     {
         // 验证 Token
         var tokenKey = $"reconnect:{req.Token}";
-        var tokenValue = await DatabaseManager.Instance.Redis.StringGetAsync(tokenKey);
-        if (!tokenValue.HasValue)
+        var tokenStr = await TokenStore.Instance.GetAsync(tokenKey);
+        if (tokenStr == null)
             return new ReconnectResp { Code = 1001, Message = "Token无效或已过期" };
 
         // 解析 token: "userId" 或 "userId:roleId"
-        var tokenStr = tokenValue!.ToString();
         var parts = tokenStr.Split(':');
         if (parts.Length < 1 || !long.TryParse(parts[0], out var userId))
             return new ReconnectResp { Code = 1002, Message = "Token数据异常" };
@@ -301,10 +301,10 @@ public class ReconnectHandler : MessageHandler<ReconnectReq>
         // 刷新 Token
         var newToken = Guid.NewGuid().ToString("N");
         session.ReconnectToken = newToken;
-        await DatabaseManager.Instance.Redis.StringSetAsync($"reconnect:{newToken}",
+        await TokenStore.Instance.SetAsync($"reconnect:{newToken}",
             roleId > 0 ? $"{userId}:{roleId}" : $"{userId}",
             TimeSpan.FromMinutes(5));
-        await DatabaseManager.Instance.Redis.KeyDeleteAsync(tokenKey);
+        await TokenStore.Instance.RemoveAsync(tokenKey);
 
         return resp;
     }

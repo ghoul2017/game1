@@ -323,7 +323,7 @@
         "RedisManager/RedisOptions/StackExchange.Redis 保留不动",
         "编译验证"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
