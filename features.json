@@ -309,6 +309,21 @@
         "客户端通过 ConfigManager 访问配置数据"
       ],
       "passes": true
+    },
+    {
+      "id": "F025",
+      "category": "misc",
+      "priority": 6,
+      "description": "移除业务层 Redis 依赖：雪花算法 ID 生成 + 内存 Token 存储替代 UserHandlers 中全部 Redis 调用。RedisManager/RedisOptions/StackExchange.Redis 保留不动",
+      "steps": [
+        "创建 IdGenerator（雪花算法，单机 workerId=1，41bit时间+10bit机器+12bit序列）",
+        "创建 TokenStore（ConcurrentDictionary + 后台定时清理过期条目）",
+        "UserHandlers: StringIncrementAsync(\"idgen:role\") → IdGenerator.Instance.NextId()",
+        "UserHandlers: 所有 StringSetAsync/StringGetAsync/KeyDeleteAsync → TokenStore",
+        "RedisManager/RedisOptions/StackExchange.Redis 保留不动",
+        "编译验证"
+      ],
+      "passes": false
     }
   ]
 }
