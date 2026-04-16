@@ -77,6 +77,10 @@ namespace GameShared.Protos
         public const ushort MapPlayerEnterNtf = 10710;
         public const ushort MapPlayerLeaveNtf = 10711;
         public const ushort MapPlayerMoveNtf = 10712;
+        public const ushort MapNpcEnterNtf = 10713;
+        public const ushort MapNpcLeaveNtf = 10714;
+        public const ushort MapNpcMoveNtf = 10715;
+        public const ushort MonsterDropNtf = 10716;
 
         // Fight 战斗 (10801-10900)
         public const ushort UseSkillReq = 10801;
@@ -85,5 +89,10 @@ namespace GameShared.Protos
         public const ushort HpChangedNtf = 10804;
         public const ushort SetPkModeReq = 10805;
         public const ushort PkModeChangedNtf = 10806;
+        public const ushort ExpChangedNtf = 10807;
+        public const ushort GoldChangedNtf = 10808;
+        public const ushort LevelUpNtf = 10809;
+        public const ushort ItemGainNtf = 10810;
+        public const ushort MpChangedNtf = 10811;
     }
 }

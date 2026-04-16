@@ -31,6 +31,7 @@ namespace Client.Game
             UnregisterAoiHandlers();
             UnregisterReconnectEvents();
             OtherPlayerManager.Instance.ClearAll();
+            MonsterEntityManager.Instance.ClearAll();
             _mainPanel = null;
         }
 
@@ -54,6 +55,19 @@ namespace Client.Game
                 var ray = cam.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out var hit, 100f))
                 {
+                    // 优先选中怪物/NPC
+                    var monsterView = hit.collider.GetComponentInParent<MonsterView>();
+                    if (monsterView != null)
+                    {
+                        GameData.SelectedTargetId = monsterView.ObjectId;
+                        GameData.SelectedTargetName = monsterView.name;
+                        if (_mainPanel != null)
+                            _mainPanel.UpdateTargetDisplay(monsterView.ObjectId, monsterView.name);
+                        Debug.Log("[GameSceneEntry] 选中怪物: " + monsterView.name + " Id=" + monsterView.ObjectId);
+                        return;
+                    }
+
+                    // 其次选中其他玩家
                     var otherView = hit.collider.GetComponentInParent<OtherPlayerView>();
                     if (otherView != null)
                     {
@@ -108,6 +122,10 @@ namespace Client.Game
             var otherPlayersObj = new GameObject("OtherPlayers");
             OtherPlayerManager.Instance.Init(otherPlayersObj.transform);
 
+            // 创建怪物/NPC容器
+            var monstersObj = new GameObject("Monsters");
+            MonsterEntityManager.Instance.Init(monstersObj.transform);
+
             // 创建玩家（使用服务端返回的出生点）
             var playerObj = new GameObject("Player");
             playerObj.transform.position = MapData.GridToWorld(spawnX, spawnY);
@@ -151,10 +169,13 @@ namespace Client.Game
             dispatcher.Register<MapPlayerEnterNtf>(MsgId.MapPlayerEnterNtf, OnMapPlayerEnterNtf);
             dispatcher.Register<MapPlayerLeaveNtf>(MsgId.MapPlayerLeaveNtf, OnMapPlayerLeaveNtf);
             dispatcher.Register<MapPlayerMoveNtf>(MsgId.MapPlayerMoveNtf, OnMapPlayerMoveNtf);
+            dispatcher.Register<MapNpcEnterNtf>(MsgId.MapNpcEnterNtf, OnMapNpcEnterNtf);
+            dispatcher.Register<MapNpcLeaveNtf>(MsgId.MapNpcLeaveNtf, OnMapNpcLeaveNtf);
+            dispatcher.Register<MapNpcMoveNtf>(MsgId.MapNpcMoveNtf, OnMapNpcMoveNtf);
             dispatcher.Register<MapMoveAck>(MsgId.MapMoveAck, OnMapMoveAck);
             dispatcher.Register<ChangeMapAck>(MsgId.ChangeMapAck, OnChangeMapAck);
 
-            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步 + 切图处理器已注册");
+            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步 + NPC/怪物 + 切图处理器已注册");
         }
 
         private void UnregisterAoiHandlers()
@@ -166,13 +187,29 @@ namespace Client.Game
             dispatcher.Unregister(MsgId.MapPlayerEnterNtf);
             dispatcher.Unregister(MsgId.MapPlayerLeaveNtf);
             dispatcher.Unregister(MsgId.MapPlayerMoveNtf);
+            dispatcher.Unregister(MsgId.MapNpcEnterNtf);
+            dispatcher.Unregister(MsgId.MapNpcLeaveNtf);
+            dispatcher.Unregister(MsgId.MapNpcMoveNtf);
             dispatcher.Unregister(MsgId.MapMoveAck);
             dispatcher.Unregister(MsgId.ChangeMapAck);
         }
 
         private void OnMapObjectsNtf(MapObjectsNtf ntf)
         {
-            OtherPlayerManager.Instance.SpawnPlayers(ntf.Objects);
+            if (ntf.Objects == null) return;
+            foreach (var obj in ntf.Objects)
+            {
+                // ObjectType: 1=Player, 2=NPC, 3=Monster
+                if (obj.ObjectType == MapObjectType.Player)
+                {
+                    OtherPlayerManager.Instance.SpawnPlayer(obj);
+                }
+                else if (obj.ObjectType == MapObjectType.Monster || obj.ObjectType == MapObjectType.Npc)
+                {
+                    // NpcId 是怪物/NPC的配置ID，用于区分怪物和NPC以及显示名称
+                    MonsterEntityManager.Instance.Spawn(obj.ObjectId, obj.NpcId, obj.Name, obj.X, obj.Y);
+                }
+            }
         }
 
         private void OnMapPlayerEnterNtf(MapPlayerEnterNtf ntf)
@@ -188,6 +225,21 @@ namespace Client.Game
         private void OnMapPlayerMoveNtf(MapPlayerMoveNtf ntf)
         {
             OtherPlayerManager.Instance.MovePlayer(ntf.RoleId, ntf.X, ntf.Y);
+        }
+
+        private void OnMapNpcEnterNtf(MapNpcEnterNtf ntf)
+        {
+            MonsterEntityManager.Instance.Spawn(ntf.ObjectId, ntf.NpcId, ntf.Name, ntf.X, ntf.Y);
+        }
+
+        private void OnMapNpcLeaveNtf(MapNpcLeaveNtf ntf)
+        {
+            MonsterEntityManager.Instance.Remove(ntf.ObjectId);
+        }
+
+        private void OnMapNpcMoveNtf(MapNpcMoveNtf ntf)
+        {
+            MonsterEntityManager.Instance.Move(ntf.ObjectId, ntf.X, ntf.Y);
         }
 
         private void OnMapMoveAck(MapMoveAck ack)
@@ -229,8 +281,9 @@ namespace Client.Game
 
         private void RebuildScene(int mapCfgId, int spawnX, int spawnY)
         {
-            // 清除其他玩家
+            // 清除其他玩家和怪物
             OtherPlayerManager.Instance.ClearAll();
+            MonsterEntityManager.Instance.ClearAll();
 
             // 销毁旧地图
             if (MapGround != null)

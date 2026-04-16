@@ -1,6 +1,10 @@
+using GameShared.Config;
 using GameShared.Protos;
+using Server.Config;
+using Server.Core;
 using Server.Core.Entity;
 using Server.Core.Log;
+using Server.Game.Bag;
 using Server.Game.Player;
 
 namespace Server.Game.TaskSystem;
@@ -54,25 +58,64 @@ public class TaskManager
         if (activeCount >= MaxActiveTaskCount)
             return TaskAcceptResult.Fail(TaskErrorCode.TaskFull);
 
-        // TODO: 从配置表读取任务定义，创建目标列表
-        // 目前先用空目标列表，等配置表完善后补充
+        // 获取任务配置
+        var configModule = ModuleRegistry.Instance.GetModule<ConfigModule>();
+        var taskCfg = configModule?.ConfigManager.Get<TaskConfig>(taskId);
+        if (taskCfg == null)
+        {
+            Log.Warn($"任务配置不存在 TaskId:{taskId}");
+            return TaskAcceptResult.Fail(TaskErrorCode.TaskNotFound);
+        }
+
+        // 创建目标列表
+        var goals = new List<TaskGoal>();
+        if (taskCfg.GoalCount >= 1 && taskCfg.GoalType1 > 0)
+        {
+            goals.Add(new TaskGoal
+            {
+                GoalType = taskCfg.GoalType1,
+                GoalParam = taskCfg.GoalParam1,
+                TargetCount = taskCfg.GoalTarget1,
+            });
+        }
+        if (taskCfg.GoalCount >= 2 && taskCfg.GoalType2 > 0)
+        {
+            goals.Add(new TaskGoal
+            {
+                GoalType = taskCfg.GoalType2,
+                GoalParam = taskCfg.GoalParam2,
+                TargetCount = taskCfg.GoalTarget2,
+            });
+        }
+        if (taskCfg.GoalCount >= 3 && taskCfg.GoalType3 > 0)
+        {
+            goals.Add(new TaskGoal
+            {
+                GoalType = taskCfg.GoalType3,
+                GoalParam = taskCfg.GoalParam3,
+                TargetCount = taskCfg.GoalTarget3,
+            });
+        }
+
         var task = new RoleTask
         {
             TaskId = taskId,
             State = 0,
             AcceptTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             CompleteTime = 0,
-            Goals = [],
+            Goals = goals,
         };
 
         taskList.Tasks.Add(task);
         taskList.GetTaskMap()[taskId] = task;
 
+        Log.Info($"接取任务 TaskId:{taskId} GoalCount:{goals.Count}");
+
         return TaskAcceptResult.Ok();
     }
 
     /// <summary>提交已完成的任务，领取奖励</summary>
-    public TaskSubmitResult SubmitTask(RoleTaskList taskList, int taskId)
+    public async Task<TaskSubmitResult> SubmitTaskAsync(RoleTaskList taskList, long roleId, int taskId)
     {
         var task = taskList.GetByTaskId(taskId);
         if (task == null)
@@ -84,11 +127,69 @@ public class TaskManager
         if (task.IsClaimed)
             return TaskSubmitResult.Fail(TaskErrorCode.TaskAlreadyClaimed);
 
+        // 获取任务配置
+        var configModule = ModuleRegistry.Instance.GetModule<ConfigModule>();
+        var taskCfg = configModule?.ConfigManager.Get<TaskConfig>(taskId);
+        if (taskCfg == null)
+        {
+            Log.Warn($"任务配置不存在 TaskId:{taskId}");
+            return TaskSubmitResult.Fail(TaskErrorCode.TaskNotFound);
+        }
+
+        // 加载背包
+        var bag = await BagManager.Instance.LoadBagAsync(roleId);
+
+        // 发放金币（简单记录，实际需要 PlayerManager 有金币接口）
+        // 目前先记录日志
+
+        // 发放物品奖励
+        if (!string.IsNullOrEmpty(taskCfg.RewardItems))
+        {
+            var itemParts = taskCfg.RewardItems.Split(',');
+            foreach (var part in itemParts)
+            {
+                var kv = part.Trim().Split(':');
+                if (kv.Length == 2 &&
+                    int.TryParse(kv[0], out int itemId) &&
+                    int.TryParse(kv[1], out int count))
+                {
+                    var addResult = BagManager.Instance.AddItem(bag, itemId, count);
+                    if (addResult.Success)
+                    {
+                        Log.Info($"任务奖励发放 RoleId:{roleId} ItemId:{itemId} Count:{count}");
+                    }
+                    else
+                    {
+                        Log.Warn($"任务奖励发放失败 RoleId:{roleId} ItemId:{itemId} Code:{addResult.ErrorCode}");
+                    }
+                }
+            }
+            await BagManager.Instance.SaveBagAsync(bag);
+        }
+
         // 标记为已领奖
         task.State = 2;
 
-        // TODO: 从配置表读取奖励，发放到背包
-        // 目前先记录日志，等背包+配置表联动完善后补充
+        Log.Info($"任务提交完成 RoleId:{roleId} TaskId:{taskId} RewardExp:{taskCfg.RewardExp} RewardGold:{taskCfg.RewardGold}");
+
+        return TaskSubmitResult.Ok();
+    }
+
+    /// <summary>提交已完成的任务（同步版本，兼容旧代码）</summary>
+    public TaskSubmitResult SubmitTask(RoleTaskList taskList, int taskId)
+    {
+        // 同步版本不发放物品奖励，需要调用 SubmitTaskAsync
+        var task = taskList.GetByTaskId(taskId);
+        if (task == null)
+            return TaskSubmitResult.Fail(TaskErrorCode.TaskNotFound);
+
+        if (!task.IsCompleted)
+            return TaskSubmitResult.Fail(TaskErrorCode.TaskNotCompleted);
+
+        if (task.IsClaimed)
+            return TaskSubmitResult.Fail(TaskErrorCode.TaskAlreadyClaimed);
+
+        task.State = 2;
 
         return TaskSubmitResult.Ok();
     }

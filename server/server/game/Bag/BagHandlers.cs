@@ -112,21 +112,51 @@ public class BagUseItemHandler : MessageHandler<BagUseItemReq>
             return resp;
         }
 
+        // 加载背包
         var bag = await BagManager.Instance.LoadBagAsync(player.RoleId);
-        var result = BagManager.Instance.UseItem(bag, req.Index, req.Count);
 
-        if (!result.Success)
+        // 获取物品信息（用于检查物品类型）
+        var bagItem = bag.GetByIndex(req.Index);
+        if (bagItem == null)
         {
-            resp.Code = result.ErrorCode;
+            resp.Code = ErrorCode.ItemNotFound;
+            return resp;
+        }
+
+        // 检查物品数量
+        if (bagItem.Count < req.Count)
+        {
+            resp.Code = ErrorCode.ItemNotEnough;
+            return resp;
+        }
+
+        // 检查物品是否可使用（消耗品ID范围: 2001-2999）
+        var configId = bagItem.ConfigId;
+        if (configId < 2001 || configId > 2999)
+        {
+            // 非消耗品不能直接使用
+            resp.Code = ErrorCode.ItemUseFail;
+            Log.Warn($"非消耗品不能直接使用 RoleId:{session.RoleId} ConfigId:{configId}");
+            return resp;
+        }
+
+        // 使用物品
+        var useResult = BagManager.Instance.UseItem(bag, req.Index, req.Count);
+        if (!useResult.Success)
+        {
+            resp.Code = useResult.ErrorCode;
             return resp;
         }
 
         await BagManager.Instance.SaveBagAsync(bag);
 
-        resp.Code = ErrorCode.Ok;
-        resp.ConfigId = result.ConfigId;
+        // 触发物品效果
+        var effectResult = await ItemEffectManager.Instance.ApplyItemEffectAsync(session.RoleId, configId);
 
-        Log.Info($"使用物品 RoleId:{session.RoleId} ConfigId:{result.ConfigId} Count:{result.UsedCount}");
+        resp.Code = ErrorCode.Ok;
+        resp.ConfigId = configId;
+
+        Log.Info($"使用物品 RoleId:{session.RoleId} ConfigId:{configId} Count:{req.Count} EffectType:{effectResult.EffectType}");
         return resp;
     }
 }

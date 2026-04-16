@@ -83,6 +83,12 @@ namespace Client.Game
                 var pc = GameSceneEntry.PlayerController;
                 coordText.text = $"({pc.CurrentGridX}, {pc.CurrentGridY})";
             }
+
+            // 快捷键触发技能 (1-4)
+            if (Input.GetKeyDown(KeyCode.Alpha1)) OnUseSkill(1);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) OnUseSkill(2);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) OnUseSkill(3);
+            if (Input.GetKeyDown(KeyCode.Alpha4)) OnUseSkill(4);
         }
 
         private void CreateTopBar()
@@ -281,11 +287,11 @@ namespace Client.Game
             chatPanel.transform.SetParent(transform, false);
             var chatRect = chatPanel.AddComponent<RectTransform>();
             chatRect.anchorMin = new Vector2(0, 0);
-            chatRect.anchorMax = new Vector2(1, 0);
-            chatRect.pivot = new Vector2(0.5f, 0);
-            chatRect.sizeDelta = new Vector2(0, 155);
+            chatRect.anchorMax = new Vector2(0.6f, 0);
+            chatRect.pivot = new Vector2(0, 0);
+            chatRect.sizeDelta = new Vector2(0, 140);
             chatRect.anchoredPosition = Vector2.zero;
-            chatPanel.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.1f, 0.8f);
+            chatPanel.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.1f, 0.85f);
 
             var div = UIBuilder.CreateDivider(chatPanel.transform, "Div", 0);
             var dRect = div.GetComponent<RectTransform>();
@@ -323,28 +329,28 @@ namespace Client.Game
             ctRect.sizeDelta = new Vector2(300, 18);
 
             chatDisplay = UIBuilder.CreateText(chatPanel.transform, "ChatDisplay",
-                "<color=#FFD700>[系统]</color> 欢迎来到游戏世界！\n<color=#FFD700>[系统]</color> 祝你冒险愉快！", 15,
+                "<color=#FFD700>[系统]</color> 欢迎来到游戏世界！\n<color=#FFD700>[系统]</color> 祝你冒险愉快！", 14,
                 UIBuilder.TextWhite, TextAnchor.LowerLeft);
             var cdRect = chatDisplay.GetComponent<RectTransform>();
             cdRect.anchorMin = new Vector2(0, 0);
             cdRect.anchorMax = new Vector2(1, 1);
-            cdRect.offsetMin = new Vector2(15, 45);
-            cdRect.offsetMax = new Vector2(-15, -20);
+            cdRect.offsetMin = new Vector2(10, 38);
+            cdRect.offsetMax = new Vector2(-10, -22);
 
-            chatInput = UIBuilder.CreateInputField(chatPanel.transform, "ChatInput", "输入聊天内容...", 480, 33, 15);
+            chatInput = UIBuilder.CreateInputField(chatPanel.transform, "ChatInput", "输入聊天内容...", 360, 30, 14);
             var ciRect = chatInput.GetComponent<RectTransform>();
             ciRect.anchorMin = new Vector2(0, 0);
             ciRect.anchorMax = new Vector2(0, 0);
             ciRect.pivot = new Vector2(0, 0);
-            ciRect.anchoredPosition = new Vector2(155, 6);
+            ciRect.anchoredPosition = new Vector2(10, 4);
 
-            var sendBtn = UIBuilder.CreateButton(chatPanel.transform, "SendBtn", "发送", 75, 33, 15,
+            var sendBtn = UIBuilder.CreateButton(chatPanel.transform, "SendBtn", "发送", 65, 30, 14,
                 UIBuilder.AccentBlue, UIBuilder.TextWhite);
             var sbRect = sendBtn.GetComponent<RectTransform>();
             sbRect.anchorMin = new Vector2(0, 0);
             sbRect.anchorMax = new Vector2(0, 0);
             sbRect.pivot = new Vector2(0, 0);
-            sbRect.anchoredPosition = new Vector2(645, 6);
+            sbRect.anchoredPosition = new Vector2(380, 4);
 
             sendBtn.onClick.AddListener(OnSendChat);
 
@@ -543,7 +549,7 @@ namespace Client.Game
 
             var fillArea = new GameObject("Fill Area");
             fillArea.transform.SetParent(hpBgObj.transform, false);
-            var faRect = fillArea.GetComponent<RectTransform>();
+            var faRect = fillArea.AddComponent<RectTransform>();
             faRect.anchorMin = Vector2.zero;
             faRect.anchorMax = Vector2.one;
             faRect.offsetMin = Vector2.zero;
@@ -580,14 +586,14 @@ namespace Client.Game
             sbRect.anchorMin = new Vector2(1, 0);
             sbRect.anchorMax = new Vector2(1, 0);
             sbRect.pivot = new Vector2(1, 0);
-            sbRect.anchoredPosition = new Vector2(-10, 165);
-            sbRect.sizeDelta = new Vector2(280, 60);
-            skillBar.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.1f, 0.7f);
+            sbRect.anchoredPosition = new Vector2(-10, 150);
+            sbRect.sizeDelta = new Vector2(280, 55);
+            skillBar.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.1f, 0.75f);
 
             int[] skillIds = { 1, 2, 3, 4 };
             string[] skillNames = { "普攻", "技能1", "技能2", "技能3" };
             Color[] skillColors = {
-                new Color(0.6f, 0.15f, 0.15f, 0.9f),
+                new Color(0.7f, 0.15f, 0.15f, 0.9f),
                 new Color(0.15f, 0.3f, 0.6f, 0.9f),
                 new Color(0.15f, 0.5f, 0.25f, 0.9f),
                 new Color(0.5f, 0.2f, 0.6f, 0.9f)
@@ -596,7 +602,7 @@ namespace Client.Game
             for (int i = 0; i < 4; i++)
             {
                 var btn = UIBuilder.CreateButton(skillBar.transform, "Skill_" + i, skillNames[i],
-                    60, 48, 13, skillColors[i], UIBuilder.TextWhite);
+                    60, 44, 14, skillColors[i], UIBuilder.TextWhite);
                 btn.GetComponent<RectTransform>().anchoredPosition = new Vector2(-10 - i * 65, 0);
                 int sid = skillIds[i];
                 btn.onClick.AddListener(() => OnUseSkill(sid));
@@ -728,14 +734,38 @@ namespace Client.Game
             }
             else
             {
-                // 其他玩家的血量变化
-                OtherPlayerManager.Instance.UpdatePlayerHp(ntf.ObjectId, ntf.Hp, 100);
+                // 其他玩家或怪物的血量变化
+                var monsterView = MonsterEntityManager.Instance.GetView(ntf.ObjectId);
+                if (monsterView != null)
+                {
+                    // 怪物HP变化
+                    monsterView.UpdateHp(ntf.Hp, 100);
 
-                // 死亡/复活表现
-                if (ntf.Reason == HpChangeReason.Killed && ntf.Hp <= 0)
-                    OtherPlayerManager.Instance.PlayDeath(ntf.ObjectId);
-                else if (ntf.Reason == HpChangeReason.Revive)
-                    OtherPlayerManager.Instance.PlayRevive(ntf.ObjectId);
+                    // 显示伤害数字
+                    if (ntf.DeltaHp != 0)
+                    {
+                        monsterView.ShowDamageNumber(-ntf.DeltaHp, false);
+                        if (ntf.DeltaHp < 0)
+                            monsterView.PlayHitFlash();
+                    }
+
+                    // 死亡/复活
+                    if (ntf.Reason == HpChangeReason.Killed && ntf.Hp <= 0)
+                        monsterView.PlayDeath();
+                    else if (ntf.Reason == HpChangeReason.Revive)
+                        monsterView.PlayRevive();
+                }
+                else
+                {
+                    // 其他玩家的血量变化
+                    OtherPlayerManager.Instance.UpdatePlayerHp(ntf.ObjectId, ntf.Hp, 100);
+
+                    // 死亡/复活表现
+                    if (ntf.Reason == HpChangeReason.Killed && ntf.Hp <= 0)
+                        OtherPlayerManager.Instance.PlayDeath(ntf.ObjectId);
+                    else if (ntf.Reason == HpChangeReason.Revive)
+                        OtherPlayerManager.Instance.PlayRevive(ntf.ObjectId);
+                }
             }
         }
 

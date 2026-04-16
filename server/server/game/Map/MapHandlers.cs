@@ -1,4 +1,5 @@
 using Server.Core.Log;
+using Server.Game.Monster;
 using Server.Game.Player;
 using Server.Network;
 using GameShared.Network;
@@ -30,12 +31,23 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
             return Task.FromResult<IMessage?>(resp);
         }
 
-        // 检查是否已在地图中
+        // 检查是否已在地图中（重进：返回当前位置）
         var currentPos = MapManager.Instance.GetPlayerPosition(session.RoleId);
         if (currentPos != null)
         {
-            resp.Code = MapErrorCode.AlreadyInMap;
-            return Task.FromResult<IMessage?>(resp);
+            var (mapId, line, px, py) = currentPos.Value;
+            resp.Code = MapErrorCode.Ok;
+            resp.MapCfgId = mapId;
+            resp.Line = line;
+            resp.X = px;
+            resp.Y = py;
+            session.Send(resp);
+            // 重新发送视野内对象
+            var currentMap = MapManager.Instance.GetMap(mapId, line);
+            if (currentMap != null)
+                SendVisibleObjects(session.RoleId, currentMap, px, py);
+            Log.Info($"玩家重进地图 RoleId:{session.RoleId} MapId:{mapId}");
+            return Task.FromResult<IMessage?>(null);
         }
 
         // 获取目标地图，不存在则用默认坐标
@@ -65,6 +77,9 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
         session.Send(resp);
         SendVisibleObjects(session.RoleId, map, x, y);
 
+        // 初始化地图怪物
+        MonsterManager.Instance.InitMapMonsters(req.MapCfgId, req.Line);
+
         Log.Info($"玩家进入地图 RoleId:{session.RoleId} MapId:{req.MapCfgId}");
         return Task.FromResult<IMessage?>(null);
     }
@@ -82,7 +97,9 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
                     ObjectType = o.ObjectType,
                     Name = o.Name,
                     X = o.X,
-                    Y = o.Y
+                    Y = o.Y,
+                    // 对于怪物/NPC，需要获取其配置ID
+                    NpcId = GetMapObjectNpcId(o)
                 }).ToList()
         };
 
@@ -90,6 +107,15 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
         {
             PlayerManager.Instance.SendToPlayer(roleId, ntf);
         }
+    }
+
+    /// <summary>获取地图对象的NPC配置ID</summary>
+    private int GetMapObjectNpcId(Aoi.IAoiObject obj)
+    {
+        // MapNpc.CfgId 包含怪物/NPC的配置ID
+        if (obj is MapNpc npc)
+            return npc.CfgId;
+        return 0;
     }
 }
 

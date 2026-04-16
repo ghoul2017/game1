@@ -1,0 +1,9 @@
+Id,ItemId,EffectType,Value1,Value2,Cooldown,Sound,Effect
+1,2001,1,100,0,5,use_potion,heal_effect
+2,2002,2,50,0,5,use_potion,mp_effect
+3,2003,1,300,0,10,use_potion,heal_effect
+4,2004,2,150,0,10,use_potion,mp_effect
+5,2005,1,500,2,60,use_scroll,revive_effect
+6,3001,3,1,300,30,use_buff,buff_speed
+7,3002,3,2,300,60,use_buff,buff_attack
+8,3003,3,3,180,120,use_buff,buff_defense

@@ -51,6 +51,7 @@ namespace GameShared.Protos
         public const int Killed = 3;
         public const int Revive = 4;
         public const int Buff = 5;
+        public const int Recover = 6;  // 物品恢复
     }
 
     [ProtoContract]

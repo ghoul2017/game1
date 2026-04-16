@@ -196,12 +196,14 @@ public class FightManager
 
         Log.Info($"战斗死亡 Victim:{victimId}({victim.Name}) Killer:{killerId}");
 
+        bool isMonster = victim.ObjectType == MapObjectType.Npc;
+
         // 通知被击杀者
         SendToRole(victimId, new KilledByNtf
         {
             KillerId = killerId,
             KillerName = GetUnit(killerId)?.Name ?? "",
-            IsMonster = victim.ObjectType == MapObjectType.Npc,
+            IsMonster = isMonster,
         });
 
         // 通知视野内其他玩家
@@ -212,6 +214,12 @@ public class FightManager
             Hp = 0,
             Reason = HpChangeReason.Killed,
         });
+
+        // 如果是怪物，处理掉落
+        if (isMonster && Server.Game.Monster.MonsterManager.Instance != null)
+        {
+            Server.Game.Monster.MonsterManager.Instance.OnMonsterKilled(victimId, killerId);
+        }
     }
 
     #endregion

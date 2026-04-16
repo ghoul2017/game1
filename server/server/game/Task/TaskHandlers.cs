@@ -86,7 +86,7 @@ public class TaskSubmitHandler : MessageHandler<TaskSubmitReq>
         }
 
         var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
-        var result = TaskManager.Instance.SubmitTask(taskList, req.TaskId);
+        var result = await TaskManager.Instance.SubmitTaskAsync(taskList, session.RoleId, req.TaskId);
 
         if (result.Success)
         {
