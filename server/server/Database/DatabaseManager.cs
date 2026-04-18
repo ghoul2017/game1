@@ -35,7 +35,7 @@ public class DatabaseManager
 
         try
         {
-            await Redis.InitializeAsync();
+            // await Redis.InitializeAsync();
         }
         catch (Exception ex)
         {
