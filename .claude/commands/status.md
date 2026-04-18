@@ -3,9 +3,9 @@
 ## 工作流程
 
 ### 1. 读取状态
-- 读取 `progress.txt`
-- 读取 `features.json`
-- 运行 `git -C E:/worku/game1 log --oneline -10`
+- 读取 CLAUDE.md 工作流章节定义的进度文件
+- 读取 CLAUDE.md 工作流章节定义的功能清单文件
+- 运行 `git log --oneline -10`
 
 ### 2. 输出报告
 

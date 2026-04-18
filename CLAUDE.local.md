@@ -59,23 +59,25 @@
 
 ```
 /pp        → 需求拆解（交互式，产品经理角色）
-/dev       → 单功能开发（协调器：准备→开发→验证→记录→提交→报告）
+/dev       → 单功能开发（协调流程：准备→开发→验证→记录→提交→报告）
 /devloop   → 循环开发（配额守卫：8轮/session，3连失败停止）
 /qdev      → 临时任务（交互式分析 + 自动流水线）
 /status    → 进度报告
-/rc        → review + commit
 /init      → 首次初始化
-/agent     → 创建/优化 agent
+/agent     → 创建/优化 agent 或 command
 ```
 
 ### 流水线架构
 
 ```
-coding-agent (协调器)
-  ├── dev-worker      (代码实现)
-  ├── verify-feature  (功能验证)  ─┐
-  ├── verify-quality  (质量验证)  ─┤ 并行
-  └── mem-writer      (知识归档)
+Commands（主会话中运行，可使用 Agent 工具委托子 agent）
+  /dev, /qdev, /devloop ──┬── dev-worker      (代码实现，tools: 读写+搜索+Bash)
+                          ├── verify-feature  (功能验证，tools: 只读)  ─┐
+                          ├── verify-quality  (质量验证，tools: 只读)  ─┤ 并行
+                          └── mem-writer      (知识归档，tools: 读写+搜索)
+
+Agents 位于 .claude/agents/，带 YAML frontmatter（name, description, tools, model）
+Commands 位于 .claude/commands/，包含完整工作流逻辑
 ```
 
 ### 项目细则索引（第三层）
