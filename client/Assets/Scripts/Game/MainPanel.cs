@@ -549,7 +549,7 @@ namespace Client.Game
 
             var fillArea = new GameObject("Fill Area");
             fillArea.transform.SetParent(hpBgObj.transform, false);
-            var faRect = fillArea.GetComponent<RectTransform>();
+            var faRect = fillArea.AddComponent<RectTransform>();
             faRect.anchorMin = Vector2.zero;
             faRect.anchorMax = Vector2.one;
             faRect.offsetMin = Vector2.zero;
@@ -557,7 +557,7 @@ namespace Client.Game
 
             var fillObj = new GameObject("Fill");
             fillObj.transform.SetParent(fillArea.transform, false);
-            var fRect = fillObj.GetComponent<RectTransform>();
+            var fRect = fillObj.AddComponent<RectTransform>();
             fRect.anchorMin = Vector2.zero;
             fRect.anchorMax = Vector2.one;
             fRect.offsetMin = Vector2.zero;
