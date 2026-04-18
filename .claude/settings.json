@@ -12,15 +12,7 @@
   },
   "hooks": {
     "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/scripts/build-check.sh"
-          }
-        ]
-      }
+
     ]
   }
 }

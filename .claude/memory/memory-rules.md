@@ -1,21 +1,33 @@
 ---
 name: memory-rules
-description: Memory system configuration — save to project dir, not ~/.claude/projects/
+description: 记忆系统规则 — 项目记忆 vs 内置自动记忆的关系和使用方式
 type: reference
 ---
 
 # 记忆系统规则
 
-- **所有记忆文件保存在项目目录** `E:/worku/game1/.claude/memory/` 下
-- **不使用** Claude Code 内置记忆系统（`~/.claude/projects/` 下的 memory/），那些文件只有本机能看，不能 Git 管理
-- **写**: 项目知识/约定/经验 → `CLAUDE.md`；本地/个人/工作记录 → `CLAUDE.local.md`；结构化记忆 → `.claude/memory/`
-- **读**: 每次对话开头，先检查 `CLAUDE.local.md` 的工作记录和 `CLAUDE.md` 的相关章节
-- **时机**: 用户说"记一下"/"记住" → 写 CLAUDE.md 或 .claude/memory/，不写 ~/.claude/projects/
+## 两个记忆系统
 
-## 为什么
+| 系统 | 路径 | 特点 | 用途 |
+|------|------|------|------|
+| 项目记忆 | `.claude/memory/` | Git 管理，团队共享 | 项目知识、踩坑经验、设计决策 |
+| 内置自动记忆 | `~/.claude/projects/` | 本机私有，每次对话自动加载 | 用户个人偏好、跨项目反馈 |
 
-用户要求记忆保存在项目目录，便于 Git 版本管理和团队共享。内置记忆系统路径 `~/.claude/projects/` 是本机私有路径，不能被 Git 管理。
+本项目以**项目记忆**为主，所有团队共享的知识写在这里。
 
-## 如何应用
+## 写入规则
 
-当需要保存记忆时，在 `E:/worku/game1/.claude/memory/` 下创建 `.md` 文件，并在 `.claude/memory/MEMORY.md` 索引中添加条目。
+- **项目知识**（架构、调试、业务规则、踩坑）→ `.claude/memory/` 带 YAML frontmatter
+- **用户偏好**（语言、格式、流程偏好）→ `CLAUDE.local.md` 用户偏好章节
+- **编码规则**（编码、换行、命名）→ `CLAUDE.local.md` 编码规则章节
+- **命名前缀**：`arch-`(架构)、`debug-`(调试)、`biz-`(业务)、`rule-`(规则)、`workflow-`(工作流)、`feedback-`(反馈)、`project-`(项目)、`ref-`(引用)
+
+## 读取规则
+
+- `CLAUDE.md` + `CLAUDE.local.md` 每次对话自动加载
+- `.claude/memory/` 文件通过 `CLAUDE.local.md` 索引按需查阅
+
+## 记忆内容筛选
+
+- ✅ 记录：踩过的坑、非直觉的规则、设计决策及理由、复杂的代码路径
+- ❌ 不记：显而易见的常识、已在 CLAUDE.md 中记录的内容、git history 可查的信息

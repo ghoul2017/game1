@@ -1,6 +1,6 @@
 ---
 name: Architecture Decisions
-description: 架构决策记录（ADR），记录关键设计选择的原因和后果
+description: 关键架构决策记录（ADR）
 type: project
 ---
 
@@ -27,14 +27,3 @@ type: project
 **决定**：数据先写内存，定时批量持久化（60s）
 **Why**: 减少数据库压力
 **How to apply**: 服务器崩溃可能丢失少量数据；停服前必须调用 `FlushAllAsync`；变更合并规则：Insert+Update=Insert, Insert+Delete=忽略, Update+Delete=Delete
-
-## 架构分层
-
-```
-Game Layer    — Managers(单例) + Handlers(消息) + Models(数据)
-Core Layer    — EventBus, EntityFactory, LogManager, MessageRouter, ConfigManager
-Network Layer — TcpServer, TcpSession, PacketCodec, NetClient
-Engine Layer  — Unity Physics/Rendering | .NET Networking
-```
-
-修改定位：新消息→shared/Protos/ + Handler | UI→client/Game/ | 业务→server/game/<module>/ | 网络→shared/Network/ | 框架→server/Core/
