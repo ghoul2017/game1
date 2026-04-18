@@ -3,6 +3,7 @@ name: dev-worker
 description: Write or fix code to implement a specific feature. Receives feature ID, description, and steps. Returns structured DEV_RESULT with status, files, summary, and knowledge.
 tools: [Read, Write, Edit, Grep, Glob, Bash]
 model: sonnet
+memory: project
 ---
 
 # Dev Worker（开发执行 Agent）

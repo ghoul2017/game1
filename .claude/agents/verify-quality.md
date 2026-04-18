@@ -3,6 +3,7 @@ name: verify-quality
 description: Review code quality for naming, safety, performance, and maintainability. Returns PASS or FAIL with categorized CRITICAL and WARNING issues. Read-only analysis.
 tools: [Read, Grep, Glob]
 model: sonnet
+memory: project
 ---
 
 # Verify Quality Agent（质量验证）

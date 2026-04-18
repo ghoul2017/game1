@@ -3,6 +3,7 @@ name: verify-feature
 description: Verify code changes correctly cover all steps of a feature specification. Cross-check message, handler, and config consistency. Read-only analysis.
 tools: [Read, Grep, Glob]
 model: sonnet
+memory: project
 ---
 
 # Verify Feature Agent（功能验证）
