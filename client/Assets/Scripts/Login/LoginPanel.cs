@@ -18,6 +18,7 @@ namespace Client.Login
         private bool isLoggingIn;
 
         private const string PREF_USERNAME = "login_username";
+        private const string PREF_PASSWORD = "login_password";
         private const string PREF_REMEMBER = "login_remember";
 
         public override void OnInit()
@@ -286,6 +287,7 @@ namespace Client.Login
             if (PlayerPrefs.GetInt(PREF_REMEMBER, 0) == 1)
             {
                 usernameInput.text = PlayerPrefs.GetString(PREF_USERNAME, "");
+                passwordInput.text = PlayerPrefs.GetString(PREF_PASSWORD, "");
                 if (rememberToggle != null) rememberToggle.isOn = true;
             }
         }
@@ -295,12 +297,14 @@ namespace Client.Login
             if (rememberToggle != null && rememberToggle.isOn)
             {
                 PlayerPrefs.SetString(PREF_USERNAME, usernameInput.text.Trim());
+                PlayerPrefs.SetString(PREF_PASSWORD, passwordInput.text.Trim());
                 PlayerPrefs.SetInt(PREF_REMEMBER, 1);
                 PlayerPrefs.Save();
             }
             else
             {
                 PlayerPrefs.DeleteKey(PREF_USERNAME);
+                PlayerPrefs.DeleteKey(PREF_PASSWORD);
                 PlayerPrefs.SetInt(PREF_REMEMBER, 0);
                 PlayerPrefs.Save();
             }
