@@ -80,6 +80,18 @@ namespace Client.Login
             toggleBg.color = UIBuilder.InputBg;
             rememberToggle = rememberObj.AddComponent<Toggle>();
             rememberToggle.targetGraphic = toggleBg;
+
+            // 勾选标记
+            var checkObj = new GameObject("Checkmark");
+            checkObj.transform.SetParent(rememberObj.transform, false);
+            var checkRect = checkObj.AddComponent<RectTransform>();
+            checkRect.sizeDelta = new Vector2(18, 18);
+            checkRect.anchoredPosition = new Vector2(-60, 0);
+            var checkImage = checkObj.AddComponent<Image>();
+            checkImage.color = UIBuilder.Gold;
+            checkImage.raycastTarget = false;
+            rememberToggle.graphic = checkImage;
+
             var toggleLabel = UIBuilder.CreateText(rememberObj.transform, "Label", "记住密码", 14,
                 UIBuilder.TextGray, TextAnchor.MiddleLeft);
             var tlRect = toggleLabel.GetComponent<RectTransform>();
