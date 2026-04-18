@@ -77,7 +77,7 @@ pwd
 
 ### Stage 3: Verify（验证）
 
-通过 Agent 工具**并行**启动两个验证 agent：
+通过 Agent 工具**并行**启动两个验证 agent（在**同一条消息中**发出两个 Agent 工具调用，两个都设置 `run_in_background: true`，然后等待两个结果）：
 
 1. **verify-feature**（subagent_type: "verify-feature"）— 功能需求覆盖验证
    - 输入：功能 ID、描述、steps、变更文件列表

@@ -35,7 +35,7 @@
 - 编译失败 → 反馈给 dev-worker 修复，最多 3 次
 
 ### Stage 3: 验证
-- 通过 Agent 工具**并行**启动 verify-feature（subagent_type: "verify-feature"）和 verify-quality（subagent_type: "verify-quality"）
+- 通过 Agent 工具**并行**启动 verify-feature 和 verify-quality（在同一条消息中发出两个 Agent 调用，设置 run_in_background: true）
 - 如果任一返回 FAIL，进入修复循环（最多 3 轮）：
   1. 将 issues 反馈给 dev-worker 重新修复
   2. 重新编译检查 + 重新验证

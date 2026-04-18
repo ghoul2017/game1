@@ -2,6 +2,7 @@
 name: mem-writer
 description: Extract and archive development knowledge into the three-layer memory system. Reads context and dev-worker output, writes memory files, updates MEMORY.md index.
 tools: [Read, Write, Grep, Glob]
+model: sonnet
 memory: project
 ---
 

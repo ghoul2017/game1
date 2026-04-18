@@ -2,7 +2,9 @@
 name: verify-quality
 description: Review code quality for naming, safety, performance, and maintainability. Returns PASS or FAIL with categorized CRITICAL and WARNING issues. Read-only analysis.
 tools: [Read, Grep, Glob]
+disallowedTools: [Edit, Write, Bash]
 model: sonnet
+permissionMode: plan
 memory: project
 ---
 
