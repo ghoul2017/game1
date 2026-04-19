@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using Client.Core;
 using Client.Network;
 using Client.Config;
-using GameShared.Protos;
-using GameShared.Config;
+using Shared.Common.Protos;
+using Shared.Common.Config;
+using Shared.Common;
 
 namespace Client.Game
 {
@@ -209,22 +210,22 @@ namespace Client.Game
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<QueryMailListAck>(MsgId.QueryMailListAck, HandleQueryMailListAck);
-            nc.Dispatcher.Register<MailReadAck>(MsgId.MailReadAck, HandleMailReadAck);
-            nc.Dispatcher.Register<MailGetItemAck>(MsgId.MailGetItemAck, HandleMailGetItemAck);
-            nc.Dispatcher.Register<MailDeleteAck>(MsgId.MailDeleteAck, HandleMailDeleteAck);
-            nc.Dispatcher.Register<MailNewNtf>(MsgId.MailNewNtf, HandleMailNewNtf);
+            nc.Dispatcher.Register<QueryMailListAck>(MsgIdConst.QueryMailListAck, HandleQueryMailListAck);
+            nc.Dispatcher.Register<MailReadAck>(MsgIdConst.MailReadAck, HandleMailReadAck);
+            nc.Dispatcher.Register<MailGetItemAck>(MsgIdConst.MailGetItemAck, HandleMailGetItemAck);
+            nc.Dispatcher.Register<MailDeleteAck>(MsgIdConst.MailDeleteAck, HandleMailDeleteAck);
+            nc.Dispatcher.Register<MailNewNtf>(MsgIdConst.MailNewNtf, HandleMailNewNtf);
         }
 
         private void UnregisterHandlers()
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgId.QueryMailListAck);
-            nc.Dispatcher.Unregister(MsgId.MailReadAck);
-            nc.Dispatcher.Unregister(MsgId.MailGetItemAck);
-            nc.Dispatcher.Unregister(MsgId.MailDeleteAck);
-            nc.Dispatcher.Unregister(MsgId.MailNewNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.QueryMailListAck);
+            nc.Dispatcher.Unregister(MsgIdConst.MailReadAck);
+            nc.Dispatcher.Unregister(MsgIdConst.MailGetItemAck);
+            nc.Dispatcher.Unregister(MsgIdConst.MailDeleteAck);
+            nc.Dispatcher.Unregister(MsgIdConst.MailNewNtf);
         }
 
         // ==================== Handlers ====================

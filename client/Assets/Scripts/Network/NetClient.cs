@@ -5,8 +5,9 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using Client.Game;
-using GameShared.Network;
-using GameShared.Protos;
+using Shared.Common;
+using Shared.Core.Network;
+using Shared.Common.Protos;
 using UnityEngine;
 
 namespace Client.Network
@@ -248,8 +249,8 @@ namespace Client.Network
                     // Register handshake response handler
                     if (_dispatcher != null)
                     {
-                        _dispatcher.Register<HandshakeResp>(MsgId.HandshakeResp, HandleHandshakeResp);
-                        _dispatcher.Register<KickNtf>(MsgId.KickNtf, HandleKickNtf);
+                        _dispatcher.Register<HandshakeResp>(MsgIdConst.HandshakeResp, HandleHandshakeResp);
+                        _dispatcher.Register<KickNtf>(MsgIdConst.KickNtf, HandleKickNtf);
                     }
 
                     // Send handshake request
@@ -317,10 +318,10 @@ namespace Client.Network
             // Cleanup handlers
             if (_dispatcher != null)
             {
-                _dispatcher.Unregister(MsgId.HandshakeResp);
-                _dispatcher.Unregister(MsgId.HeartbeatResp);
-                _dispatcher.Unregister(MsgId.ReconnectResp);
-                _dispatcher.Unregister(MsgId.KickNtf);
+                _dispatcher.Unregister(MsgIdConst.HandshakeResp);
+                _dispatcher.Unregister(MsgIdConst.HeartbeatResp);
+                _dispatcher.Unregister(MsgIdConst.ReconnectResp);
+                _dispatcher.Unregister(MsgIdConst.KickNtf);
             }
 
             _running = false;
@@ -405,7 +406,7 @@ namespace Client.Network
         {
             // Unregister handler
             if (_dispatcher != null)
-                _dispatcher.Unregister(MsgId.HandshakeResp);
+                _dispatcher.Unregister(MsgIdConst.HandshakeResp);
 
             if (resp.Code == 0)
             {
@@ -414,7 +415,7 @@ namespace Client.Network
                     // Had previous session — attempt application-level reconnect
                     Debug.Log("[NetClient] Handshake OK, sending ReconnectReq...");
                     if (_dispatcher != null)
-                        _dispatcher.Register<ReconnectResp>(MsgId.ReconnectResp, HandleReconnectResp);
+                        _dispatcher.Register<ReconnectResp>(MsgIdConst.ReconnectResp, HandleReconnectResp);
 
                     var req = new ReconnectReq();
                     req.Token = GameData.Token;
@@ -429,7 +430,7 @@ namespace Client.Network
 
                     // Register heartbeat handler for ping measurement
                     if (_dispatcher != null)
-                        _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+                        _dispatcher.Register<HeartbeatResp>(MsgIdConst.HeartbeatResp, HandleHeartbeatResp);
 
                     OnConnected?.Invoke();
                 }
@@ -463,7 +464,7 @@ namespace Client.Network
         private void HandleReconnectResp(ReconnectResp resp)
         {
             if (_dispatcher != null)
-                _dispatcher.Unregister(MsgId.ReconnectResp);
+                _dispatcher.Unregister(MsgIdConst.ReconnectResp);
 
             _hadSession = false;
 
@@ -480,7 +481,7 @@ namespace Client.Network
 
                 _state = ConnState.Connected;
                 if (_dispatcher != null)
-                    _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+                    _dispatcher.Register<HeartbeatResp>(MsgIdConst.HeartbeatResp, HandleHeartbeatResp);
 
                 OnReconnected?.Invoke();
             }
@@ -493,7 +494,7 @@ namespace Client.Network
 
                 _state = ConnState.Connected;
                 if (_dispatcher != null)
-                    _dispatcher.Register<HeartbeatResp>(MsgId.HeartbeatResp, HandleHeartbeatResp);
+                    _dispatcher.Register<HeartbeatResp>(MsgIdConst.HeartbeatResp, HandleHeartbeatResp);
 
                 OnReconnectFailed?.Invoke(resp.Message);
             }

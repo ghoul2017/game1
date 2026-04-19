@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Client.Core;
 using Client.Network;
-using GameShared.Protos;
+using Shared.Common.Protos;
 
 namespace Client.Game
 {

@@ -1,5 +1,10 @@
-using GameShared.Config;
-using GameShared.Protos;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Shared.Common.Config;
+using Shared.Common.Protos;
 using Server.Config;
 using Server.Core;
 using Server.Core.Log;
@@ -8,7 +13,7 @@ using Server.Game.Fight;
 using Server.Game.Map;
 using Server.Game.Player;
 using Server.Network;
-using GameShared.Network;
+using Shared.Core.Network;
 
 namespace Server.Game.Monster;
 

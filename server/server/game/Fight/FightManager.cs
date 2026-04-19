@@ -1,11 +1,13 @@
-using GameShared.Config;
+using System;
+using System.Collections.Generic;
+using Shared.Common.Config;
 using Server.Config;
 using Server.Core;
 using Server.Core.Log;
 using Server.Game.Map;
 using Server.Network;
-using GameShared.Network;
-using GameShared.Protos;
+using Shared.Core.Network;
+using Shared.Common.Protos;
 using Server.Game.Player;
 
 namespace Server.Game.Fight;

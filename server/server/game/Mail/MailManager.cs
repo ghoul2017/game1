@@ -1,11 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using ProtoBuf;
 using Server.Core.Entity;
 using Server.Core.Log;
 using Server.Game.Bag;
 using Server.Game.Player;
 using Server.Network;
-using GameShared.Network;
-using GameShared.Protos;
+using Shared.Core.Network;
+using Shared.Common.Protos;
 
 namespace Server.Game.Mail;
 

@@ -1,4 +1,6 @@
-using GameShared.Config;
+using System;
+using System.Collections.Generic;
+using Shared.Common.Config;
 
 namespace Server.Game.Fight;
 

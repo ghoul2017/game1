@@ -5,7 +5,8 @@ using System.Collections.Generic;
 using Client.Core;
 using Client.Game;
 using Client.Network;
-using GameShared.Protos;
+using Shared.Common;
+using Shared.Common.Protos;
 
 namespace Client.Login
 {
@@ -125,10 +126,10 @@ namespace Client.Login
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
             {
-                nc.Dispatcher.Register<RoleListResp>(MsgId.RoleListResp, HandleRoleListResp);
-                nc.Dispatcher.Register<CreateRoleResp>(MsgId.CreateRoleResp, HandleCreateRoleResp);
-                nc.Dispatcher.Register<SelectRoleResp>(MsgId.SelectRoleResp, HandleSelectRoleResp);
-                nc.Dispatcher.Register<EnterMapAck>(MsgId.EnterMapAck, HandleEnterMapAck);
+                nc.Dispatcher.Register<RoleListResp>(MsgIdConst.RoleListResp, HandleRoleListResp);
+                nc.Dispatcher.Register<CreateRoleResp>(MsgIdConst.CreateRoleResp, HandleCreateRoleResp);
+                nc.Dispatcher.Register<SelectRoleResp>(MsgIdConst.SelectRoleResp, HandleSelectRoleResp);
+                nc.Dispatcher.Register<EnterMapAck>(MsgIdConst.EnterMapAck, HandleEnterMapAck);
             }
         }
 
@@ -137,10 +138,10 @@ namespace Client.Login
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
             {
-                nc.Dispatcher.Unregister(MsgId.RoleListResp);
-                nc.Dispatcher.Unregister(MsgId.CreateRoleResp);
-                nc.Dispatcher.Unregister(MsgId.SelectRoleResp);
-                nc.Dispatcher.Unregister(MsgId.EnterMapAck);
+                nc.Dispatcher.Unregister(MsgIdConst.RoleListResp);
+                nc.Dispatcher.Unregister(MsgIdConst.CreateRoleResp);
+                nc.Dispatcher.Unregister(MsgIdConst.SelectRoleResp);
+                nc.Dispatcher.Unregister(MsgIdConst.EnterMapAck);
             }
         }
 

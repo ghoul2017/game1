@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Server.Core.Entity;
 using Server.Core.Log;
 using Server.Network;
-using GameShared.Network;
+using Shared.Core.Network;
 
 namespace Server.Game.Player;
 

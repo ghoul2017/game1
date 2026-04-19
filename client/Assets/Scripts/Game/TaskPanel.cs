@@ -3,7 +3,8 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using Client.Core;
 using Client.Network;
-using GameShared.Protos;
+using Shared.Common;
+using Shared.Common.Protos;
 
 namespace Client.Game
 {
@@ -201,22 +202,22 @@ namespace Client.Game
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<QueryTaskListAck>(MsgId.QueryTaskListAck, HandleQueryTaskListAck);
-            nc.Dispatcher.Register<TaskAcceptAck>(MsgId.TaskAcceptAck, HandleTaskAcceptAck);
-            nc.Dispatcher.Register<TaskSubmitAck>(MsgId.TaskSubmitAck, HandleTaskSubmitAck);
-            nc.Dispatcher.Register<TaskGiveUpAck>(MsgId.TaskGiveUpAck, HandleTaskGiveUpAck);
-            nc.Dispatcher.Register<TaskChangedNtf>(MsgId.TaskChangedNtf, HandleTaskChangedNtf);
+            nc.Dispatcher.Register<QueryTaskListAck>(MsgIdConst.QueryTaskListAck, HandleQueryTaskListAck);
+            nc.Dispatcher.Register<TaskAcceptAck>(MsgIdConst.TaskAcceptAck, HandleTaskAcceptAck);
+            nc.Dispatcher.Register<TaskSubmitAck>(MsgIdConst.TaskSubmitAck, HandleTaskSubmitAck);
+            nc.Dispatcher.Register<TaskGiveUpAck>(MsgIdConst.TaskGiveUpAck, HandleTaskGiveUpAck);
+            nc.Dispatcher.Register<TaskChangedNtf>(MsgIdConst.TaskChangedNtf, HandleTaskChangedNtf);
         }
 
         private void UnregisterHandlers()
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgId.QueryTaskListAck);
-            nc.Dispatcher.Unregister(MsgId.TaskAcceptAck);
-            nc.Dispatcher.Unregister(MsgId.TaskSubmitAck);
-            nc.Dispatcher.Unregister(MsgId.TaskGiveUpAck);
-            nc.Dispatcher.Unregister(MsgId.TaskChangedNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.QueryTaskListAck);
+            nc.Dispatcher.Unregister(MsgIdConst.TaskAcceptAck);
+            nc.Dispatcher.Unregister(MsgIdConst.TaskSubmitAck);
+            nc.Dispatcher.Unregister(MsgIdConst.TaskGiveUpAck);
+            nc.Dispatcher.Unregister(MsgIdConst.TaskChangedNtf);
         }
 
         // ==================== Handlers ====================

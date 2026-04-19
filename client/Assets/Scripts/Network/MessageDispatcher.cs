@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using GameShared.Network;
-using GameShared.Protos;
+using Shared.Core.Network;
+using Shared.Common.Protos;
 using ProtoBuf;
 
 namespace Client.Network

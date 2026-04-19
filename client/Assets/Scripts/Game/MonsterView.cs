@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using GameShared.Protos;
+using Shared.Common.Protos;
 using UnityEngine;
 using UnityEngine.UI;
 

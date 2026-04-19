@@ -3,7 +3,8 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using Client.Core;
 using Client.Network;
-using GameShared.Protos;
+using Shared.Common;
+using Shared.Common.Protos;
 
 namespace Client.Game
 {
@@ -386,18 +387,18 @@ namespace Client.Game
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<ChatAck>(MsgId.ChatAck, HandleChatAck);
-            nc.Dispatcher.Register<ChatNtf>(MsgId.ChatNtf, HandleChatNtf);
-            nc.Dispatcher.Register<SystemChatNtf>(MsgId.SystemChatNtf, HandleSystemChatNtf);
+            nc.Dispatcher.Register<ChatAck>(MsgIdConst.ChatAck, HandleChatAck);
+            nc.Dispatcher.Register<ChatNtf>(MsgIdConst.ChatNtf, HandleChatNtf);
+            nc.Dispatcher.Register<SystemChatNtf>(MsgIdConst.SystemChatNtf, HandleSystemChatNtf);
         }
 
         private void UnregisterChatHandlers()
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgId.ChatAck);
-            nc.Dispatcher.Unregister(MsgId.ChatNtf);
-            nc.Dispatcher.Unregister(MsgId.SystemChatNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.ChatAck);
+            nc.Dispatcher.Unregister(MsgIdConst.ChatNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.SystemChatNtf);
         }
 
         private void HandleChatAck(ChatAck ack)
@@ -668,20 +669,20 @@ namespace Client.Game
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<UseSkillAck>(MsgId.UseSkillAck, HandleUseSkillAck);
-            nc.Dispatcher.Register<HpChangedNtf>(MsgId.HpChangedNtf, HandleHpChangedNtf);
-            nc.Dispatcher.Register<KilledByNtf>(MsgId.KilledByNtf, HandleKilledByNtf);
-            nc.Dispatcher.Register<PkModeChangedNtf>(MsgId.PkModeChangedNtf, HandlePkModeChangedNtf);
+            nc.Dispatcher.Register<UseSkillAck>(MsgIdConst.UseSkillAck, HandleUseSkillAck);
+            nc.Dispatcher.Register<HpChangedNtf>(MsgIdConst.HpChangedNtf, HandleHpChangedNtf);
+            nc.Dispatcher.Register<KilledByNtf>(MsgIdConst.KilledByNtf, HandleKilledByNtf);
+            nc.Dispatcher.Register<PkModeChangedNtf>(MsgIdConst.PkModeChangedNtf, HandlePkModeChangedNtf);
         }
 
         private void UnregisterFightHandlers()
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgId.UseSkillAck);
-            nc.Dispatcher.Unregister(MsgId.HpChangedNtf);
-            nc.Dispatcher.Unregister(MsgId.KilledByNtf);
-            nc.Dispatcher.Unregister(MsgId.PkModeChangedNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.UseSkillAck);
+            nc.Dispatcher.Unregister(MsgIdConst.HpChangedNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.KilledByNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.PkModeChangedNtf);
         }
 
         private void HandleUseSkillAck(UseSkillAck ack)

@@ -1,7 +1,8 @@
+using System.Collections.Generic;
 using Server.Core.Log;
 using Server.Game.Aoi;
 using Server.Game.Player;
-using GameShared.Protos;
+using Shared.Common.Protos;
 
 namespace Server.Game.Map;
 

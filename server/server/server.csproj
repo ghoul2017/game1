@@ -28,7 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\..\client\Assets\Scripts\shared\**\*.cs" />
+        <Compile Include="..\..\client\Assets\Scripts\Shared\**\*.cs" />
     </ItemGroup>
 
 </Project>

@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
-using GameShared.Network;
-using GameShared.Protos;
+using Shared.Common;
+using Shared.Core.Network;
+using Shared.Common.Protos;
 
 namespace Client.Network
 {
@@ -39,58 +40,58 @@ namespace Client.Network
         public static void Init()
         {
             // User (10101-10200)
-            Register<LoginResp>(MsgId.LoginResp);
-            Register<RoleListResp>(MsgId.RoleListResp);
-            Register<CreateRoleResp>(MsgId.CreateRoleResp);
-            Register<SelectRoleResp>(MsgId.SelectRoleResp);
-            Register<ReconnectResp>(MsgId.ReconnectResp);
-            Register<KickNtf>(MsgId.KickNtf);
+            Register<LoginResp>(MsgIdConst.LoginResp);
+            Register<RoleListResp>(MsgIdConst.RoleListResp);
+            Register<CreateRoleResp>(MsgIdConst.CreateRoleResp);
+            Register<SelectRoleResp>(MsgIdConst.SelectRoleResp);
+            Register<ReconnectResp>(MsgIdConst.ReconnectResp);
+            Register<KickNtf>(MsgIdConst.KickNtf);
 
             // Misc (10201-10300)
-            Register<HandshakeResp>(MsgId.HandshakeResp);
-            Register<HeartbeatResp>(MsgId.HeartbeatResp);
+            Register<HandshakeResp>(MsgIdConst.HandshakeResp);
+            Register<HeartbeatResp>(MsgIdConst.HeartbeatResp);
 
             // Bag (10301-10400)
-            Register<QueryBagAck>(MsgId.QueryBagAck);
-            Register<BagTidyAck>(MsgId.BagTidyAck);
-            Register<BagSwapAck>(MsgId.BagSwapAck);
-            Register<BagUseItemAck>(MsgId.BagUseItemAck);
-            Register<BagItemChangedNtf>(MsgId.BagItemChangedNtf);
+            Register<QueryBagAck>(MsgIdConst.QueryBagAck);
+            Register<BagTidyAck>(MsgIdConst.BagTidyAck);
+            Register<BagSwapAck>(MsgIdConst.BagSwapAck);
+            Register<BagUseItemAck>(MsgIdConst.BagUseItemAck);
+            Register<BagItemChangedNtf>(MsgIdConst.BagItemChangedNtf);
 
             // Mail (10401-10500)
-            Register<QueryMailListAck>(MsgId.QueryMailListAck);
-            Register<MailReadAck>(MsgId.MailReadAck);
-            Register<MailGetItemAck>(MsgId.MailGetItemAck);
-            Register<MailDeleteAck>(MsgId.MailDeleteAck);
-            Register<MailNewNtf>(MsgId.MailNewNtf);
+            Register<QueryMailListAck>(MsgIdConst.QueryMailListAck);
+            Register<MailReadAck>(MsgIdConst.MailReadAck);
+            Register<MailGetItemAck>(MsgIdConst.MailGetItemAck);
+            Register<MailDeleteAck>(MsgIdConst.MailDeleteAck);
+            Register<MailNewNtf>(MsgIdConst.MailNewNtf);
 
             // Chat (10501-10600)
-            Register<ChatAck>(MsgId.ChatAck);
-            Register<ChatNtf>(MsgId.ChatNtf);
-            Register<SystemChatNtf>(MsgId.SystemChatNtf);
+            Register<ChatAck>(MsgIdConst.ChatAck);
+            Register<ChatNtf>(MsgIdConst.ChatNtf);
+            Register<SystemChatNtf>(MsgIdConst.SystemChatNtf);
 
             // Task (10601-10700)
-            Register<QueryTaskListAck>(MsgId.QueryTaskListAck);
-            Register<TaskAcceptAck>(MsgId.TaskAcceptAck);
-            Register<TaskSubmitAck>(MsgId.TaskSubmitAck);
-            Register<TaskGiveUpAck>(MsgId.TaskGiveUpAck);
-            Register<TaskChangedNtf>(MsgId.TaskChangedNtf);
+            Register<QueryTaskListAck>(MsgIdConst.QueryTaskListAck);
+            Register<TaskAcceptAck>(MsgIdConst.TaskAcceptAck);
+            Register<TaskSubmitAck>(MsgIdConst.TaskSubmitAck);
+            Register<TaskGiveUpAck>(MsgIdConst.TaskGiveUpAck);
+            Register<TaskChangedNtf>(MsgIdConst.TaskChangedNtf);
 
             // Map (10701-10800)
-            Register<EnterMapAck>(MsgId.EnterMapAck);
-            Register<LeaveMapAck>(MsgId.LeaveMapAck);
-            Register<ChangeMapAck>(MsgId.ChangeMapAck);
-            Register<MapMoveAck>(MsgId.MapMoveAck);
-            Register<MapObjectsNtf>(MsgId.MapObjectsNtf);
-            Register<MapPlayerEnterNtf>(MsgId.MapPlayerEnterNtf);
-            Register<MapPlayerLeaveNtf>(MsgId.MapPlayerLeaveNtf);
-            Register<MapPlayerMoveNtf>(MsgId.MapPlayerMoveNtf);
+            Register<EnterMapAck>(MsgIdConst.EnterMapAck);
+            Register<LeaveMapAck>(MsgIdConst.LeaveMapAck);
+            Register<ChangeMapAck>(MsgIdConst.ChangeMapAck);
+            Register<MapMoveAck>(MsgIdConst.MapMoveAck);
+            Register<MapObjectsNtf>(MsgIdConst.MapObjectsNtf);
+            Register<MapPlayerEnterNtf>(MsgIdConst.MapPlayerEnterNtf);
+            Register<MapPlayerLeaveNtf>(MsgIdConst.MapPlayerLeaveNtf);
+            Register<MapPlayerMoveNtf>(MsgIdConst.MapPlayerMoveNtf);
 
             // Fight (10801-10900)
-            Register<UseSkillAck>(MsgId.UseSkillAck);
-            Register<HpChangedNtf>(MsgId.HpChangedNtf);
-            Register<KilledByNtf>(MsgId.KilledByNtf);
-            Register<PkModeChangedNtf>(MsgId.PkModeChangedNtf);
+            Register<UseSkillAck>(MsgIdConst.UseSkillAck);
+            Register<HpChangedNtf>(MsgIdConst.HpChangedNtf);
+            Register<KilledByNtf>(MsgIdConst.KilledByNtf);
+            Register<PkModeChangedNtf>(MsgIdConst.PkModeChangedNtf);
         }
     }
 }

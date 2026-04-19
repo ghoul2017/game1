@@ -1,3 +1,5 @@
+using Shared.Core.Config;
+
 namespace Client.Config
 {
     using System;
@@ -5,7 +7,7 @@ namespace Client.Config
     using System.Collections.Generic;
     using System.IO;
     using System.Reflection;
-    using GameShared.Config;
+    using Shared.Common.Config;
 
     /// <summary>
     /// 客户端配置表管理器，轻量版（无热更新）。

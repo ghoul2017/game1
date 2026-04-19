@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using Client.Core;
 using Client.Network;
 using Client.Config;
-using GameShared.Protos;
-using GameShared.Config;
+using Shared.Common.Protos;
+using Shared.Common.Config;
+using Shared.Common;
 
 namespace Client.Game
 {
@@ -155,20 +156,20 @@ namespace Client.Game
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<QueryBagAck>(MsgId.QueryBagAck, HandleQueryBagAck);
-            nc.Dispatcher.Register<BagTidyAck>(MsgId.BagTidyAck, HandleBagTidyAck);
-            nc.Dispatcher.Register<BagUseItemAck>(MsgId.BagUseItemAck, HandleBagUseItemAck);
-            nc.Dispatcher.Register<BagItemChangedNtf>(MsgId.BagItemChangedNtf, HandleBagItemChangedNtf);
+            nc.Dispatcher.Register<QueryBagAck>(MsgIdConst.QueryBagAck, HandleQueryBagAck);
+            nc.Dispatcher.Register<BagTidyAck>(MsgIdConst.BagTidyAck, HandleBagTidyAck);
+            nc.Dispatcher.Register<BagUseItemAck>(MsgIdConst.BagUseItemAck, HandleBagUseItemAck);
+            nc.Dispatcher.Register<BagItemChangedNtf>(MsgIdConst.BagItemChangedNtf, HandleBagItemChangedNtf);
         }
 
         private void UnregisterHandlers()
         {
             var nc = NetClient.Instance;
             if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgId.QueryBagAck);
-            nc.Dispatcher.Unregister(MsgId.BagTidyAck);
-            nc.Dispatcher.Unregister(MsgId.BagUseItemAck);
-            nc.Dispatcher.Unregister(MsgId.BagItemChangedNtf);
+            nc.Dispatcher.Unregister(MsgIdConst.QueryBagAck);
+            nc.Dispatcher.Unregister(MsgIdConst.BagTidyAck);
+            nc.Dispatcher.Unregister(MsgIdConst.BagUseItemAck);
+            nc.Dispatcher.Unregister(MsgIdConst.BagItemChangedNtf);
         }
 
         private void HandleQueryBagAck(QueryBagAck ack)

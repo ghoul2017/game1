@@ -1,9 +1,11 @@
+using System;
+using System.Collections.Generic;
 using Server.Core.Log;
 using Server.Game.Player;
 using Server.Network;
-using GameShared.Network;
+using Shared.Core.Network;
 using ProtoBuf;
-using GameShared.Protos;
+using Shared.Common.Protos;
 
 namespace Server.Game.Chat;
 

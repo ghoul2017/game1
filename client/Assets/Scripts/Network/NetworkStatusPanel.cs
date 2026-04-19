@@ -1,5 +1,5 @@
 using Client.Core;
-using GameShared.Network;
+using Shared.Core.Network;
 using UnityEngine;
 using UnityEngine.UI;
 

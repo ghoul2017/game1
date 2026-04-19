@@ -3,7 +3,8 @@ using UnityEngine.UI;
 using Client.Core;
 using Client.Network;
 using Client.Game;
-using GameShared.Protos;
+using Shared.Common;
+using Shared.Common.Protos;
 
 namespace Client.Login
 {
@@ -162,14 +163,14 @@ namespace Client.Login
         {
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
-                nc.Dispatcher.Register<LoginResp>(MsgId.LoginResp, HandleLoginResp);
+                nc.Dispatcher.Register<LoginResp>(MsgIdConst.LoginResp, HandleLoginResp);
         }
 
         private void UnregisterHandlers()
         {
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
-                nc.Dispatcher.Unregister(MsgId.LoginResp);
+                nc.Dispatcher.Unregister(MsgIdConst.LoginResp);
         }
 
         private void SetButtonEnabled(bool enabled)

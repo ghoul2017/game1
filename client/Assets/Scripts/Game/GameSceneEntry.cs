@@ -2,8 +2,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Client.Core;
 using Client.Network;
-using GameShared.Network;
-using GameShared.Protos;
+using Shared.Common;
+using Shared.Core.Network;
+using Shared.Common.Protos;
 
 namespace Client.Game
 {
@@ -165,15 +166,15 @@ namespace Client.Game
                 return;
             }
 
-            dispatcher.Register<MapObjectsNtf>(MsgId.MapObjectsNtf, OnMapObjectsNtf);
-            dispatcher.Register<MapPlayerEnterNtf>(MsgId.MapPlayerEnterNtf, OnMapPlayerEnterNtf);
-            dispatcher.Register<MapPlayerLeaveNtf>(MsgId.MapPlayerLeaveNtf, OnMapPlayerLeaveNtf);
-            dispatcher.Register<MapPlayerMoveNtf>(MsgId.MapPlayerMoveNtf, OnMapPlayerMoveNtf);
-            dispatcher.Register<MapNpcEnterNtf>(MsgId.MapNpcEnterNtf, OnMapNpcEnterNtf);
-            dispatcher.Register<MapNpcLeaveNtf>(MsgId.MapNpcLeaveNtf, OnMapNpcLeaveNtf);
-            dispatcher.Register<MapNpcMoveNtf>(MsgId.MapNpcMoveNtf, OnMapNpcMoveNtf);
-            dispatcher.Register<MapMoveAck>(MsgId.MapMoveAck, OnMapMoveAck);
-            dispatcher.Register<ChangeMapAck>(MsgId.ChangeMapAck, OnChangeMapAck);
+            dispatcher.Register<MapObjectsNtf>(MsgIdConst.MapObjectsNtf, OnMapObjectsNtf);
+            dispatcher.Register<MapPlayerEnterNtf>(MsgIdConst.MapPlayerEnterNtf, OnMapPlayerEnterNtf);
+            dispatcher.Register<MapPlayerLeaveNtf>(MsgIdConst.MapPlayerLeaveNtf, OnMapPlayerLeaveNtf);
+            dispatcher.Register<MapPlayerMoveNtf>(MsgIdConst.MapPlayerMoveNtf, OnMapPlayerMoveNtf);
+            dispatcher.Register<MapNpcEnterNtf>(MsgIdConst.MapNpcEnterNtf, OnMapNpcEnterNtf);
+            dispatcher.Register<MapNpcLeaveNtf>(MsgIdConst.MapNpcLeaveNtf, OnMapNpcLeaveNtf);
+            dispatcher.Register<MapNpcMoveNtf>(MsgIdConst.MapNpcMoveNtf, OnMapNpcMoveNtf);
+            dispatcher.Register<MapMoveAck>(MsgIdConst.MapMoveAck, OnMapMoveAck);
+            dispatcher.Register<ChangeMapAck>(MsgIdConst.ChangeMapAck, OnChangeMapAck);
 
             Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步 + NPC/怪物 + 切图处理器已注册");
         }
@@ -183,15 +184,15 @@ namespace Client.Game
             var dispatcher = NetClient.Instance != null ? NetClient.Instance.Dispatcher : null;
             if (dispatcher == null) return;
 
-            dispatcher.Unregister(MsgId.MapObjectsNtf);
-            dispatcher.Unregister(MsgId.MapPlayerEnterNtf);
-            dispatcher.Unregister(MsgId.MapPlayerLeaveNtf);
-            dispatcher.Unregister(MsgId.MapPlayerMoveNtf);
-            dispatcher.Unregister(MsgId.MapNpcEnterNtf);
-            dispatcher.Unregister(MsgId.MapNpcLeaveNtf);
-            dispatcher.Unregister(MsgId.MapNpcMoveNtf);
-            dispatcher.Unregister(MsgId.MapMoveAck);
-            dispatcher.Unregister(MsgId.ChangeMapAck);
+            dispatcher.Unregister(MsgIdConst.MapObjectsNtf);
+            dispatcher.Unregister(MsgIdConst.MapPlayerEnterNtf);
+            dispatcher.Unregister(MsgIdConst.MapPlayerLeaveNtf);
+            dispatcher.Unregister(MsgIdConst.MapPlayerMoveNtf);
+            dispatcher.Unregister(MsgIdConst.MapNpcEnterNtf);
+            dispatcher.Unregister(MsgIdConst.MapNpcLeaveNtf);
+            dispatcher.Unregister(MsgIdConst.MapNpcMoveNtf);
+            dispatcher.Unregister(MsgIdConst.MapMoveAck);
+            dispatcher.Unregister(MsgIdConst.ChangeMapAck);
         }
 
         private void OnMapObjectsNtf(MapObjectsNtf ntf)

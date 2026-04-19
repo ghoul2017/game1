@@ -1,7 +1,8 @@
+using System.Threading.Tasks;
 using Server.Core.Log;
 using Server.Network;
-using GameShared.Network;
-using GameShared.Protos;
+using Shared.Core.Network;
+using Shared.Common.Protos;
 
 namespace Server.Game.Fight;
 

@@ -1,3 +1,6 @@
+using System;
+using System.Threading.Tasks;
+
 namespace Server.Database.MySql.Repositories;
 
 public class Player
