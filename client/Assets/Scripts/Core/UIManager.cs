@@ -105,6 +105,12 @@ namespace Client.Core
             {
                 panel.Hide(fadeDuration);
                 RemoveFromStack(panel);
+
+                // 恢复新栈顶面板的显示
+                if (panelStack.Count > 0)
+                {
+                    panelStack.Peek().Show(fadeDuration);
+                }
             }
         }
 
