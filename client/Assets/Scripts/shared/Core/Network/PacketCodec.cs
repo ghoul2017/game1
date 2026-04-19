@@ -26,7 +26,7 @@ namespace Shared.Core.Network
         /// 尝试从缓冲区解码一个完整包。
         /// 返回 null 表示数据不足，需要继续接收。
         /// </summary>
-        public static DecodeResult TryDecode(byte[] buffer, int offset, int count)
+        public static DecodeResult? TryDecode(byte[] buffer, int offset, int count)
         {
             if (count < HeaderSize)
                 return null;

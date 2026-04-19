@@ -61,8 +61,10 @@ namespace Shared.Core.Config
                         // 忽略解析错误，保留默认值
                     }
                 }
+
                 result.Add(item);
             }
+
             return result;
         }
 
@@ -99,6 +101,7 @@ namespace Shared.Core.Config
                 if (!string.IsNullOrEmpty(trimmed))
                     list.Add(int.Parse(trimmed));
             }
+
             return list.ToArray();
         }
 
