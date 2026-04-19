@@ -1,3 +1,5 @@
+using System;
+
 namespace Server.Core.Log;
 
 public struct LogEntry

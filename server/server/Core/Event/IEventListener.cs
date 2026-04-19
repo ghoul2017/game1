@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace Server.Core.Event;
 
 /// <summary>

@@ -1,3 +1,5 @@
+using System;
+
 namespace Server.Core.Event;
 
 /// <summary>

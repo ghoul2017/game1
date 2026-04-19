@@ -1,3 +1,5 @@
+using System;
+
 namespace Server.Core.Log;
 
 public class ConsoleLogAppender : ILogAppender
