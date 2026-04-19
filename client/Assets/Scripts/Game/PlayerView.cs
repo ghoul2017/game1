@@ -65,7 +65,6 @@ namespace Client.Game
             canvas.sortingOrder = 10;
 
             var scaler = canvasObj.AddComponent<CanvasScaler>();
-            scaler.dynamicPixelsPerUnit = 100;
 
             nameplateCanvas = canvas;
 

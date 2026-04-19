@@ -84,7 +84,7 @@ namespace Client.Game
             var canvas = dmgObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.sortingOrder = 20;
-            dmgObj.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 200;
+            dmgObj.AddComponent<CanvasScaler>();
             dmgObj.transform.localScale = Vector3.one * 0.008f;
 
             var textObj = new GameObject("Text");
@@ -187,7 +187,6 @@ namespace Client.Game
             canvas.sortingOrder = 10;
 
             var scaler = canvasObj.AddComponent<CanvasScaler>();
-            scaler.dynamicPixelsPerUnit = 100;
 
             _nameplateCanvas = canvas;
 
