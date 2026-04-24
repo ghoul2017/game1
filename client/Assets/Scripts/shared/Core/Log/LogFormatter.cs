@@ -1,5 +1,6 @@
 using System.Text;
 
+#nullable enable
 namespace Shared.Core.Log
 {
     public class LogFormatter : ILogFormatter

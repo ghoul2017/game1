@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
+#nullable enable
 namespace Shared.Core.Log
 {
     public class FileLogAppender : ILogAppender

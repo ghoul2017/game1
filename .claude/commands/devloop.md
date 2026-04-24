@@ -66,7 +66,7 @@ DevLoop 报告
 ## 约束
 
 - 全自动执行，不提问
-- 遵循 CLAUDE.local.md 中的本地偏好
+- 遵循 `.claude/rules/` 中的编码规则
 - 严禁删除或修改功能清单中的已有条目
 - 不使用 git push
 

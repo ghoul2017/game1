@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-
+#nullable enable
 namespace Game.Config
 {
     public interface IConfigManager

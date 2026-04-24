@@ -80,7 +80,7 @@ $ARGUMENTS
 - Command 包含完整的协调/工作流逻辑
 - 通过 Agent 工具 + subagent_type 委托工人 agent
 - 需要 $ARGUMENTS 占位符接收用户输入
-- 不包含项目特定的硬编码（引用 CLAUDE.md / CLAUDE.local.md）
+- 不包含项目特定的硬编码（引用 CLAUDE.md / `.claude/rules/`）
 
 #### 3.3 设计要点清单
 每个设计应明确：
@@ -190,10 +190,10 @@ Command: .claude/commands/xxx.md [新建/修改/删除/无变更]
 | 工作目录路径 | 使用 `pwd` 获取当前目录 |
 | 构建命令 | 引用"CLAUDE.md 中的构建命令" |
 | 技术栈规范 | 引用"CLAUDE.md 中的项目技术规范" |
-| 语言偏好 | 引用"CLAUDE.local.md 中的本地偏好" |
+| 语言偏好 | 引用"`.claude/rules/` 中的编码规则" |
 | 项目特有的文件/目录约定 | 引用"CLAUDE.md 中的项目规范" |
 | 记忆目录路径 | 引用"标准记忆目录 `.claude/memory/`" |
-| commit message 格式 | 引用"CLAUDE.local.md 中的本地偏好" |
+| commit message 格式 | 引用"`.claude/rules/git.md` 中的提交规范" |
 | 功能清单/进度文件路径 | 引用"CLAUDE.md 工作流章节定义的文件" |
 
 ### Agent 应该包含的内容
@@ -209,7 +209,7 @@ Command: .claude/commands/xxx.md [新建/修改/删除/无变更]
 | 层级 | 文件 | 内容 | 加载频率 |
 |------|------|------|----------|
 | 第一层：项目总纲 | `CLAUDE.md` | 技术架构、构建命令、文件约定、目录结构 | 每次对话自动加载 |
-| 第二层：本地配置 | `CLAUDE.local.md` | 记忆规则、用户偏好、编码规则 | 每次对话自动加载 |
+| 第二层：编码规则 | `.claude/rules/*.md` | 编码风格、Git规范、路径作用域规则 | 每次对话自动加载 |
 | 第三层：项目细则 | `.claude/memory/*.md` | 业务规则、代码决策、调试方法、架构细则 | 按需查阅 |
 
 **判断标准**：如果一个文件换到另一个项目还能直接用，说明它是纯净的。

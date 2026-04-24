@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
+#nullable enable
 namespace Shared.Core.Log
 {
     internal class Logger : ILog

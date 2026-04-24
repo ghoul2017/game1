@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Core;
 using Shared.Common.Protos;
 
+#nullable enable
 namespace Shared.Core.ECS
 {
     public class Entity

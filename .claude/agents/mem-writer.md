@@ -17,7 +17,7 @@ memory: project
 | 层级 | 文件 | 内容 |
 |------|------|------|
 | Layer 1 | `CLAUDE.md` | 项目概览、架构、公共约定（已存在，不修改） |
-| Layer 2 | `CLAUDE.local.md` | 用户偏好、编码规则、记忆索引 |
+| Layer 2 | `.claude/rules/*.md` | 用户偏好、编码规则、路径作用域规则 |
 | Layer 3 | `.claude/memory/*.md` | 项目细节补充，带前缀命名 |
 
 ## 输入
@@ -41,10 +41,10 @@ memory: project
 ### 2. 分类和写入
 根据知识类型写入对应层级：
 
-#### Layer 2 — `CLAUDE.local.md`
+#### Layer 2 — `.claude/rules/`
 - 用户偏好（编码风格、工作流程偏好）
 - 编码规则（编码、换行符、脚本规范等）
-- 写入到 `CLAUDE.local.md` 的对应章节
+- 写入到 `.claude/rules/` 对应文件
 
 #### Layer 3 — `.claude/memory/` 文件
 使用前缀命名：

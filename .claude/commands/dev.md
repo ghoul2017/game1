@@ -125,7 +125,7 @@ YYYY-MM-DD [功能ID] FAILED - 失败原因
 **成功时：**
 ```bash
 git add <变更的文件>
-git commit -m "按照 CLAUDE.local.md 偏好格式提交"
+git commit -m "feat: [功能ID] 功能描述"
 git add <进度文件> <功能清单文件>
 git commit -m "progress: [功能ID] 状态更新"
 ```
@@ -166,7 +166,7 @@ Session 报告
 - **干净提交** — session 结束时代码应处于可编译状态
 - **回退机制** — 修复循环失败后必须回退
 - **不使用 git push**
-- **遵循 CLAUDE.local.md 中的本地偏好**（语言、commit 格式等）
+- **遵循 `.claude/rules/` 中的编码规则**（语言、commit 格式等）
 
 ## 错误处理
 

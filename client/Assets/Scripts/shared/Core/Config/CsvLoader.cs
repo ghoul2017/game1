@@ -7,6 +7,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 
+#nullable enable
 namespace Game.Config
 {
     /// <summary>

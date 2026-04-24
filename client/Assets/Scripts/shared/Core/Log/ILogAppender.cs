@@ -1,5 +1,6 @@
 using System;
 
+#nullable enable
 namespace Shared.Core.Log
 {
     public struct LogEntry

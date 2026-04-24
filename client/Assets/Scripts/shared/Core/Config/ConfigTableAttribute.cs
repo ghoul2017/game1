@@ -1,3 +1,4 @@
+#nullable enable
 namespace Shared.Core.Config
 {
     using System;

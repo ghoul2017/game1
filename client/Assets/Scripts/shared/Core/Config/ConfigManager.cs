@@ -8,6 +8,7 @@ using Shared.Common.Config;
 using Shared.Core.Log;
 using Shared.Core.Config;
 
+#nullable enable
 namespace Game.Config
 {
     public class ConfigManager : IConfigManager, IDisposable

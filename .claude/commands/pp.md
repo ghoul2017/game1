@@ -110,7 +110,7 @@ pwd
 ### 7. 提交
 ```bash
 git add <功能清单文件>
-git commit -m "按照 CLAUDE.local.md 偏好格式提交"
+git commit -m "按照 `.claude/rules/git.md` 规范提交"
 ```
 
 ### 8. 输出最终报告
@@ -139,7 +139,7 @@ git commit -m "按照 CLAUDE.local.md 偏好格式提交"
 - **description 要足够具体** — dev-worker 能仅凭 description 完成实现
 - **遵循项目架构约定** — 参考 CLAUDE.md 中的消息系统、实体系统、Handler 规范
 - **不使用 git push**
-- **遵循 CLAUDE.local.md 中的本地偏好**
+- **遵循 `.claude/rules/` 中的编码规则**
 - **讨论过程中可以查阅代码** — 理解现有系统后再提建议，不凭空设计
 
 $ARGUMENTS

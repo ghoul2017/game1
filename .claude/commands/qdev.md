@@ -46,7 +46,7 @@
 - 通过 Agent 工具委托 mem-writer agent（subagent_type: "mem-writer"）归档知识
 
 ### Stage 5: 提交
-- 成功：`git add` + `git commit`（格式参考 CLAUDE.local.md 偏好）
+- 成功：`git add` + `git commit`（格式：`feat: [qdev] 任务描述`）
 - 失败：回退变更
 
 ### Stage 6: 报告
@@ -70,6 +70,6 @@ Quick Dev 报告
 - Stage 1-6 全自动，不提问
 - 不修改功能清单文件
 - 不使用 git push
-- 遵循 CLAUDE.local.md 中的本地偏好
+- 遵循 `.claude/rules/` 中的编码规则
 
 $ARGUMENTS

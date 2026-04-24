@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 
+#nullable enable
 namespace Shared.Core.Network
 {
     /// <summary>

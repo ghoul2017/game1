@@ -4,6 +4,7 @@ using Game.Core;
 using Shared.Core.ECS;
 using Shared.Core.Log;
 
+#nullable enable
 namespace Game.Config
 {
     public class ConfigComponent : Component
