@@ -27,9 +27,9 @@ public class NtfMethodHandler : IMessageHandler
         _componentType = componentType;
         _reqType = reqType;
 
-        // 从 TReq 获取 MsgId
-        var msgIdProp = reqType.GetProperty("MsgId");
-        ReqMsgId = (ushort)(msgIdProp?.GetValue(null) ?? 0);
+        // 从 TReq 实例获取 MsgId（MsgId 是实例属性）
+        var reqInstance = (IMessage?)System.Activator.CreateInstance(reqType);
+        ReqMsgId = reqInstance?.MsgId ?? 0;
     }
 
     public async Task<IMessage?> HandleAsync(TcpSession session, byte[] payload)

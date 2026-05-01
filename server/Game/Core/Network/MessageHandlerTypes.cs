@@ -7,10 +7,10 @@ namespace Game.Core.Network;
 /// 用于 [MessageHandler(typeof(MessageHandler&lt;,&gt;))] 标记扩展方法。
 /// </summary>
 /// <typeparam name="TReq">请求消息类型</typeparam>
-/// <typeparam name="TResp">响应消息类型</typeparam>
-public abstract class MessageHandler<TReq, TResp>
+/// <typeparam name="TRes">响应消息类型</typeparam>
+public abstract class MessageHandler<TReq, TRes>
     where TReq : IMessage
-    where TResp : IMessage, new()
+    where TRes : IMessage, new()
 {
 }
 
@@ -18,8 +18,8 @@ public abstract class MessageHandler<TReq, TResp>
 /// 通知风格消息处理器基类标记（无响应模式）。
 /// 用于 [MessageHandler(typeof(MessageNtfHandler&lt;&gt;))] 标记扩展方法。
 /// </summary>
-/// <typeparam name="TReq">请求消息类型</typeparam>
-public abstract class MessageNtfHandler<TReq>
-    where TReq : IMessage
+/// <typeparam name="TNtf">请求消息类型</typeparam>
+public abstract class MessageNtfHandler<TNtf>
+    where TNtf : IMessage
 {
 }

@@ -52,9 +52,9 @@ public class MessageRouter
                 continue;
             }
 
-            // 获取 MsgId
-            var msgIdProp = reqType.GetProperty("MsgId");
-            var msgId = (ushort)(msgIdProp?.GetValue(null) ?? 0);
+            // 获取 MsgId（需要创建实例，因为 MsgId 是实例属性）
+            var reqInstance = (IMessage?)Activator.CreateInstance(reqType);
+            var msgId = reqInstance?.MsgId ?? 0;
 
             // 判断是 RPC 还是通知风格
             var handlerType = attr.type;
