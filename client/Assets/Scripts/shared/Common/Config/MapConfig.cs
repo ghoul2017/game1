@@ -5,7 +5,7 @@ namespace Shared.Common.Config
     /// <summary>
     /// 地图配置。对应 Map.csv。
     /// </summary>
-    [ConfigTable("Map.csv")]
+    [ConfigTable(FileName = "Map.csv")]
     public class MapConfig
     {
         /// <summary>地图配置ID</summary>

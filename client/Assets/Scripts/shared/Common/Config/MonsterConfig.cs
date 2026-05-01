@@ -5,7 +5,7 @@ namespace Shared.Common.Config
     /// <summary>
     /// 怪物配置。对应 Monster.csv。
     /// </summary>
-    [ConfigTable("Monster.csv", KeyName = "Id")]
+    [ConfigTable(FileName = "Monster.csv", KeyName = "Id")]
     public class MonsterConfig
     {
         /// <summary>怪物配置ID</summary>

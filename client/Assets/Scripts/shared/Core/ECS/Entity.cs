@@ -8,13 +8,24 @@ namespace Shared.Core.ECS
 {
     public class Entity
     {
-        private Entity? _parent;
-        public Entity? Parent => _parent;
         private long _id;
         public long Id => _id;
-
-
         private Dictionary<Type, Component> _components = new();
+
+
+        public static T CreateEntity<T>() where T : Entity, new()
+        {
+            var entity = new T();
+            entity._id = IdGenerator.Instance.NextId();
+            return entity;
+        }
+
+        public static T CreateEntityById<T>(long id) where T : Entity, new()
+        {
+            var entity = new T();
+            entity._id = id;
+            return entity;
+        }
 
         public T AddComponent<T>() where T : Component, new()
         {
@@ -24,11 +35,8 @@ namespace Shared.Core.ECS
                 throw new Exception($"重复添加组件: {type.FullName}");
             }
 
-            var component = new T
-            {
-                _parent = this,
-                _id = IdGenerator.Instance.NextId()
-            };
+            var component = new T();
+            component.SetParent(this);
             _components.Add(type, component);
             return component;
         }
@@ -41,7 +49,7 @@ namespace Shared.Core.ECS
 
         public void RemoveComponent(Component component)
         {
-            component._parent = null;
+            component.SetParent(null);
             _components.Remove(component.GetType());
         }
     }

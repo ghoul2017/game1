@@ -47,7 +47,7 @@ public class ItemEffectManager
         var result = new ItemUseResult();
 
         // 获取物品效果配置
-        var effectConfig = ConfigComponent.ConfigManager.Get<ItemEffectConfig>(configId);
+        var effectConfig = ConfigManager.Get<ItemEffectConfig>(configId);
         if (effectConfig == null)
         {
             // 没有效果配置的物品，可能是普通物品（如装备、材料）

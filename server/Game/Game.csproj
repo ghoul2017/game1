@@ -31,8 +31,4 @@
         <Compile Include="..\..\client\Assets\Scripts\Shared\**\*.cs" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Config\" />
-    </ItemGroup>
-
 </Project>

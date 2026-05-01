@@ -1,4 +1,4 @@
-namespace Game.game.user;
+namespace Game.Components.User;
 
 /// <summary>
 /// 登出原因

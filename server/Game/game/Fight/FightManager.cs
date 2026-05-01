@@ -76,7 +76,7 @@ public class FightManager
     /// <summary>获取技能配置（从 ConfigManager 加载的 CSV 数据）</summary>
     public SkillConfig? GetSkillConfig(int skillId)
     {
-        return ConfigComponent.ConfigManager.Get<SkillConfig>(skillId);
+        return ConfigManager.Get<SkillConfig>(skillId);
     }
 
     #endregion

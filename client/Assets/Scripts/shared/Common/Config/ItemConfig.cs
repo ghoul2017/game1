@@ -5,7 +5,7 @@ namespace Shared.Common.Config
     /// <summary>
     /// 物品配置。对应 Item.csv。
     /// </summary>
-    [ConfigTable("Item.csv")]
+    [ConfigTable]
     public class ItemConfig
     {
         public int Id { get; set; }

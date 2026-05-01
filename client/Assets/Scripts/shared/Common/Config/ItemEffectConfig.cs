@@ -6,7 +6,7 @@ namespace Shared.Common.Config
     /// 物品使用效果配置。对应 ItemEffect.csv。
     /// 物品使用后根据此配置触发对应效果。
     /// </summary>
-    [ConfigTable("ItemEffect.csv", KeyName = "Id")]
+    [ConfigTable(FileName = "ItemEffect.csv", KeyName = "Id")]
     public class ItemEffectConfig
     {
         /// <summary>效果ID</summary>

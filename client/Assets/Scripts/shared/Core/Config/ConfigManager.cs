@@ -11,9 +11,11 @@ using Shared.Core.Config;
 #nullable enable
 namespace Game.Config
 {
-    public class ConfigManager : IConfigManager, IDisposable
+    public class ConfigManager : IDisposable
     {
         private static readonly ILog Log = LogManager.GetLogger<ConfigManager>();
+        
+        public static ConfigManager Instance { get; } = new();
 
         /// <summary>全表数据 Type → List&lt;T&gt;</summary>
         private readonly ConcurrentDictionary<Type, object> _lists = new();
@@ -25,6 +27,12 @@ namespace Game.Config
         private readonly Dictionary<Type, (string fileName, PropertyInfo keyProp)> _configMeta = new();
 
         private FileSystemWatcher? _watcher;
+        
+        public void Init(string directory)
+        {
+            Instance.LoadAll(directory);
+            Log.Info("配置表模块初始化完成");
+        }
 
         public void LoadAll(string tablesDirectory)
         {
@@ -53,8 +61,14 @@ namespace Game.Config
                     throw new InvalidOperationException(
                         $"配置表 {type.Name} 标注 KeyName=\"{attr.KeyName}\"，但未找到该属性");
 
-                _configMeta[type] = (attr.FileName, keyProp);
-                Log.Debug($"扫描到配置表: {type.Name} → {attr.FileName} (Key={attr.KeyName})");
+                var attrFileName = attr.FileName;
+                if ("".Equals(attrFileName))
+                {
+                    attrFileName = type.Name + ".csv";
+                }
+
+                _configMeta[type] = (attrFileName, keyProp);
+                Log.Debug($"扫描到配置表: {type.Name} → {attrFileName} (Key={attr.KeyName})");
             }
 
             Log.Info($"共扫描到 {_configMeta.Count} 个配置表");
@@ -94,22 +108,22 @@ namespace Game.Config
         }
 
         /// <summary>按主键查单条</summary>
-        public T? Get<T>(int id) where T : class
+        public static T? Get<T>(int id) where T : class
         {
-            if (!_dicts.TryGetValue(typeof(T), out var dict)) return null;
+            if (!Instance._dicts.TryGetValue(typeof(T), out var dict)) return null;
             return ((Dictionary<int, T>)dict).TryGetValue(id, out var val) ? val : null;
         }
 
         /// <summary>获取全表数据</summary>
-        public List<T> GetAll<T>() where T : class
+        public static List<T> GetAll<T>() where T : class
         {
-            return _lists.TryGetValue(typeof(T), out var data) ? (List<T>)data : new();
+            return Instance._lists.TryGetValue(typeof(T), out var data) ? (List<T>)data : new();
         }
 
         /// <summary>获取索引字典</summary>
-        public Dictionary<int, T> GetDict<T>() where T : class
+        public static Dictionary<int, T> GetDict<T>() where T : class
         {
-            return _dicts.TryGetValue(typeof(T), out var dict) ? (Dictionary<int, T>)dict : new();
+            return Instance._dicts.TryGetValue(typeof(T), out var dict) ? (Dictionary<int, T>)dict : new();
         }
 
         /// <summary>热更新通知事件</summary>

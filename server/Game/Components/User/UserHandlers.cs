@@ -1,16 +1,13 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Game.Core;
 using Game.Core.Entity;
 using Game.Database;
 using Game.Game.Player;
 using Game.Network;
+using Shared.Common.Protos;
 using Shared.Core.Log;
 using Shared.Core.Network;
-using Shared.Common.Protos;
 
-namespace Game.Game.User;
+namespace Game.Components.User;
 
 /// <summary>
 /// 登录处理。验证账号 → 自动注册 → BindUser → 生成重连Token。
@@ -34,7 +31,7 @@ public class LoginHandler : MessageHandler<LoginReq>
         }
 
         // 查询账号
-        var account = await DatabaseManager.Instance.PlayerRepo.GetByUsernameAsync(req.Username);
+        Database.MySql.Repositories.Player? account = await DatabaseManager.Instance.PlayerRepo.GetByUsernameAsync(req.Username);
         if (account == null)
         {
             // 自动注册
@@ -206,7 +203,7 @@ public class SelectRoleHandler : MessageHandler<SelectRoleReq>
         }
 
         // 创建在线玩家
-        var player = new Player.Player
+        var player = new Player
         {
             UserId = session.UserId,
             RoleId = role.Id,
@@ -273,7 +270,7 @@ public class ReconnectHandler : MessageHandler<ReconnectReq>
             {
                 SessionManager.Instance.BindRole(session, role.Id);
 
-                var player = new Player.Player
+                var player = new Player
                 {
                     UserId = userId,
                     RoleId = role.Id,

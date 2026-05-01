@@ -41,19 +41,25 @@ public abstract class MessageHandler<TReq> : IMessageHandler
     }
 }
 
-public abstract  class PlayerMessageHandler<TReq> :  MessageHandler<TReq>
+public abstract  class PlayerMessageHandler<TReq> :  IMessageHandler
     where TReq : class, IMessage, new()
 {
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, TReq req)
+    /// <summary>从 Req 类型自动获取 MsgId</summary>
+    public ushort ReqMsgId { get; } = new TReq().MsgId;
+
+    public async Task<IMessage?> HandleAsync(TcpSession session, byte[] payload)
     {
+        TReq req;
+        using (var ms = new MemoryStream(payload))
+            req = Serializer.Deserialize<TReq>(ms);
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
             return null;
         }
-        return await HandleAsync(player, req);
+        return await ExecuteAsync(player, req);
     }
 
     /// <summary>业务逻辑 — 接收 Player 和反序列化后的请求，子类实现</summary>
-    protected abstract Task<IMessage?> HandleAsync(Player player, TReq req);
+    protected abstract Task<IMessage?> ExecuteAsync(Player player, TReq req);
 }

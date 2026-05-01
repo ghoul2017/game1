@@ -18,7 +18,8 @@ namespace Shared.Core.Log
 
         public static void Init(LogOptions options)
         {
-            if (_initialized) return;
+            if (_initialized)
+                return;
 
             _rootLevel = ParseLevel(options.Level, LogLevel.Info);
             _loggerLevels = options.Loggers?.ToDictionary(

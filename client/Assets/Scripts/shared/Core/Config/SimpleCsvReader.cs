@@ -1,11 +1,11 @@
 #nullable enable
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+
 namespace Shared.Core.Config
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Reflection;
-
     /// <summary>
     /// 轻量 CSV 读取器，兼容 .NET 8 和 Unity 2021.3（.NET Framework 4.7.1）。
     /// 支持 int/string/float/long/double/bool 及 int[]（分号分隔）类型。

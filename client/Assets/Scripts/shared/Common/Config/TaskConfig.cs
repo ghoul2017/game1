@@ -5,7 +5,7 @@ namespace Shared.Common.Config
     /// <summary>
     /// 任务配置。对应 Task.csv。
     /// </summary>
-    [ConfigTable("Task.csv", KeyName = "Id")]
+    [ConfigTable(FileName = "Task.csv", KeyName = "Id")]
     public class TaskConfig
     {
         /// <summary>任务ID</summary>

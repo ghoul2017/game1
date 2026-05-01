@@ -5,7 +5,7 @@ namespace Shared.Common.Config
     /// <summary>
     /// 技能配置。对应 Skill.csv。
     /// </summary>
-    [ConfigTable("Skill.csv", KeyName = "SkillId")]
+    [ConfigTable(FileName = "Skill.csv", KeyName = "SkillId")]
     public class SkillConfig
     {
         /// <summary>技能ID</summary>

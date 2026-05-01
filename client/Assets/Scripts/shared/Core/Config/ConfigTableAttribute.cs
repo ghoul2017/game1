@@ -10,14 +10,9 @@ namespace Shared.Core.Config
     public class ConfigTableAttribute : Attribute
     {
         /// <summary>CSV 文件名（如 "Skill.csv"）</summary>
-        public string FileName { get; }
+        public string FileName { get; set; } = "";
 
         /// <summary>主键属性名，默认 "Id"</summary>
         public string KeyName { get; set; } = "Id";
-
-        public ConfigTableAttribute(string fileName)
-        {
-            FileName = fileName;
-        }
     }
 }

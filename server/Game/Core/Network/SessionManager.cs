@@ -5,7 +5,7 @@ using Shared.Core.Network;
 using Shared.Common.Protos;
 using Shared.Core.Log;
 using System.Timers;
-using Game.game.user;
+using Game.Components.User;
 using Timer = System.Timers.Timer;
 
 namespace Game.Network;

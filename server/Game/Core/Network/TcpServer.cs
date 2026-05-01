@@ -3,10 +3,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Game.Components.User;
 using Game.Core;
 using Game.Game.Player;
 using Shared.Core.Log;
-using Game.game.user;
 
 namespace Game.Network;
 

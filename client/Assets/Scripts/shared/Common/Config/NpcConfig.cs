@@ -5,7 +5,7 @@ namespace Shared.Common.Config
     /// <summary>
     /// NPC配置。对应 Npc.csv。
     /// </summary>
-    [ConfigTable("Npc.csv", KeyName = "Id")]
+    [ConfigTable(FileName = "Npc.csv", KeyName = "Id")]
     public class NpcConfig
     {
         /// <summary>NPC配置ID</summary>

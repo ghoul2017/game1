@@ -68,7 +68,7 @@ public class MonsterManager
     public void InitMapMonsters(int mapId, int line)
     {
 
-        var monsters = ConfigComponent.ConfigManager.GetAll<MonsterConfig>()
+        var monsters = ConfigManager.GetAll<MonsterConfig>()
             .Where(m => m.MapId == mapId)
             .ToList();
 
@@ -638,7 +638,7 @@ public class MonsterManager
         {
             if (ParseTimerKey(timerKey, out int mapId, out int line, out int cfgId))
             {
-                var cfg = ConfigComponent.ConfigManager.Get<MonsterConfig>(cfgId);
+                var cfg = ConfigManager.Get<MonsterConfig>(cfgId);
                 if (cfg != null)
                 {
                     SpawnMonster(mapId, line, cfg);

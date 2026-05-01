@@ -63,7 +63,7 @@ public class TaskManager
             return TaskAcceptResult.Fail(TaskErrorCode.TaskFull);
 
         // 获取任务配置
-        var taskCfg = ConfigComponent.ConfigManager.Get<TaskConfig>(taskId);
+        var taskCfg = ConfigManager.Get<TaskConfig>(taskId);
         if (taskCfg == null)
         {
             Log.Warn($"任务配置不存在 TaskId:{taskId}");
@@ -131,7 +131,7 @@ public class TaskManager
             return TaskSubmitResult.Fail(TaskErrorCode.TaskAlreadyClaimed);
 
         // 获取任务配置
-        var taskCfg = ConfigComponent.ConfigManager.Get<TaskConfig>(taskId);
+        var taskCfg = ConfigManager.Get<TaskConfig>(taskId);
         if (taskCfg == null)
         {
             Log.Warn($"任务配置不存在 TaskId:{taskId}");
