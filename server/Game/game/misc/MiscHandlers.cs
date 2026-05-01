@@ -18,8 +18,8 @@ public class HandshakeHandler : MessageHandler<HandshakeReq>
     {
         Log.Info($"Session:{session.SessionId} Token:{req.Token}");
 
-        var resp = new HandshakeResp { Code = 0, Message = "OK" };
-        return Task.FromResult<IMessage?>(resp);
+        var res = new HandshakeResp { Code = 0, Message = "OK" };
+        return Task.FromResult<IMessage?>(res);
     }
 }
 
@@ -35,12 +35,12 @@ public class HeartbeatHandler : MessageHandler<HeartbeatReq>
         // 更新会话活跃时间
         session.UpdateActiveTime();
 
-        var resp = new HeartbeatResp
+        var res = new HeartbeatResp
         {
             ServerTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             ClientTime = req.ClientTime
         };
 
-        return Task.FromResult<IMessage?>(resp);
+        return Task.FromResult<IMessage?>(res);
     }
 }

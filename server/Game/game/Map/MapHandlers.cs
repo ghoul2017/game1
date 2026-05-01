@@ -18,19 +18,19 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
 
     protected override Task<IMessage?> ExecuteAsync(TcpSession session, EnterMapReq req)
     {
-        var resp = new EnterMapAck();
+        var res = new EnterMapAck();
 
         if (session.RoleId == 0)
         {
-            resp.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         // 检查是否已在地图中（重进：返回当前位置）
@@ -38,12 +38,12 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
         if (currentPos != null)
         {
             var (mapId, line, px, py) = currentPos.Value;
-            resp.Code = MapErrorCode.Ok;
-            resp.MapCfgId = mapId;
-            resp.Line = line;
-            resp.X = px;
-            resp.Y = py;
-            session.Send(resp);
+            res.Code = MapErrorCode.Ok;
+            res.MapCfgId = mapId;
+            res.Line = line;
+            res.X = px;
+            res.Y = py;
+            session.Send(res);
             // 重新发送视野内对象
             var currentMap = MapManager.Instance.GetMap(mapId, line);
             if (currentMap != null)
@@ -56,8 +56,8 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
         var map = MapManager.Instance.GetMap(req.MapCfgId, req.Line);
         if (map == null)
         {
-            resp.Code = MapErrorCode.MapNotFound;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.MapNotFound;
+            return Task.FromResult<IMessage?>(res);
         }
 
         int x = req.Line == 0 ? map.BirthX : map.BirthX;
@@ -65,18 +65,18 @@ public class EnterMapHandler : MessageHandler<EnterMapReq>
 
         if (!MapManager.Instance.EnterMap(session.RoleId, player.RoleName, req.MapCfgId, req.Line, x, y))
         {
-            resp.Code = MapErrorCode.MapNotFound;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.MapNotFound;
+            return Task.FromResult<IMessage?>(res);
         }
 
-        resp.Code = MapErrorCode.Ok;
-        resp.MapCfgId = req.MapCfgId;
-        resp.Line = req.Line;
-        resp.X = x;
-        resp.Y = y;
+        res.Code = MapErrorCode.Ok;
+        res.MapCfgId = req.MapCfgId;
+        res.Line = req.Line;
+        res.X = x;
+        res.Y = y;
 
         // 先发送响应，让客户端设置场景，再发送视野内对象列表
-        session.Send(resp);
+        session.Send(res);
         SendVisibleObjects(session.RoleId, map, x, y);
 
         // 初始化地图怪物
@@ -128,22 +128,22 @@ public class LeaveMapHandler : MessageHandler<LeaveMapReq>
 {
     protected override Task<IMessage?> ExecuteAsync(TcpSession session, LeaveMapReq req)
     {
-        var resp = new LeaveMapAck();
+        var res = new LeaveMapAck();
 
         if (session.RoleId == 0)
         {
-            resp.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         if (!MapManager.Instance.QuitMap(session.RoleId))
         {
-            resp.Code = MapErrorCode.NotInMap;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotInMap;
+            return Task.FromResult<IMessage?>(res);
         }
 
-        resp.Code = MapErrorCode.Ok;
-        return Task.FromResult<IMessage?>(resp);
+        res.Code = MapErrorCode.Ok;
+        return Task.FromResult<IMessage?>(res);
     }
 }
 
@@ -156,26 +156,26 @@ public class ChangeMapHandler : MessageHandler<ChangeMapReq>
 
     protected override Task<IMessage?> ExecuteAsync(TcpSession session, ChangeMapReq req)
     {
-        var resp = new ChangeMapAck();
+        var res = new ChangeMapAck();
 
         if (session.RoleId == 0)
         {
-            resp.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         var targetMap = MapManager.Instance.GetMap(req.TargetMapCfgId, req.TargetLine);
         if (targetMap == null)
         {
-            resp.Code = MapErrorCode.MapNotFound;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.MapNotFound;
+            return Task.FromResult<IMessage?>(res);
         }
 
         int x = req.X > 0 ? req.X : targetMap.BirthX;
@@ -183,18 +183,18 @@ public class ChangeMapHandler : MessageHandler<ChangeMapReq>
 
         if (!MapManager.Instance.ChangeMap(session.RoleId, player.RoleName, req.TargetMapCfgId, req.TargetLine, x, y))
         {
-            resp.Code = MapErrorCode.MapNotFound;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.MapNotFound;
+            return Task.FromResult<IMessage?>(res);
         }
 
-        resp.Code = MapErrorCode.Ok;
-        resp.MapCfgId = req.TargetMapCfgId;
-        resp.Line = req.TargetLine;
-        resp.X = x;
-        resp.Y = y;
+        res.Code = MapErrorCode.Ok;
+        res.MapCfgId = req.TargetMapCfgId;
+        res.Line = req.TargetLine;
+        res.X = x;
+        res.Y = y;
 
         // 先发送响应，再发送视野内对象列表
-        session.Send(resp);
+        session.Send(res);
 
         var objects = targetMap.GetObjectsInRange(x, y, 4);
         var ntf = new MapObjectsNtf
@@ -229,24 +229,24 @@ public class MapMoveHandler : MessageHandler<MapMoveReq>
 {
     protected override Task<IMessage?> ExecuteAsync(TcpSession session, MapMoveReq req)
     {
-        var resp = new MapMoveAck();
+        var res = new MapMoveAck();
 
         if (session.RoleId == 0)
         {
-            resp.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         if (!MapManager.Instance.Move(session.RoleId, req.X, req.Y))
         {
-            resp.Code = MapErrorCode.NotInMap;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = MapErrorCode.NotInMap;
+            return Task.FromResult<IMessage?>(res);
         }
 
-        resp.Code = MapErrorCode.Ok;
-        resp.X = req.X;
-        resp.Y = req.Y;
+        res.Code = MapErrorCode.Ok;
+        res.X = req.X;
+        res.Y = req.Y;
 
-        return Task.FromResult<IMessage?>(resp);
+        return Task.FromResult<IMessage?>(res);
     }
 }

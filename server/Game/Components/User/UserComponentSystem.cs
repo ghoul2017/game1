@@ -24,16 +24,16 @@ public static class UserComponentSystem
     /// 登录处理。验证账号 → 自动注册 → BindUser → 生成重连Token。
     /// </summary>
     [MessageHandler(typeof(MessageHandler<,>))]
-    public static async Task<IMessage?> LoginHandler(this UserComponent self, TcpSession session, LoginReq req, LoginResp resp)
+    public static async Task<IMessage?> LoginHandler(this UserComponent self, TcpSession session, LoginReq req, LoginResp res)
     {
         Log.Info($"登录请求 Session:{session.SessionId} User:{req.Username}");
 
         // 已登录的会话不允许重复登录
         if (session.UserId != 0)
         {
-            resp.Code = 1001;
-            resp.Message = "已登录";
-            return resp;
+            res.Code = 1001;
+            res.Message = "已登录";
+            return res;
         }
 
         // 查询账号
@@ -54,9 +54,9 @@ public static class UserComponentSystem
         }
         else if (account.Password != req.Password)
         {
-            resp.Code = 1002;
-            resp.Message = "密码错误";
-            return resp;
+            res.Code = 1002;
+            res.Message = "密码错误";
+            return res;
         }
 
         // 绑定会话
@@ -68,32 +68,32 @@ public static class UserComponentSystem
         session.ReconnectToken = token;
         await TokenStore.Instance.SetAsync($"reconnect:{token}", $"{account.Id}", TimeSpan.FromMinutes(5));
 
-        resp.Code = 0;
-        resp.Message = "OK";
-        resp.PlayerId = account.Id;
-        resp.Token = token;
+        res.Code = 0;
+        res.Message = "OK";
+        res.PlayerId = account.Id;
+        res.Token = token;
 
         Log.Info($"登录成功 User:{req.Username} UserId:{account.Id}");
-        return resp;
+        return res;
     }
 
     /// <summary>
     /// 角色列表查询。返回当前账号下的所有角色。
     /// </summary>
     [MessageHandler(typeof(MessageHandler<,>))]
-    public static async Task<IMessage?> RoleListHandler(this UserComponent self, TcpSession session, RoleListReq req, RoleListResp resp)
+    public static async Task<IMessage?> RoleListHandler(this UserComponent self, TcpSession session, RoleListReq req, RoleListResp res)
     {
         if (session.UserId == 0)
         {
-            resp.Code = 1001;
-            resp.Message = "未登录";
-            return resp;
+            res.Code = 1001;
+            res.Message = "未登录";
+            return res;
         }
 
         var roles = await DatabaseManager.Instance.RoleRepo.GetByUserIdAsync(session.UserId);
-        resp.Code = 0;
-        resp.Message = "OK";
-        resp.Roles = roles.Select(r => new RoleInfo
+        res.Code = 0;
+        res.Message = "OK";
+        res.Roles = roles.Select(r => new RoleInfo
         {
             RoleId = r.RoleId,
             Name = r.Name,
@@ -101,21 +101,21 @@ public static class UserComponentSystem
             Job = r.Job
         }).ToList();
 
-        Log.Info($"角色列表 UserId:{session.UserId} 数量:{resp.Roles.Count}");
-        return resp;
+        Log.Info($"角色列表 UserId:{session.UserId} 数量:{res.Roles.Count}");
+        return res;
     }
 
     /// <summary>
     /// 创建角色。校验名称唯一性 → 生成ID → 写入角色索引 + Role实体。
     /// </summary>
     [MessageHandler(typeof(MessageHandler<,>))]
-    public static async Task<IMessage?> CreateRoleHandler(this UserComponent self, TcpSession session, CreateRoleReq req, CreateRoleResp resp)
+    public static async Task<IMessage?> CreateRoleHandler(this UserComponent self, TcpSession session, CreateRoleReq req, CreateRoleResp res)
     {
         if (session.UserId == 0)
         {
-            resp.Code = 1001;
-            resp.Message = "未登录";
-            return resp;
+            res.Code = 1001;
+            res.Message = "未登录";
+            return res;
         }
 
         var name = req.Name.Trim();
@@ -123,9 +123,9 @@ public static class UserComponentSystem
         // 名称校验
         if (string.IsNullOrEmpty(name) || name.Length > 12)
         {
-            resp.Code = 1002;
-            resp.Message = "角色名长度不合法（1-12字符）";
-            return resp;
+            res.Code = 1002;
+            res.Message = "角色名长度不合法（1-12字符）";
+            return res;
         }
 
         // 角色数量限制
@@ -133,17 +133,17 @@ public static class UserComponentSystem
         var existing = await DatabaseManager.Instance.RoleRepo.GetByUserIdAsync(session.UserId);
         if (existing.Count >= MaxRolesPerUser)
         {
-            resp.Code = 1003;
-            resp.Message = $"最多创建{MaxRolesPerUser}个角色";
-            return resp;
+            res.Code = 1003;
+            res.Message = $"最多创建{MaxRolesPerUser}个角色";
+            return res;
         }
 
         // 名称唯一性
         if (await DatabaseManager.Instance.RoleRepo.NameExistsAsync(name))
         {
-            resp.Code = 1004;
-            resp.Message = "角色名已存在";
-            return resp;
+            res.Code = 1004;
+            res.Message = "角色名已存在";
+            return res;
         }
 
         // 生成角色ID（雪花算法）
@@ -171,41 +171,41 @@ public static class UserComponentSystem
             Job = req.Job
         });
 
-        resp.Code = 0;
-        resp.Message = "OK";
-        resp.Role = new RoleInfo { RoleId = roleId, Name = name, Level = 1, Job = req.Job };
+        res.Code = 0;
+        res.Message = "OK";
+        res.Role = new RoleInfo { RoleId = roleId, Name = name, Level = 1, Job = req.Job };
 
         Log.Info($"创建角色 UserId:{session.UserId} RoleId:{roleId} Name:{name}");
-        return resp;
+        return res;
     }
 
     /// <summary>
     /// 选角入场。加载角色 → BindRole → 加入 PlayerManager → 进入游戏。
     /// </summary>
     [MessageHandler(typeof(MessageHandler<,>))]
-    public static async Task<IMessage?> SelectRoleHandler(this UserComponent self, TcpSession session, SelectRoleReq req, SelectRoleResp resp)
+    public static async Task<IMessage?> SelectRoleHandler(this UserComponent self, TcpSession session, SelectRoleReq req, SelectRoleResp res)
     {
         if (session.UserId == 0)
         {
-            resp.Code = 1001;
-            resp.Message = "未登录";
-            return resp;
+            res.Code = 1001;
+            res.Message = "未登录";
+            return res;
         }
 
         // 加载角色
         var role = await PlayerManager.Instance.LoadRoleAsync(req.RoleId);
         if (role == null)
         {
-            resp.Code = 1002;
-            resp.Message = "角色不存在";
-            return resp;
+            res.Code = 1002;
+            res.Message = "角色不存在";
+            return res;
         }
 
         if (role.UserId != session.UserId)
         {
-            resp.Code = 1003;
-            resp.Message = "不是你的角色";
-            return resp;
+            res.Code = 1003;
+            res.Message = "不是你的角色";
+            return res;
         }
 
         // 绑定角色到会话
@@ -233,40 +233,40 @@ public static class UserComponentSystem
         };
         PlayerManager.Instance.AddPlayer(player);
 
-        resp.Code = 0;
-        resp.Message = "OK";
-        resp.RoleId = role.Id;
-        resp.Name = role.Name;
-        resp.Level = role.Level;
-        resp.Job = role.Job;
+        res.Code = 0;
+        res.Message = "OK";
+        res.RoleId = role.Id;
+        res.Name = role.Name;
+        res.Level = role.Level;
+        res.Job = role.Job;
 
         Log.Info($"选角入场 UserId:{session.UserId} RoleId:{role.Id} Name:{role.Name}");
-        return resp;
+        return res;
     }
 
     /// <summary>
     /// 断线重连。验证Token → 恢复会话绑定 → 重新加入在线列表。
     /// </summary>
     [MessageHandler(typeof(MessageHandler<,>))]
-    public static async Task<IMessage?> ReconnectHandler(this UserComponent self, TcpSession session, ReconnectReq req, ReconnectResp resp)
+    public static async Task<IMessage?> ReconnectHandler(this UserComponent self, TcpSession session, ReconnectReq req, ReconnectResp res)
     {
         // 验证 Token
         var tokenKey = $"reconnect:{req.Token}";
         var tokenStr = await TokenStore.Instance.GetAsync(tokenKey);
         if (tokenStr == null)
         {
-            resp.Code = 1001;
-            resp.Message = "Token无效或已过期";
-            return resp;
+            res.Code = 1001;
+            res.Message = "Token无效或已过期";
+            return res;
         }
 
         // 解析 token: "userId" 或 "userId:roleId"
         var parts = tokenStr.Split(':');
         if (parts.Length < 1 || !long.TryParse(parts[0], out var userId))
         {
-            resp.Code = 1002;
-            resp.Message = "Token数据异常";
-            return resp;
+            res.Code = 1002;
+            res.Message = "Token数据异常";
+            return res;
         }
 
         long roleId = 0;
@@ -279,8 +279,8 @@ public static class UserComponentSystem
         session.UserId = userId;
         SessionManager.Instance.BindUser(session, userId);
 
-        resp.Code = 0;
-        resp.Message = "OK";
+        res.Code = 0;
+        res.Message = "OK";
 
         // 如果有角色，恢复在线状态
         if (roleId > 0)
@@ -302,9 +302,9 @@ public static class UserComponentSystem
                 };
                 PlayerManager.Instance.AddPlayer(player);
 
-                resp.RoleId = role.Id;
-                resp.Name = role.Name;
-                resp.Level = role.Level;
+                res.RoleId = role.Id;
+                res.Name = role.Name;
+                res.Level = role.Level;
 
                 Log.Info($"重连成功 UserId:{userId} RoleId:{role.Id}");
             }
@@ -326,6 +326,6 @@ public static class UserComponentSystem
             TimeSpan.FromMinutes(5));
         await TokenStore.Instance.RemoveAsync(tokenKey);
 
-        return resp;
+        return res;
     }
 }

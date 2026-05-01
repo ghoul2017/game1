@@ -11,9 +11,6 @@ namespace Game.Network;
 /// </summary>
 public interface IMessageHandler
 {
-    /// <summary>监听的请求消息ID</summary>
-    ushort ReqMsgId { get; }
-
     /// <summary>处理消息（Router 调用，内部反序列化后交给 ExecuteAsync）</summary>
     Task<IMessage?> HandleAsync(TcpSession session, byte[] payload);
 }

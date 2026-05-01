@@ -402,13 +402,13 @@ namespace Client.Network
 
         // ==================== Handshake ====================
 
-        private void HandleHandshakeResp(HandshakeResp resp)
+        private void HandleHandshakeResp(HandshakeResp res)
         {
             // Unregister handler
             if (_dispatcher != null)
                 _dispatcher.Unregister(MsgIdConst.HandshakeResp);
 
-            if (resp.Code == 0)
+            if (res.Code == 0)
             {
                 if (_hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
                 {
@@ -437,9 +437,9 @@ namespace Client.Network
             }
             else
             {
-                Debug.LogWarning("[NetClient] Handshake failed: " + resp.Message);
+                Debug.LogWarning("[NetClient] Handshake failed: " + res.Message);
                 _hadSession = false;
-                HandleDisconnect("Handshake rejected: " + resp.Message);
+                HandleDisconnect("Handshake rejected: " + res.Message);
             }
         }
 
@@ -452,32 +452,32 @@ namespace Client.Network
             Send(req);
         }
 
-        private void HandleHeartbeatResp(HeartbeatResp resp)
+        private void HandleHeartbeatResp(HeartbeatResp res)
         {
             long nowTicks = DateTime.UtcNow.Ticks;
-            long rttTicks = nowTicks - resp.ClientTime;
+            long rttTicks = nowTicks - res.ClientTime;
             PingMs = (int)(rttTicks / System.TimeSpan.TicksPerMillisecond);
         }
 
         // ==================== Reconnect ====================
 
-        private void HandleReconnectResp(ReconnectResp resp)
+        private void HandleReconnectResp(ReconnectResp res)
         {
             if (_dispatcher != null)
                 _dispatcher.Unregister(MsgIdConst.ReconnectResp);
 
             _hadSession = false;
 
-            if (resp.Code == 0)
+            if (res.Code == 0)
             {
-                Debug.Log("[NetClient] Reconnect OK, role=" + resp.Name);
+                Debug.Log("[NetClient] Reconnect OK, role=" + res.Name);
 
                 // Update role data from server
                 if (GameData.CurrentRole == null)
                     GameData.CurrentRole = new RoleData();
-                GameData.CurrentRole.RoleId = resp.RoleId;
-                GameData.CurrentRole.Name = resp.Name;
-                GameData.CurrentRole.Level = resp.Level;
+                GameData.CurrentRole.RoleId = res.RoleId;
+                GameData.CurrentRole.Name = res.Name;
+                GameData.CurrentRole.Level = res.Level;
 
                 _state = ConnState.Connected;
                 if (_dispatcher != null)
@@ -487,7 +487,7 @@ namespace Client.Network
             }
             else
             {
-                Debug.LogWarning("[NetClient] Reconnect failed: " + resp.Message);
+                Debug.LogWarning("[NetClient] Reconnect failed: " + res.Message);
                 GameData.Token = "";
                 GameData.CurrentRole = null;
                 GameData.CurrentMap = null;
@@ -496,7 +496,7 @@ namespace Client.Network
                 if (_dispatcher != null)
                     _dispatcher.Register<HeartbeatResp>(MsgIdConst.HeartbeatResp, HandleHeartbeatResp);
 
-                OnReconnectFailed?.Invoke(resp.Message);
+                OnReconnectFailed?.Invoke(res.Message);
             }
         }
 

@@ -15,22 +15,22 @@ public class QueryTaskListHandler : MessageHandler<QueryTaskListReq>
 {
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, QueryTaskListReq req)
     {
-        var resp = new QueryTaskListAck();
+        var res = new QueryTaskListAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = TaskErrorCode.InvalidParam;
-            return resp;
+            res.Code = TaskErrorCode.InvalidParam;
+            return res;
         }
 
         var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
         var tasks = TaskManager.Instance.GetTaskList(taskList);
 
-        resp.Code = TaskErrorCode.Ok;
-        resp.Tasks = tasks.Select(TaskManager.Instance.ToTaskInfo).ToList();
+        res.Code = TaskErrorCode.Ok;
+        res.Tasks = tasks.Select(TaskManager.Instance.ToTaskInfo).ToList();
 
-        return resp;
+        return res;
     }
 }
 
@@ -43,13 +43,13 @@ public class TaskAcceptHandler : MessageHandler<TaskAcceptReq>
 
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, TaskAcceptReq req)
     {
-        var resp = new TaskAcceptAck();
+        var res = new TaskAcceptAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = TaskErrorCode.InvalidParam;
-            return resp;
+            res.Code = TaskErrorCode.InvalidParam;
+            return res;
         }
 
         var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
@@ -59,13 +59,13 @@ public class TaskAcceptHandler : MessageHandler<TaskAcceptReq>
         {
             await TaskManager.Instance.SaveTasksAsync(taskList);
             var task = taskList.GetByTaskId(req.TaskId);
-            resp.Task = TaskManager.Instance.ToTaskInfo(task!);
+            res.Task = TaskManager.Instance.ToTaskInfo(task!);
             Log.Info($"接取任务 RoleId:{session.RoleId} TaskId:{req.TaskId}");
         }
 
-        resp.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
+        res.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
 
-        return resp;
+        return res;
     }
 }
 
@@ -78,13 +78,13 @@ public class TaskSubmitHandler : MessageHandler<TaskSubmitReq>
 
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, TaskSubmitReq req)
     {
-        var resp = new TaskSubmitAck();
+        var res = new TaskSubmitAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = TaskErrorCode.InvalidParam;
-            return resp;
+            res.Code = TaskErrorCode.InvalidParam;
+            return res;
         }
 
         var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
@@ -96,10 +96,10 @@ public class TaskSubmitHandler : MessageHandler<TaskSubmitReq>
             Log.Info($"提交任务领奖 RoleId:{session.RoleId} TaskId:{req.TaskId}");
         }
 
-        resp.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
-        resp.TaskId = req.TaskId;
+        res.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
+        res.TaskId = req.TaskId;
 
-        return resp;
+        return res;
     }
 }
 
@@ -112,13 +112,13 @@ public class TaskGiveUpHandler : MessageHandler<TaskGiveUpReq>
 
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, TaskGiveUpReq req)
     {
-        var resp = new TaskGiveUpAck();
+        var res = new TaskGiveUpAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = TaskErrorCode.InvalidParam;
-            return resp;
+            res.Code = TaskErrorCode.InvalidParam;
+            return res;
         }
 
         var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
@@ -130,9 +130,9 @@ public class TaskGiveUpHandler : MessageHandler<TaskGiveUpReq>
             Log.Info($"放弃任务 RoleId:{session.RoleId} TaskId:{req.TaskId}");
         }
 
-        resp.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
-        resp.TaskId = req.TaskId;
+        res.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
+        res.TaskId = req.TaskId;
 
-        return resp;
+        return res;
     }
 }

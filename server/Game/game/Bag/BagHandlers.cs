@@ -17,21 +17,21 @@ public class QueryBagHandler : MessageHandler<QueryBagReq>
 
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, QueryBagReq req)
     {
-        var resp = new QueryBagAck();
+        var res = new QueryBagAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = ErrorCode.InvalidParam;
-            return resp;
+            res.Code = ErrorCode.InvalidParam;
+            return res;
         }
 
         var bag = await BagManager.Instance.LoadBagAsync(player.RoleId);
-        resp.Code = ErrorCode.Ok;
-        resp.Capacity = bag.Capacity;
-        resp.Items = bag.Items.Select(ToInfo).ToList();
+        res.Code = ErrorCode.Ok;
+        res.Capacity = bag.Capacity;
+        res.Items = bag.Items.Select(ToInfo).ToList();
 
-        return resp;
+        return res;
     }
 
     internal static BagItemInfo ToInfo(BagItem item) => new()
@@ -51,23 +51,23 @@ public class BagTidyHandler : MessageHandler<BagTidyReq>
 {
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, BagTidyReq req)
     {
-        var resp = new BagTidyAck();
+        var res = new BagTidyAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = ErrorCode.InvalidParam;
-            return resp;
+            res.Code = ErrorCode.InvalidParam;
+            return res;
         }
 
         var bag = await BagManager.Instance.LoadBagAsync(player.RoleId);
         BagManager.Instance.Tidy(bag);
         await BagManager.Instance.SaveBagAsync(bag);
 
-        resp.Code = ErrorCode.Ok;
-        resp.Items = bag.Items.Select(QueryBagHandler.ToInfo).ToList();
+        res.Code = ErrorCode.Ok;
+        res.Items = bag.Items.Select(QueryBagHandler.ToInfo).ToList();
 
-        return resp;
+        return res;
     }
 }
 
@@ -78,21 +78,21 @@ public class BagSwapHandler : MessageHandler<BagSwapReq>
 {
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, BagSwapReq req)
     {
-        var resp = new BagSwapAck();
+        var res = new BagSwapAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = ErrorCode.InvalidParam;
-            return resp;
+            res.Code = ErrorCode.InvalidParam;
+            return res;
         }
 
         var bag = await BagManager.Instance.LoadBagAsync(player.RoleId);
         BagManager.Instance.Swap(bag, req.Index1, req.Index2);
         await BagManager.Instance.SaveBagAsync(bag);
 
-        resp.Code = ErrorCode.Ok;
-        return resp;
+        res.Code = ErrorCode.Ok;
+        return res;
     }
 }
 
@@ -105,13 +105,13 @@ public class BagUseItemHandler : MessageHandler<BagUseItemReq>
 
     protected override async Task<IMessage?> ExecuteAsync(TcpSession session, BagUseItemReq req)
     {
-        var resp = new BagUseItemAck();
+        var res = new BagUseItemAck();
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = ErrorCode.InvalidParam;
-            return resp;
+            res.Code = ErrorCode.InvalidParam;
+            return res;
         }
 
         // 加载背包
@@ -121,15 +121,15 @@ public class BagUseItemHandler : MessageHandler<BagUseItemReq>
         var bagItem = bag.GetByIndex(req.Index);
         if (bagItem == null)
         {
-            resp.Code = ErrorCode.ItemNotFound;
-            return resp;
+            res.Code = ErrorCode.ItemNotFound;
+            return res;
         }
 
         // 检查物品数量
         if (bagItem.Count < req.Count)
         {
-            resp.Code = ErrorCode.ItemNotEnough;
-            return resp;
+            res.Code = ErrorCode.ItemNotEnough;
+            return res;
         }
 
         // 检查物品是否可使用（消耗品ID范围: 2001-2999）
@@ -137,17 +137,17 @@ public class BagUseItemHandler : MessageHandler<BagUseItemReq>
         if (configId < 2001 || configId > 2999)
         {
             // 非消耗品不能直接使用
-            resp.Code = ErrorCode.ItemUseFail;
+            res.Code = ErrorCode.ItemUseFail;
             Log.Warn($"非消耗品不能直接使用 RoleId:{session.RoleId} ConfigId:{configId}");
-            return resp;
+            return res;
         }
 
         // 使用物品
         var useResult = BagManager.Instance.UseItem(bag, req.Index, req.Count);
         if (!useResult.Success)
         {
-            resp.Code = useResult.ErrorCode;
-            return resp;
+            res.Code = useResult.ErrorCode;
+            return res;
         }
 
         await BagManager.Instance.SaveBagAsync(bag);
@@ -155,10 +155,10 @@ public class BagUseItemHandler : MessageHandler<BagUseItemReq>
         // 触发物品效果
         var effectResult = await ItemEffectManager.Instance.ApplyItemEffectAsync(session.RoleId, configId);
 
-        resp.Code = ErrorCode.Ok;
-        resp.ConfigId = configId;
+        res.Code = ErrorCode.Ok;
+        res.ConfigId = configId;
 
         Log.Info($"使用物品 RoleId:{session.RoleId} ConfigId:{configId} Count:{req.Count} EffectType:{effectResult.EffectType}");
-        return resp;
+        return res;
     }
 }

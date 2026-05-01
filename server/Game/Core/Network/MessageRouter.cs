@@ -13,11 +13,7 @@ public class MessageRouter
 {
     private static readonly ILog Log = LogManager.GetLogger<MessageRouter>();
     private readonly Dictionary<ushort, IMessageHandler> _handlers = new();
-
-    public void Register(IMessageHandler handler)
-    {
-        _handlers[handler.ReqMsgId] = handler;
-    }
+    
 
     /// <summary>
     /// 自动扫描程序集中所有带 [MessageHandler] 特性的扩展方法。
@@ -33,7 +29,8 @@ public class MessageRouter
             .Where(m => m.GetCustomAttribute(handlerAttrType) != null))
         {
             var attr = (MessageHandlerAttribute?)method.GetCustomAttribute(handlerAttrType);
-            if (attr == null) continue;
+            if (attr == null)
+                continue;
 
             var parameters = method.GetParameters();
             if (parameters.Length < 3)
@@ -100,9 +97,9 @@ public class MessageRouter
 
         try
         {
-            var resp = await handler.HandleAsync(session, payload);
-            if (resp != null)
-                session.Send(resp);
+            var res = await handler.HandleAsync(session, payload);
+            if (res != null)
+                session.Send(res);
         }
         catch (Exception ex)
         {

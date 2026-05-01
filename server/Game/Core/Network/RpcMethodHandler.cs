@@ -20,18 +20,12 @@ public class RpcMethodHandler : IMessageHandler
     private readonly Type _reqType;
     private readonly Type _respType;
 
-    public ushort ReqMsgId { get; }
-
     public RpcMethodHandler(MethodInfo method, Type componentType, Type reqType, Type respType)
     {
         _method = method;
         _componentType = componentType;
         _reqType = reqType;
         _respType = respType;
-
-        // 从 TReq 实例获取 MsgId（MsgId 是实例属性）
-        var reqInstance = (IMessage?)System.Activator.CreateInstance(reqType);
-        ReqMsgId = reqInstance?.MsgId ?? 0;
     }
 
     public async Task<IMessage?> HandleAsync(TcpSession session, byte[] payload)
@@ -42,13 +36,13 @@ public class RpcMethodHandler : IMessageHandler
             req = Serializer.NonGeneric.Deserialize(_reqType, ms);
 
         // 创建响应对象
-        var resp = System.Activator.CreateInstance(_respType);
+        var res = System.Activator.CreateInstance(_respType);
 
         // 获取组件实例
         var component = Context.Server.GetComponent(_componentType);
 
         // 调用扩展方法
-        var task = (Task<IMessage?>)_method.Invoke(null, new object[] { component!, session, req, resp! })!;
+        var task = (Task<IMessage?>)_method.Invoke(null, new object[] { component!, session, req, res! })!;
         return await task;
     }
 }

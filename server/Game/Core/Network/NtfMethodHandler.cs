@@ -19,17 +19,11 @@ public class NtfMethodHandler : IMessageHandler
     private readonly Type _componentType;
     private readonly Type _reqType;
 
-    public ushort ReqMsgId { get; }
-
     public NtfMethodHandler(MethodInfo method, Type componentType, Type reqType)
     {
         _method = method;
         _componentType = componentType;
         _reqType = reqType;
-
-        // 从 TReq 实例获取 MsgId（MsgId 是实例属性）
-        var reqInstance = (IMessage?)System.Activator.CreateInstance(reqType);
-        ReqMsgId = reqInstance?.MsgId ?? 0;
     }
 
     public async Task<IMessage?> HandleAsync(TcpSession session, byte[] payload)

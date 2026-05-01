@@ -266,18 +266,18 @@ namespace Client.Login
             NetClient.Instance.Send(new LoginReq { Username = username, Password = password });
         }
 
-        private void HandleLoginResp(LoginResp resp)
+        private void HandleLoginResp(LoginResp res)
         {
-            if (resp.Code == 0)
+            if (res.Code == 0)
             {
-                GameData.PlayerId = resp.PlayerId;
-                GameData.Token = resp.Token;
-                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + resp.PlayerId);
+                GameData.PlayerId = res.PlayerId;
+                GameData.Token = res.Token;
+                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + res.PlayerId);
                 UIManager.Instance.ReplacePanel<RoleSelectPanel>();
             }
             else
             {
-                errorText.text = resp.Message;
+                errorText.text = res.Message;
                 isLoggingIn = false;
                 SetButtonEnabled(true);
             }

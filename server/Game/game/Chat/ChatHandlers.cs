@@ -16,26 +16,26 @@ public class ChatHandler : MessageHandler<ChatReq>
 
     protected override Task<IMessage?> ExecuteAsync(TcpSession session, ChatReq req)
     {
-        var resp = new ChatAck();
+        var res = new ChatAck();
 
         // 必须已选角
         if (session.RoleId == 0)
         {
-            resp.Code = ChatErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = ChatErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            resp.Code = ChatErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage?>(resp);
+            res.Code = ChatErrorCode.NotLoggedIn;
+            return Task.FromResult<IMessage?>(res);
         }
 
         var (code, ntf, targetRoleId) = ChatManager.Instance.HandleChat(
             player.RoleId, player.RoleName, req.Channel, req.Content, req.TargetName);
 
-        resp.Code = code;
+        res.Code = code;
 
         if (code == ChatErrorCode.Ok && ntf != null)
         {
@@ -54,6 +54,6 @@ public class ChatHandler : MessageHandler<ChatReq>
             Log.Debug($"聊天 RoleId:{session.RoleId} Channel:{req.Channel}");
         }
 
-        return Task.FromResult<IMessage?>(resp);
+        return Task.FromResult<IMessage?>(res);
     }
 }

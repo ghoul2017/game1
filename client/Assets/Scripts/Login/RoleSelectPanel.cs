@@ -159,12 +159,12 @@ namespace Client.Login
 
         // --- Network Handlers ---
 
-        private void HandleRoleListResp(RoleListResp resp)
+        private void HandleRoleListResp(RoleListResp res)
         {
-            if (resp.Code == 0)
+            if (res.Code == 0)
             {
                 roles.Clear();
-                foreach (var info in resp.Roles)
+                foreach (var info in res.Roles)
                 {
                     roles.Add(new RoleData
                     {
@@ -182,16 +182,16 @@ namespace Client.Login
             }
             else
             {
-                selectTip.text = resp.Message;
+                selectTip.text = res.Message;
                 selectTip.color = Color.red;
             }
         }
 
-        private void HandleCreateRoleResp(CreateRoleResp resp)
+        private void HandleCreateRoleResp(CreateRoleResp res)
         {
-            if (resp.Code == 0)
+            if (res.Code == 0)
             {
-                var info = resp.Role;
+                var info = res.Role;
                 roles.Add(new RoleData
                 {
                     RoleId = info.RoleId,
@@ -208,23 +208,23 @@ namespace Client.Login
             }
             else
             {
-                selectTip.text = resp.Message;
+                selectTip.text = res.Message;
                 selectTip.color = Color.red;
             }
         }
 
-        private void HandleSelectRoleResp(SelectRoleResp resp)
+        private void HandleSelectRoleResp(SelectRoleResp res)
         {
-            if (resp.Code == 0)
+            if (res.Code == 0)
             {
                 GameData.CurrentRole = new RoleData
                 {
-                    RoleId = resp.RoleId,
-                    Name = resp.Name,
-                    Level = resp.Level,
-                    Job = GameData.GetJobName(resp.Job)
+                    RoleId = res.RoleId,
+                    Name = res.Name,
+                    Level = res.Level,
+                    Job = GameData.GetJobName(res.Job)
                 };
-                Debug.Log(string.Format("[RoleSelectPanel] 选角成功: {0} Lv.{1}，正在进入地图...", resp.Name, resp.Level));
+                Debug.Log(string.Format("[RoleSelectPanel] 选角成功: {0} Lv.{1}，正在进入地图...", res.Name, res.Level));
                 selectTip.text = "正在进入地图...";
                 selectTip.color = UIBuilder.TextDim;
 
@@ -233,26 +233,26 @@ namespace Client.Login
             }
             else
             {
-                selectTip.text = resp.Message;
+                selectTip.text = res.Message;
                 selectTip.color = Color.red;
                 enterBtn.interactable = true;
             }
         }
 
-        private void HandleEnterMapAck(EnterMapAck resp)
+        private void HandleEnterMapAck(EnterMapAck res)
         {
-            if (resp.Code == MapErrorCode.Ok)
+            if (res.Code == MapErrorCode.Ok)
             {
                 Debug.Log(string.Format("[RoleSelectPanel] 进图成功: MapCfgId={0} Line={1} Spawn=({2},{3})",
-                    resp.MapCfgId, resp.Line, resp.X, resp.Y));
+                    res.MapCfgId, res.Line, res.X, res.Y));
 
                 // 缓存进图数据
                 GameData.CurrentMap = new EnterMapData
                 {
-                    MapCfgId = resp.MapCfgId,
-                    Line = resp.Line,
-                    SpawnX = resp.X,
-                    SpawnY = resp.Y
+                    MapCfgId = res.MapCfgId,
+                    Line = res.Line,
+                    SpawnX = res.X,
+                    SpawnY = res.Y
                 };
 
                 UIManager.Instance.ClearAll();
@@ -260,8 +260,8 @@ namespace Client.Login
             }
             else
             {
-                Debug.LogError(string.Format("[RoleSelectPanel] 进图失败: Code={0}", resp.Code));
-                selectTip.text = string.Format("进入地图失败 (错误码:{0})", resp.Code);
+                Debug.LogError(string.Format("[RoleSelectPanel] 进图失败: Code={0}", res.Code));
+                selectTip.text = string.Format("进入地图失败 (错误码:{0})", res.Code);
                 selectTip.color = Color.red;
                 enterBtn.interactable = true;
             }
