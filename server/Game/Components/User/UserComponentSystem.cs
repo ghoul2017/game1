@@ -1,4 +1,8 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Game.Core;
+using Game.Core.Network;
 using Game.Core.Entity;
 using Game.Database;
 using Game.Game.Player;
@@ -10,17 +14,19 @@ using Shared.Core.Network;
 namespace Game.Components.User;
 
 /// <summary>
-/// 登录处理。验证账号 → 自动注册 → BindUser → 生成重连Token。
+/// 用户组件系统 — 扩展方法风格 Handler。
 /// </summary>
-public class LoginHandler : MessageHandler<LoginReq>
+public static class UserComponentSystem
 {
-    private static readonly ILog Log = LogManager.GetLogger<LoginHandler>();
+    private static readonly ILog Log = LogManager.GetLogger<UserComponent>();
 
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, LoginReq req)
+    /// <summary>
+    /// 登录处理。验证账号 → 自动注册 → BindUser → 生成重连Token。
+    /// </summary>
+    [MessageHandler(typeof(MessageHandler<,>))]
+    public static async Task<IMessage?> LoginHandler(this UserComponent self, TcpSession session, LoginReq req, LoginResp resp)
     {
         Log.Info($"登录请求 Session:{session.SessionId} User:{req.Username}");
-
-        var resp = new LoginResp();
 
         // 已登录的会话不允许重复登录
         if (session.UserId != 0)
@@ -70,68 +76,75 @@ public class LoginHandler : MessageHandler<LoginReq>
         Log.Info($"登录成功 User:{req.Username} UserId:{account.Id}");
         return resp;
     }
-}
 
-/// <summary>
-/// 角色列表查询。返回当前账号下的所有角色。
-/// </summary>
-public class RoleListHandler : MessageHandler<RoleListReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<RoleListHandler>();
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, RoleListReq req)
+    /// <summary>
+    /// 角色列表查询。返回当前账号下的所有角色。
+    /// </summary>
+    [MessageHandler(typeof(MessageHandler<,>))]
+    public static async Task<IMessage?> RoleListHandler(this UserComponent self, TcpSession session, RoleListReq req, RoleListResp resp)
     {
         if (session.UserId == 0)
         {
-            return new RoleListResp { Code = 1001, Message = "未登录" };
+            resp.Code = 1001;
+            resp.Message = "未登录";
+            return resp;
         }
 
         var roles = await DatabaseManager.Instance.RoleRepo.GetByUserIdAsync(session.UserId);
-        var resp = new RoleListResp
+        resp.Code = 0;
+        resp.Message = "OK";
+        resp.Roles = roles.Select(r => new RoleInfo
         {
-            Code = 0,
-            Message = "OK",
-            Roles = roles.Select(r => new RoleInfo
-            {
-                RoleId = r.RoleId,
-                Name = r.Name,
-                Level = r.Level,
-                Job = r.Job
-            }).ToList()
-        };
+            RoleId = r.RoleId,
+            Name = r.Name,
+            Level = r.Level,
+            Job = r.Job
+        }).ToList();
 
         Log.Info($"角色列表 UserId:{session.UserId} 数量:{resp.Roles.Count}");
         return resp;
     }
-}
 
-/// <summary>
-/// 创建角色。校验名称唯一性 → 生成ID → 写入角色索引 + Role实体。
-/// </summary>
-public class CreateRoleHandler : MessageHandler<CreateRoleReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<CreateRoleHandler>();
-    private const int MaxRolesPerUser = 4;
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, CreateRoleReq req)
+    /// <summary>
+    /// 创建角色。校验名称唯一性 → 生成ID → 写入角色索引 + Role实体。
+    /// </summary>
+    [MessageHandler(typeof(MessageHandler<,>))]
+    public static async Task<IMessage?> CreateRoleHandler(this UserComponent self, TcpSession session, CreateRoleReq req, CreateRoleResp resp)
     {
         if (session.UserId == 0)
-            return new CreateRoleResp { Code = 1001, Message = "未登录" };
+        {
+            resp.Code = 1001;
+            resp.Message = "未登录";
+            return resp;
+        }
 
         var name = req.Name.Trim();
 
         // 名称校验
         if (string.IsNullOrEmpty(name) || name.Length > 12)
-            return new CreateRoleResp { Code = 1002, Message = "角色名长度不合法（1-12字符）" };
+        {
+            resp.Code = 1002;
+            resp.Message = "角色名长度不合法（1-12字符）";
+            return resp;
+        }
 
         // 角色数量限制
+        const int MaxRolesPerUser = 4;
         var existing = await DatabaseManager.Instance.RoleRepo.GetByUserIdAsync(session.UserId);
         if (existing.Count >= MaxRolesPerUser)
-            return new CreateRoleResp { Code = 1003, Message = $"最多创建{MaxRolesPerUser}个角色" };
+        {
+            resp.Code = 1003;
+            resp.Message = $"最多创建{MaxRolesPerUser}个角色";
+            return resp;
+        }
 
         // 名称唯一性
         if (await DatabaseManager.Instance.RoleRepo.NameExistsAsync(name))
-            return new CreateRoleResp { Code = 1004, Message = "角色名已存在" };
+        {
+            resp.Code = 1004;
+            resp.Message = "角色名已存在";
+            return resp;
+        }
 
         // 生成角色ID（雪花算法）
         var roleId = IdGenerator.Instance.NextId();
@@ -158,37 +171,42 @@ public class CreateRoleHandler : MessageHandler<CreateRoleReq>
             Job = req.Job
         });
 
-        var resp = new CreateRoleResp
-        {
-            Code = 0,
-            Message = "OK",
-            Role = new RoleInfo { RoleId = roleId, Name = name, Level = 1, Job = req.Job }
-        };
+        resp.Code = 0;
+        resp.Message = "OK";
+        resp.Role = new RoleInfo { RoleId = roleId, Name = name, Level = 1, Job = req.Job };
 
         Log.Info($"创建角色 UserId:{session.UserId} RoleId:{roleId} Name:{name}");
         return resp;
     }
-}
 
-/// <summary>
-/// 选角入场。加载角色 → BindRole → 加入 PlayerManager → 进入游戏。
-/// </summary>
-public class SelectRoleHandler : MessageHandler<SelectRoleReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<SelectRoleHandler>();
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, SelectRoleReq req)
+    /// <summary>
+    /// 选角入场。加载角色 → BindRole → 加入 PlayerManager → 进入游戏。
+    /// </summary>
+    [MessageHandler(typeof(MessageHandler<,>))]
+    public static async Task<IMessage?> SelectRoleHandler(this UserComponent self, TcpSession session, SelectRoleReq req, SelectRoleResp resp)
     {
         if (session.UserId == 0)
-            return new SelectRoleResp { Code = 1001, Message = "未登录" };
+        {
+            resp.Code = 1001;
+            resp.Message = "未登录";
+            return resp;
+        }
 
         // 加载角色
         var role = await PlayerManager.Instance.LoadRoleAsync(req.RoleId);
         if (role == null)
-            return new SelectRoleResp { Code = 1002, Message = "角色不存在" };
+        {
+            resp.Code = 1002;
+            resp.Message = "角色不存在";
+            return resp;
+        }
 
         if (role.UserId != session.UserId)
-            return new SelectRoleResp { Code = 1003, Message = "不是你的角色" };
+        {
+            resp.Code = 1003;
+            resp.Message = "不是你的角色";
+            return resp;
+        }
 
         // 绑定角色到会话
         SessionManager.Instance.BindRole(session, role.Id);
@@ -215,40 +233,41 @@ public class SelectRoleHandler : MessageHandler<SelectRoleReq>
         };
         PlayerManager.Instance.AddPlayer(player);
 
-        var resp = new SelectRoleResp
-        {
-            Code = 0,
-            Message = "OK",
-            RoleId = role.Id,
-            Name = role.Name,
-            Level = role.Level,
-            Job = role.Job
-        };
+        resp.Code = 0;
+        resp.Message = "OK";
+        resp.RoleId = role.Id;
+        resp.Name = role.Name;
+        resp.Level = role.Level;
+        resp.Job = role.Job;
 
         Log.Info($"选角入场 UserId:{session.UserId} RoleId:{role.Id} Name:{role.Name}");
         return resp;
     }
-}
 
-/// <summary>
-/// 断线重连。验证Token → 恢复会话绑定 → 重新加入在线列表。
-/// </summary>
-public class ReconnectHandler : MessageHandler<ReconnectReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<ReconnectHandler>();
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, ReconnectReq req)
+    /// <summary>
+    /// 断线重连。验证Token → 恢复会话绑定 → 重新加入在线列表。
+    /// </summary>
+    [MessageHandler(typeof(MessageHandler<,>))]
+    public static async Task<IMessage?> ReconnectHandler(this UserComponent self, TcpSession session, ReconnectReq req, ReconnectResp resp)
     {
         // 验证 Token
         var tokenKey = $"reconnect:{req.Token}";
         var tokenStr = await TokenStore.Instance.GetAsync(tokenKey);
         if (tokenStr == null)
-            return new ReconnectResp { Code = 1001, Message = "Token无效或已过期" };
+        {
+            resp.Code = 1001;
+            resp.Message = "Token无效或已过期";
+            return resp;
+        }
 
         // 解析 token: "userId" 或 "userId:roleId"
         var parts = tokenStr.Split(':');
         if (parts.Length < 1 || !long.TryParse(parts[0], out var userId))
-            return new ReconnectResp { Code = 1002, Message = "Token数据异常" };
+        {
+            resp.Code = 1002;
+            resp.Message = "Token数据异常";
+            return resp;
+        }
 
         long roleId = 0;
         if (parts.Length >= 2) long.TryParse(parts[1], out roleId);
@@ -260,7 +279,8 @@ public class ReconnectHandler : MessageHandler<ReconnectReq>
         session.UserId = userId;
         SessionManager.Instance.BindUser(session, userId);
 
-        var resp = new ReconnectResp { Code = 0, Message = "OK" };
+        resp.Code = 0;
+        resp.Message = "OK";
 
         // 如果有角色，恢复在线状态
         if (roleId > 0)

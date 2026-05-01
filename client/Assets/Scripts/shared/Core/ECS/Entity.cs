@@ -47,6 +47,12 @@ namespace Shared.Core.ECS
             return (T)_components[type];
         }
 
+        /// <summary>按类型获取组件（非泛型，用于反射调用）</summary>
+        public Component GetComponent(Type type)
+        {
+            return _components[type];
+        }
+
         public void RemoveComponent(Component component)
         {
             component.SetParent(null);
