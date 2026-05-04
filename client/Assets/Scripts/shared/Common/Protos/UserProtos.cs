@@ -15,9 +15,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
-    public class LoginResp : IMessage
+    public class LoginRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.LoginResp;
+        public ushort MsgId => MsgIdConst.LoginRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
         [ProtoMember(3)] public long PlayerId { get; set; }
@@ -44,9 +44,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
-    public class RoleListResp : IMessage
+    public class RoleListRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.RoleListResp;
+        public ushort MsgId => MsgIdConst.RoleListRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
         [ProtoMember(3)] public List<RoleInfo> Roles { get; set; } = new List<RoleInfo>();
@@ -63,9 +63,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
-    public class CreateRoleResp : IMessage
+    public class CreateRoleRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.CreateRoleResp;
+        public ushort MsgId => MsgIdConst.CreateRoleRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
         [ProtoMember(3)] public RoleInfo Role { get; set; } = new RoleInfo();
@@ -81,9 +81,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
-    public class SelectRoleResp : IMessage
+    public class SelectRoleRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.SelectRoleResp;
+        public ushort MsgId => MsgIdConst.SelectRoleRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
         [ProtoMember(3)] public long RoleId { get; set; }
@@ -103,9 +103,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
-    public class ReconnectResp : IMessage
+    public class ReconnectRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.ReconnectResp;
+        public ushort MsgId => MsgIdConst.ReconnectRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
         [ProtoMember(3)] public long RoleId { get; set; }

@@ -43,7 +43,7 @@ public class ChatHandler : MessageHandler<ChatReq>
             {
                 case ChatChannel.World:
                     // 广播给所有人（包括发送者）
-                    SessionManager.Instance.Broadcast(ntf);
+                    PlayerManager.Instance.Broadcast(ntf);
                     break;
                 case ChatChannel.Private:
                     // 发送给目标

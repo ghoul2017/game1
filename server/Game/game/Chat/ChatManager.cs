@@ -97,7 +97,7 @@ public class ChatManager
             SendTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
 
-        SessionManager.Instance.Broadcast(ntf);
+        PlayerManager.Instance.Broadcast(ntf);
 
         Log.Info($"系统广播: {content}");
     }

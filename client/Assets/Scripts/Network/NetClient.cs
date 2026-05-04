@@ -249,7 +249,7 @@ namespace Client.Network
                     // Register handshake response handler
                     if (_dispatcher != null)
                     {
-                        _dispatcher.Register<HandshakeResp>(MsgIdConst.HandshakeResp, HandleHandshakeResp);
+                        _dispatcher.Register<HandshakeRes>(MsgIdConst.HandshakeRes, HandleHandshakeRes);
                         _dispatcher.Register<KickNtf>(MsgIdConst.KickNtf, HandleKickNtf);
                     }
 
@@ -318,9 +318,9 @@ namespace Client.Network
             // Cleanup handlers
             if (_dispatcher != null)
             {
-                _dispatcher.Unregister(MsgIdConst.HandshakeResp);
-                _dispatcher.Unregister(MsgIdConst.HeartbeatResp);
-                _dispatcher.Unregister(MsgIdConst.ReconnectResp);
+                _dispatcher.Unregister(MsgIdConst.HandshakeRes);
+                _dispatcher.Unregister(MsgIdConst.HeartbeatRes);
+                _dispatcher.Unregister(MsgIdConst.ReconnectRes);
                 _dispatcher.Unregister(MsgIdConst.KickNtf);
             }
 
@@ -402,11 +402,11 @@ namespace Client.Network
 
         // ==================== Handshake ====================
 
-        private void HandleHandshakeResp(HandshakeResp res)
+        private void HandleHandshakeRes(HandshakeRes res)
         {
             // Unregister handler
             if (_dispatcher != null)
-                _dispatcher.Unregister(MsgIdConst.HandshakeResp);
+                _dispatcher.Unregister(MsgIdConst.HandshakeRes);
 
             if (res.Code == 0)
             {
@@ -415,7 +415,7 @@ namespace Client.Network
                     // Had previous session — attempt application-level reconnect
                     Debug.Log("[NetClient] Handshake OK, sending ReconnectReq...");
                     if (_dispatcher != null)
-                        _dispatcher.Register<ReconnectResp>(MsgIdConst.ReconnectResp, HandleReconnectResp);
+                        _dispatcher.Register<ReconnectRes>(MsgIdConst.ReconnectRes, HandleReconnectRes);
 
                     var req = new ReconnectReq();
                     req.Token = GameData.Token;
@@ -430,7 +430,7 @@ namespace Client.Network
 
                     // Register heartbeat handler for ping measurement
                     if (_dispatcher != null)
-                        _dispatcher.Register<HeartbeatResp>(MsgIdConst.HeartbeatResp, HandleHeartbeatResp);
+                        _dispatcher.Register<HeartbeatRes>(MsgIdConst.HeartbeatRes, HandleHeartbeatRes);
 
                     OnConnected?.Invoke();
                 }
@@ -452,7 +452,7 @@ namespace Client.Network
             Send(req);
         }
 
-        private void HandleHeartbeatResp(HeartbeatResp res)
+        private void HandleHeartbeatRes(HeartbeatRes res)
         {
             long nowTicks = DateTime.UtcNow.Ticks;
             long rttTicks = nowTicks - res.ClientTime;
@@ -461,10 +461,10 @@ namespace Client.Network
 
         // ==================== Reconnect ====================
 
-        private void HandleReconnectResp(ReconnectResp res)
+        private void HandleReconnectRes(ReconnectRes res)
         {
             if (_dispatcher != null)
-                _dispatcher.Unregister(MsgIdConst.ReconnectResp);
+                _dispatcher.Unregister(MsgIdConst.ReconnectRes);
 
             _hadSession = false;
 
@@ -481,7 +481,7 @@ namespace Client.Network
 
                 _state = ConnState.Connected;
                 if (_dispatcher != null)
-                    _dispatcher.Register<HeartbeatResp>(MsgIdConst.HeartbeatResp, HandleHeartbeatResp);
+                    _dispatcher.Register<HeartbeatRes>(MsgIdConst.HeartbeatRes, HandleHeartbeatRes);
 
                 OnReconnected?.Invoke();
             }
@@ -494,7 +494,7 @@ namespace Client.Network
 
                 _state = ConnState.Connected;
                 if (_dispatcher != null)
-                    _dispatcher.Register<HeartbeatResp>(MsgIdConst.HeartbeatResp, HandleHeartbeatResp);
+                    _dispatcher.Register<HeartbeatRes>(MsgIdConst.HeartbeatRes, HandleHeartbeatRes);
 
                 OnReconnectFailed?.Invoke(res.Message);
             }

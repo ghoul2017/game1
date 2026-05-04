@@ -163,14 +163,14 @@ namespace Client.Login
         {
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
-                nc.Dispatcher.Register<LoginResp>(MsgIdConst.LoginResp, HandleLoginResp);
+                nc.Dispatcher.Register<LoginRes>(MsgIdConst.LoginRes, HandleLoginRes);
         }
 
         private void UnregisterHandlers()
         {
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
-                nc.Dispatcher.Unregister(MsgIdConst.LoginResp);
+                nc.Dispatcher.Unregister(MsgIdConst.LoginRes);
         }
 
         private void SetButtonEnabled(bool enabled)
@@ -266,7 +266,7 @@ namespace Client.Login
             NetClient.Instance.Send(new LoginReq { Username = username, Password = password });
         }
 
-        private void HandleLoginResp(LoginResp res)
+        private void HandleLoginRes(LoginRes res)
         {
             if (res.Code == 0)
             {

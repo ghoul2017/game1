@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Game.Core.Entity;
+using Game.Core.Network;
 using Game.Network;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -127,7 +128,12 @@ public class PlayerManager
     /// <summary>广播消息给所有在线玩家</summary>
     public void Broadcast(IMessage msg)
     {
-        SessionManager.Instance.Broadcast(msg);
+        foreach (Player player in _players.Values)
+        {
+           
+            var session = SessionManager.Instance.GetByUserId( player.UserId);
+            session?.Send(msg);
+        }
     }
 
     /// <summary>向指定角色发送消息</summary>

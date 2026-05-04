@@ -40,16 +40,16 @@ namespace Client.Network
         public static void Init()
         {
             // User (10101-10200)
-            Register<LoginResp>(MsgIdConst.LoginResp);
-            Register<RoleListResp>(MsgIdConst.RoleListResp);
-            Register<CreateRoleResp>(MsgIdConst.CreateRoleResp);
-            Register<SelectRoleResp>(MsgIdConst.SelectRoleResp);
-            Register<ReconnectResp>(MsgIdConst.ReconnectResp);
+            Register<LoginRes>(MsgIdConst.LoginRes);
+            Register<RoleListRes>(MsgIdConst.RoleListRes);
+            Register<CreateRoleRes>(MsgIdConst.CreateRoleRes);
+            Register<SelectRoleRes>(MsgIdConst.SelectRoleRes);
+            Register<ReconnectRes>(MsgIdConst.ReconnectRes);
             Register<KickNtf>(MsgIdConst.KickNtf);
 
             // Misc (10201-10300)
-            Register<HandshakeResp>(MsgIdConst.HandshakeResp);
-            Register<HeartbeatResp>(MsgIdConst.HeartbeatResp);
+            Register<HandshakeRes>(MsgIdConst.HandshakeRes);
+            Register<HeartbeatRes>(MsgIdConst.HeartbeatRes);
 
             // Bag (10301-10400)
             Register<QueryBagAck>(MsgIdConst.QueryBagAck);

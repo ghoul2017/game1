@@ -13,9 +13,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
-    public class HandshakeResp : IMessage
+    public class HandshakeRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.HandshakeResp;
+        public ushort MsgId => MsgIdConst.HandshakeRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
     }
@@ -30,9 +30,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
-    public class HeartbeatResp : IMessage
+    public class HeartbeatRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.HeartbeatResp;
+        public ushort MsgId => MsgIdConst.HeartbeatRes;
         [ProtoMember(1)] public long ServerTime { get; set; }
         [ProtoMember(2)] public long ClientTime { get; set; }
     }

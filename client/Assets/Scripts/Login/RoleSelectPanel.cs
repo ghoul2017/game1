@@ -126,9 +126,9 @@ namespace Client.Login
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
             {
-                nc.Dispatcher.Register<RoleListResp>(MsgIdConst.RoleListResp, HandleRoleListResp);
-                nc.Dispatcher.Register<CreateRoleResp>(MsgIdConst.CreateRoleResp, HandleCreateRoleResp);
-                nc.Dispatcher.Register<SelectRoleResp>(MsgIdConst.SelectRoleResp, HandleSelectRoleResp);
+                nc.Dispatcher.Register<RoleListRes>(MsgIdConst.RoleListRes, HandleRoleListRes);
+                nc.Dispatcher.Register<CreateRoleRes>(MsgIdConst.CreateRoleRes, HandleCreateRoleRes);
+                nc.Dispatcher.Register<SelectRoleRes>(MsgIdConst.SelectRoleRes, HandleSelectRoleRes);
                 nc.Dispatcher.Register<EnterMapAck>(MsgIdConst.EnterMapAck, HandleEnterMapAck);
             }
         }
@@ -138,9 +138,9 @@ namespace Client.Login
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
             {
-                nc.Dispatcher.Unregister(MsgIdConst.RoleListResp);
-                nc.Dispatcher.Unregister(MsgIdConst.CreateRoleResp);
-                nc.Dispatcher.Unregister(MsgIdConst.SelectRoleResp);
+                nc.Dispatcher.Unregister(MsgIdConst.RoleListRes);
+                nc.Dispatcher.Unregister(MsgIdConst.CreateRoleRes);
+                nc.Dispatcher.Unregister(MsgIdConst.SelectRoleRes);
                 nc.Dispatcher.Unregister(MsgIdConst.EnterMapAck);
             }
         }
@@ -159,7 +159,7 @@ namespace Client.Login
 
         // --- Network Handlers ---
 
-        private void HandleRoleListResp(RoleListResp res)
+        private void HandleRoleListRes(RoleListRes res)
         {
             if (res.Code == 0)
             {
@@ -187,7 +187,7 @@ namespace Client.Login
             }
         }
 
-        private void HandleCreateRoleResp(CreateRoleResp res)
+        private void HandleCreateRoleRes(CreateRoleRes res)
         {
             if (res.Code == 0)
             {
@@ -213,7 +213,7 @@ namespace Client.Login
             }
         }
 
-        private void HandleSelectRoleResp(SelectRoleResp res)
+        private void HandleSelectRoleRes(SelectRoleRes res)
         {
             if (res.Code == 0)
             {
