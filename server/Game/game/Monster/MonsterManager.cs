@@ -19,6 +19,7 @@ namespace Game.Game.Monster;
 
 /// <summary>
 /// 怪物管理器。管理怪物的出生、刷新、AI、掉落等。
+/// 所有操作在游戏主线程上执行，无需加锁。
 /// </summary>
 public class MonsterManager
 {
@@ -35,7 +36,6 @@ public class MonsterManager
     /// <summary>刷新计时器 key=(mapId,line,cfgId), value=下次刷新时间</summary>
     private readonly Dictionary<string, long> _spawnTimers = new();
 
-    private readonly object _lock = new();
     private CancellationTokenSource? _updateCts;
     private Task? _updateTask;
 
@@ -47,7 +47,16 @@ public class MonsterManager
     public void Start()
     {
         _updateCts = new CancellationTokenSource();
-        _updateTask = Task.Run(() => UpdateLoop(_updateCts.Token));
+        // AI 更新循环投递到游戏主线程，确保与 Handler 串行执行
+        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
+        if (gameCtx != null)
+        {
+            _updateTask = gameCtx.PostAsync(() => UpdateLoop(_updateCts.Token));
+        }
+        else
+        {
+            _updateTask = Task.Run(() => UpdateLoop(_updateCts.Token));
+        }
         Log.Info("怪物管理器已启动");
     }
 
@@ -57,10 +66,7 @@ public class MonsterManager
         _updateCts?.Cancel();
         _updateTask?.Wait(1000);
         _updateCts?.Dispose();
-        lock (_lock)
-        {
-            _mapMonsters.Clear();
-        }
+        _mapMonsters.Clear();
         Log.Info("怪物管理器已停止");
     }
 
@@ -75,23 +81,20 @@ public class MonsterManager
         if (monsters.Count == 0) return;
 
         long mapKey = GetMapKey(mapId, line);
-        lock (_lock)
+        if (!_mapMonsters.ContainsKey(mapKey))
+            _mapMonsters[mapKey] = new Dictionary<long, MonsterUnit>();
+
+        foreach (var cfg in monsters)
         {
-            if (!_mapMonsters.ContainsKey(mapKey))
-                _mapMonsters[mapKey] = new Dictionary<long, MonsterUnit>();
+            // 初始化刷新计时器
+            string timerKey = GetTimerKey(mapId, line, cfg.Id);
+            if (!_spawnTimers.ContainsKey(timerKey))
+                _spawnTimers[timerKey] = 0;
 
-            foreach (var cfg in monsters)
+            // 生成初始怪物
+            for (int i = 0; i < cfg.MaxCount; i++)
             {
-                // 初始化刷新计时器
-                string timerKey = GetTimerKey(mapId, line, cfg.Id);
-                if (!_spawnTimers.ContainsKey(timerKey))
-                    _spawnTimers[timerKey] = 0;
-
-                // 生成初始怪物
-                for (int i = 0; i < cfg.MaxCount; i++)
-                {
-                    SpawnMonster(mapId, line, cfg);
-                }
+                SpawnMonster(mapId, line, cfg);
             }
         }
 
@@ -122,61 +125,58 @@ public class MonsterManager
         var map = MapManager.Instance.GetMap(mapId, line);
         if (map == null) return null;
 
-        lock (_lock)
+        long mapKey = GetMapKey(mapId, line);
+        if (!_mapMonsters.ContainsKey(mapKey))
+            _mapMonsters[mapKey] = new Dictionary<long, MonsterUnit>();
+
+        var mapMonsters = _mapMonsters[mapKey];
+
+        // 检查当前数量
+        var currentCount = mapMonsters.Values.Count(m => m.CfgId == cfg.Id);
+        if (currentCount >= cfg.MaxCount)
+            return null;
+
+        long monsterId = Interlocked.Increment(ref _nextMonsterId);
+
+        var monster = new MonsterUnit(monsterId, cfg);
+
+        // 创建战斗单元
+        var fightAttr = new FightAttribute
         {
-            long mapKey = GetMapKey(mapId, line);
-            if (!_mapMonsters.ContainsKey(mapKey))
-                _mapMonsters[mapKey] = new Dictionary<long, MonsterUnit>();
+            MaxHp = cfg.MaxHp,
+            Hp = cfg.MaxHp,
+            PhyAttMin = cfg.Attack,
+            PhyAttMax = cfg.Attack,
+            PhyDefMin = cfg.Defense,
+            PhyDefMax = cfg.Defense,
+        };
 
-            var mapMonsters = _mapMonsters[mapKey];
+        var fightUnit = FightManager.Instance.RegisterUnit(
+            monsterId,
+            MapObjectType.Monster,
+            cfg.Name,
+            cfg.Id,
+            fightAttr
+        );
 
-            // 检查当前数量
-            var currentCount = mapMonsters.Values.Count(m => m.CfgId == cfg.Id);
-            if (currentCount >= cfg.MaxCount)
-                return null;
+        // 添加到地图
+        var npc = new MapNpc((int)monsterId, cfg.Id, cfg.Name, mapId, line, x, y);
+        map.AddObject(npc);
 
-            long monsterId = Interlocked.Increment(ref _nextMonsterId);
+        monster.Npc = npc;
+        monster.FightUnit = fightUnit;
+        monster.X = x;
+        monster.Y = y;
+        monster.AiState = AiState.Idle;
+        monster.LastUpdateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            var monster = new MonsterUnit(monsterId, cfg);
+        mapMonsters[monsterId] = monster;
 
-            // 创建战斗单元
-            var fightAttr = new FightAttribute
-            {
-                MaxHp = cfg.MaxHp,
-                Hp = cfg.MaxHp,
-                PhyAttMin = cfg.Attack,
-                PhyAttMax = cfg.Attack,
-                PhyDefMin = cfg.Defense,
-                PhyDefMax = cfg.Defense,
-            };
+        // 广播给附近玩家
+        BroadcastMonsterAppear(mapId, line, monster);
 
-            var fightUnit = FightManager.Instance.RegisterUnit(
-                monsterId,
-                MapObjectType.Monster,
-                cfg.Name,
-                cfg.Id,
-                fightAttr
-            );
-
-            // 添加到地图
-            var npc = new MapNpc((int)monsterId, cfg.Id, cfg.Name, mapId, line, x, y);
-            map.AddObject(npc);
-
-            monster.Npc = npc;
-            monster.FightUnit = fightUnit;
-            monster.X = x;
-            monster.Y = y;
-            monster.AiState = AiState.Idle;
-            monster.LastUpdateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-            mapMonsters[monsterId] = monster;
-
-            // 广播给附近玩家
-            BroadcastMonsterAppear(mapId, line, monster);
-
-            Log.Debug($"生成怪物 MonsterId:{monsterId} CfgId:{cfg.Id} Pos:({x},{y})");
-            return monster;
-        }
+        Log.Debug($"生成怪物 MonsterId:{monsterId} CfgId:{cfg.Id} Pos:({x},{y})");
+        return monster;
     }
 
     #endregion
@@ -188,42 +188,39 @@ public class MonsterManager
     /// </summary>
     public void OnMonsterKilled(long monsterId, long killerId)
     {
-        lock (_lock)
+        // 从所有地图中查找
+        foreach (var kvp in _mapMonsters)
         {
-            // 从所有地图中查找
-            foreach (var kvp in _mapMonsters)
+            if (kvp.Value.TryGetValue(monsterId, out var monster))
             {
-                if (kvp.Value.TryGetValue(monsterId, out var monster))
+                // 移除战斗单元
+                FightManager.Instance.UnregisterUnit(monsterId);
+
+                // 广播死亡
+                var mapId = monster.Npc?.MapId ?? 0;
+                var line = monster.Npc?.Line ?? 0;
+                BroadcastMonsterDeath(mapId, line, monsterId);
+
+                // 从地图移除
+                var map = MapManager.Instance.GetMap(mapId, line);
+                map?.RemoveObject(monsterId);
+
+                // 移除
+                kvp.Value.Remove(monsterId);
+
+                if (monster.Config != null)
                 {
-                    // 移除战斗单元
-                    FightManager.Instance.UnregisterUnit(monsterId);
+                    // 设置刷新计时器
+                    string timerKey = GetTimerKey(mapId, line, monster.CfgId);
+                    _spawnTimers[timerKey] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                        + monster.Config.SpawnInterval * 1000;
 
-                    // 广播死亡
-                    var mapId = monster.Npc?.MapId ?? 0;
-                    var line = monster.Npc?.Line ?? 0;
-                    BroadcastMonsterDeath(mapId, line, monsterId);
-
-                    // 从地图移除
-                    var map = MapManager.Instance.GetMap(mapId, line);
-                    map?.RemoveObject(monsterId);
-
-                    // 移除
-                    kvp.Value.Remove(monsterId);
-
-                    if (monster.Config != null)
-                    {
-                        // 设置刷新计时器
-                        string timerKey = GetTimerKey(mapId, line, monster.CfgId);
-                        _spawnTimers[timerKey] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                            + monster.Config.SpawnInterval * 1000;
-
-                        // 计算掉落
-                        CalculateAndGrantDrop(monster, killerId, mapId, line);
-                    }
-
-                    Log.Info($"怪物死亡 MonsterId:{monsterId} KillerId:{killerId}");
-                    return;
+                    // 计算掉落
+                    CalculateAndGrantDrop(monster, killerId, mapId, line);
                 }
+
+                Log.Info($"怪物死亡 MonsterId:{monsterId} KillerId:{killerId}");
+                return;
             }
         }
     }
@@ -365,7 +362,7 @@ public class MonsterManager
 
     #region AI更新
 
-    /// <summary>AI更新循环</summary>
+    /// <summary>AI更新循环（在游戏主线程上执行）</summary>
     private async Task UpdateLoop(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -375,14 +372,9 @@ public class MonsterManager
                 await Task.Delay(1000, ct);
 
                 long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                List<MonsterUnit> allMonsters;
-
-                lock (_lock)
-                {
-                    allMonsters = _mapMonsters.Values
-                        .SelectMany(m => m.Values)
-                        .ToList();
-                }
+                var allMonsters = _mapMonsters.Values
+                    .SelectMany(m => m.Values)
+                    .ToList();
 
                 foreach (var monster in allMonsters)
                 {
@@ -713,12 +705,9 @@ public class MonsterManager
     /// <summary>获取地图怪物数量</summary>
     public int GetMapMonsterCount(int mapId, int line)
     {
-        lock (_lock)
-        {
-            long mapKey = GetMapKey(mapId, line);
-            return _mapMonsters.TryGetValue(mapKey, out var monsters)
-                ? monsters.Count : 0;
-        }
+        long mapKey = GetMapKey(mapId, line);
+        return _mapMonsters.TryGetValue(mapKey, out var monsters)
+            ? monsters.Count : 0;
     }
 
     #endregion

@@ -15,7 +15,7 @@ namespace Game.Game.Fight;
 
 /// <summary>
 /// 战斗管理器。处理技能使用、伤害结算、死亡处理等战斗核心逻辑。
-/// 参考: Java 项目的 FightManager。
+/// 所有操作在游戏主线程上执行，无需加锁。
 /// </summary>
 public class FightManager
 {
@@ -25,9 +25,6 @@ public class FightManager
 
     /// <summary>在线战斗单元 key=objectId</summary>
     private readonly Dictionary<long, FightUnit> _units = new();
-
-
-    private readonly object _lock = new();
 
     private FightManager() { }
 
@@ -42,10 +39,7 @@ public class FightManager
     public FightUnit RegisterUnit(long objectId, int objectType, string name, int cfgId, FightAttribute attr)
     {
         var unit = new FightUnit(objectId, objectType, name, cfgId, attr);
-        lock (_lock)
-        {
-            _units[objectId] = unit;
-        }
+        _units[objectId] = unit;
         Log.Debug($"注册战斗单元 ObjectId:{objectId} Name:{name}");
         return unit;
     }
@@ -53,20 +47,14 @@ public class FightManager
     /// <summary>注销战斗单元（玩家离开地图时调用）</summary>
     public void UnregisterUnit(long objectId)
     {
-        lock (_lock)
-        {
-            _units.Remove(objectId);
-        }
+        _units.Remove(objectId);
         Log.Debug($"注销战斗单元 ObjectId:{objectId}");
     }
 
     /// <summary>获取战斗单元</summary>
     public FightUnit? GetUnit(long objectId)
     {
-        lock (_lock)
-        {
-            return _units.TryGetValue(objectId, out var unit) ? unit : null;
-        }
+        return _units.TryGetValue(objectId, out var unit) ? unit : null;
     }
 
     #endregion
@@ -322,10 +310,7 @@ public class FightManager
     /// <summary>清除所有战斗单元（停服时调用）</summary>
     public void RemoveAll()
     {
-        lock (_lock)
-        {
-            _units.Clear();
-        }
+        _units.Clear();
         Log.Info("战斗管理器已清空");
     }
 

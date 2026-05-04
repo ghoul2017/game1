@@ -11,8 +11,7 @@ namespace Game.Game.Player;
 
 /// <summary>
 /// 玩家管理器。管理在线玩家列表，提供查找、广播、统计等功能。
-/// 在 SessionManager 之上提供游戏层面的玩家管理。
-/// 参考: Java 项目的 UserManager + ServerPlayerManager。
+/// 所有操作在游戏主线程上执行，无需加锁。
 /// </summary>
 public class PlayerManager
 {
@@ -23,28 +22,24 @@ public class PlayerManager
     private readonly Dictionary<long, Player> _players = new();           // roleId → Player
     private readonly Dictionary<long, Player> _playersByUserId = new();   // userId → Player
     private readonly Dictionary<string, Player> _playersByName = new();   // roleName → Player
-    private readonly object _lock = new();
 
     private PlayerManager() { }
 
     /// <summary>玩家上线（登录+选角完成后调用）</summary>
     public void AddPlayer(Player player)
     {
-        lock (_lock)
+        // 如果已在线，先移除旧的
+        if (_players.TryGetValue(player.RoleId, out var oldPlayer))
         {
-            // 如果已在线，先移除旧的
-            if (_players.TryGetValue(player.RoleId, out var oldPlayer))
-            {
-                RemovePlayerLocked(oldPlayer);
-                Log.Warn($"玩家重复上线，替换旧数据 RoleId:{player.RoleId}");
-            }
+            RemovePlayerInternal(oldPlayer);
+            Log.Warn($"玩家重复上线，替换旧数据 RoleId:{player.RoleId}");
+        }
 
-            _players[player.RoleId] = player;
-            _playersByUserId[player.UserId] = player;
-            if (!string.IsNullOrEmpty(player.RoleName))
-            {
-                _playersByName[player.RoleName] = player;
-            }
+        _players[player.RoleId] = player;
+        _playersByUserId[player.UserId] = player;
+        if (!string.IsNullOrEmpty(player.RoleName))
+        {
+            _playersByName[player.RoleName] = player;
         }
         Log.Info($"玩家上线 RoleId:{player.RoleId} Name:{player.RoleName}，在线人数: {OnlineCount}");
     }
@@ -52,17 +47,14 @@ public class PlayerManager
     /// <summary>玩家下线（断线或主动退出时调用）</summary>
     public void RemovePlayer(long roleId)
     {
-        lock (_lock)
+        if (_players.TryGetValue(roleId, out var player))
         {
-            if (_players.TryGetValue(roleId, out var player))
-            {
-                RemovePlayerLocked(player);
-                Log.Info($"玩家下线 RoleId:{roleId}，在线人数: {OnlineCount}");
-            }
+            RemovePlayerInternal(player);
+            Log.Info($"玩家下线 RoleId:{roleId}，在线人数: {OnlineCount}");
         }
     }
 
-    private void RemovePlayerLocked(Player player)
+    private void RemovePlayerInternal(Player player)
     {
         _players.Remove(player.RoleId);
         _playersByUserId.Remove(player.UserId);
@@ -75,54 +67,37 @@ public class PlayerManager
     /// <summary>按角色ID获取在线玩家</summary>
     public Player? GetByRoleId(long roleId)
     {
-        lock (_lock)
-        {
-            return _players.TryGetValue(roleId, out var p) ? p : null;
-        }
+        return _players.TryGetValue(roleId, out var p) ? p : null;
     }
 
     /// <summary>按用户ID获取在线玩家</summary>
     public Player? GetByUserId(long userId)
     {
-        lock (_lock)
-        {
-            return _playersByUserId.TryGetValue(userId, out var p) ? p : null;
-        }
+        return _playersByUserId.TryGetValue(userId, out var p) ? p : null;
     }
 
     /// <summary>按角色名获取在线玩家</summary>
     public Player? GetByRoleName(string name)
     {
-        lock (_lock)
-        {
-            return _playersByName.TryGetValue(name, out var p) ? p : null;
-        }
+        return _playersByName.TryGetValue(name, out var p) ? p : null;
     }
 
     /// <summary>角色是否在线</summary>
-    public bool IsOnline(long roleId)
-    {
-        lock (_lock) { return _players.ContainsKey(roleId); }
-    }
+    public bool IsOnline(long roleId) => _players.ContainsKey(roleId);
 
     /// <summary>当前在线玩家数</summary>
-    public int OnlineCount
-    {
-        get { lock (_lock) { return _players.Count; } }
-    }
+    public int OnlineCount => _players.Count;
 
     /// <summary>获取所有在线角色ID</summary>
-    public List<long> GetOnlineRoleIds()
-    {
-        lock (_lock) { return new List<long>(_players.Keys); }
-    }
+    public List<long> GetOnlineRoleIds() => new(_players.Keys);
 
-    /// <summary>遍历所有在线玩家（线程安全快照）</summary>
+    /// <summary>遍历所有在线玩家</summary>
     public void ForEachPlayer(Action<Player> action)
     {
-        List<Player> snapshot;
-        lock (_lock) { snapshot = new List<Player>(_players.Values); }
-        snapshot.ForEach(action);
+        foreach (var player in _players.Values)
+        {
+            action(player);
+        }
     }
 
     /// <summary>广播消息给所有在线玩家</summary>
@@ -130,8 +105,7 @@ public class PlayerManager
     {
         foreach (Player player in _players.Values)
         {
-           
-            var session = SessionManager.Instance.GetByUserId( player.UserId);
+            var session = SessionManager.Instance.GetByUserId(player.UserId);
             session?.Send(msg);
         }
     }
@@ -178,10 +152,7 @@ public class PlayerManager
     /// <summary>保存所有在线角色（Write-Behind，停服时用 immediately=true）</summary>
     public async Task SaveAllRolesAsync(bool immediately = false)
     {
-        List<Player> snapshot;
-        lock (_lock) { snapshot = new List<Player>(_players.Values); }
-
-        foreach (var player in snapshot)
+        foreach (var player in _players.Values)
         {
             if (player.RoleData != null)
             {
@@ -195,19 +166,16 @@ public class PlayerManager
                 }
             }
         }
-        Log.Info($"保存所有在线角色完成，共 {snapshot.Count} 个");
+        Log.Info($"保存所有在线角色完成，共 {_players.Count} 个");
     }
 
     /// <summary>移除所有在线玩家（服务器关闭时调用）</summary>
     public void RemoveAll()
     {
-        lock (_lock)
-        {
-            var count = _players.Count;
-            _players.Clear();
-            _playersByUserId.Clear();
-            _playersByName.Clear();
-            Log.Info($"清空所有在线玩家，共 {count} 人");
-        }
+        var count = _players.Count;
+        _players.Clear();
+        _playersByUserId.Clear();
+        _playersByName.Clear();
+        Log.Info($"清空所有在线玩家，共 {count} 人");
     }
 }

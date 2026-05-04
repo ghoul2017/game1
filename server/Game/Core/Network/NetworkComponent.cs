@@ -48,6 +48,14 @@ public class NetworkComponent : Component
     {
         _router = new MessageRouter();
         _router.AutoRegister();
+
+        // 设置消息调度到游戏主线程，确保 Handler 串行执行
+        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
+        if (gameCtx != null)
+        {
+            _router.DispatchContext = gameCtx;
+            Log.Info("消息路由已绑定游戏主线程");
+        }
         _heartbeatTimer = new System.Timers.Timer(CheckIntervalSeconds * 1000);
         _heartbeatTimer.Elapsed += OnHeartbeatCheck;
         _heartbeatTimer.AutoReset = true;
@@ -106,6 +114,18 @@ public class NetworkComponent : Component
     }
 
     private void OnSessionDisconnected(TcpSession session)
+    {
+        // 断线回调可能来自非主线程，投递到游戏主线程执行
+        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
+        if (gameCtx != null && !GameSynchronizationContext.IsMainThread)
+        {
+            gameCtx.Post(_ => HandleDisconnection(session), null);
+            return;
+        }
+        HandleDisconnection(session);
+    }
+
+    private void HandleDisconnection(TcpSession session)
     {
         // 如果已选角，从在线列表移除并保存数据
         if (session.RoleId != 0)
@@ -179,6 +199,20 @@ public class NetworkComponent : Component
     }
 
     private void OnHeartbeatCheck(object? sender, ElapsedEventArgs e)
+    {
+        // Timer 回调在非主线程，投递到游戏主线程执行
+        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
+        if (gameCtx != null)
+        {
+            gameCtx.Post(_ => DoHeartbeatCheck(), null);
+        }
+        else
+        {
+            DoHeartbeatCheck();
+        }
+    }
+
+    private void DoHeartbeatCheck()
     {
         var now = DateTime.UtcNow;
         List<TcpSession> timeoutSessions = _sessionMap.Values

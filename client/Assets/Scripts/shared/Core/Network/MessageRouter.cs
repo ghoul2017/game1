@@ -13,6 +13,12 @@ namespace Shared.Core.Network
         private static readonly ILog Log = LogManager.GetLogger<MessageRouter>();
         private readonly Dictionary<ushort, IMessageHandler> _handlers = new();
 
+        /// <summary>
+        /// 消息调度上下文。设置后，Handler 将通过 Post 投递到该上下文执行（如游戏主线程）。
+        /// 默认 null，表示直接在当前线程执行（客户端默认行为）。
+        /// </summary>
+        public SynchronizationContext? DispatchContext { get; set; }
+
 
         /// <summary>
         /// 自动扫描程序集中所有带 [MessageHandler] 特性的扩展方法。
@@ -70,6 +76,26 @@ namespace Shared.Core.Network
             if (!_handlers.TryGetValue(msgId, out var handler))
             {
                 Log.Warn($"未注册的消息ID: {msgId}");
+                return;
+            }
+
+            // 如果设置了调度上下文，投递到该上下文执行（如游戏主线程）
+            var ctx = DispatchContext;
+            if (ctx != null)
+            {
+                ctx.Post(async _ =>
+                {
+                    try
+                    {
+                        var res = await handler.HandleAsync(session, payload);
+                        if (res != null)
+                            session.Send(res);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"处理消息 {msgId} 异常: {ex.Message}");
+                    }
+                }, null);
                 return;
             }
 

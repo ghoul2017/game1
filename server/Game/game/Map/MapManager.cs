@@ -7,7 +7,7 @@ namespace Game.Game.Map;
 
 /// <summary>
 /// 地图管理器。管理所有地图实例，处理玩家切图、位置同步等。
-/// 参考: Java 项目的 MapManager。
+/// 所有操作在游戏主线程上执行，无需加锁。
 /// </summary>
 public class MapManager
 {
@@ -27,8 +27,6 @@ public class MapManager
     /// <summary>默认地图配置ID</summary>
     private const int DefaultMapCfgId = 1;
 
-    private readonly object _lock = new();
-
     private MapManager() { }
 
     #region 地图管理
@@ -37,10 +35,7 @@ public class MapManager
     public GameMap CreateMap(int cfgId, int line, string name, int width, int height, int birthX, int birthY)
     {
         var map = new GameMap(cfgId, line, name, width, height, birthX, birthY);
-        lock (_lock)
-        {
-            _maps[map.MapKey] = map;
-        }
+        _maps[map.MapKey] = map;
         Log.Info($"创建地图 CfgId:{cfgId} Line:{line} Name:{name} Size:{width}x{height}");
         return map;
     }
@@ -49,38 +44,23 @@ public class MapManager
     public GameMap? GetMap(int cfgId, int line)
     {
         long key = (long)cfgId * 1000 + line;
-        lock (_lock)
-        {
-            return _maps.TryGetValue(key, out var map) ? map : null;
-        }
+        return _maps.TryGetValue(key, out var map) ? map : null;
     }
 
     /// <summary>获取玩家所在的地图</summary>
     public GameMap? GetPlayerMap(long roleId)
     {
-        lock (_lock)
-        {
-            return _playerMapMap.TryGetValue(roleId, out var map) ? map : null;
-        }
+        return _playerMapMap.TryGetValue(roleId, out var map) ? map : null;
     }
 
     /// <summary>获取玩家的地图对象</summary>
     public MapPlayer? GetPlayerMapObj(long roleId)
     {
-        lock (_lock)
-        {
-            return _playerMapObjMap.TryGetValue(roleId, out var obj) ? obj : null;
-        }
+        return _playerMapObjMap.TryGetValue(roleId, out var obj) ? obj : null;
     }
 
-    /// <summary>获取所有地图（快照）</summary>
-    public List<GameMap> GetAllMaps()
-    {
-        lock (_lock)
-        {
-            return new List<GameMap>(_maps.Values);
-        }
-    }
+    /// <summary>获取所有地图</summary>
+    public List<GameMap> GetAllMaps() => new(_maps.Values);
 
     #endregion
 
@@ -96,24 +76,21 @@ public class MapManager
             return false;
         }
 
-        lock (_lock)
+        // 如果玩家已在某张地图，先退出
+        if (_playerMapMap.ContainsKey(roleId))
         {
-            // 如果玩家已在某张地图，先退出
-            if (_playerMapMap.ContainsKey(roleId))
-            {
-                QuitMapLocked(roleId);
-            }
-
-            var mapPlayer = new MapPlayer(roleId, roleName, cfgId, line, x, y);
-            if (!map.AddObject(mapPlayer))
-            {
-                Log.Warn($"玩家进入地图失败 RoleId:{roleId}");
-                return false;
-            }
-
-            _playerMapMap[roleId] = map;
-            _playerMapObjMap[roleId] = mapPlayer;
+            QuitMapInternal(roleId);
         }
+
+        var mapPlayer = new MapPlayer(roleId, roleName, cfgId, line, x, y);
+        if (!map.AddObject(mapPlayer))
+        {
+            Log.Warn($"玩家进入地图失败 RoleId:{roleId}");
+            return false;
+        }
+
+        _playerMapMap[roleId] = map;
+        _playerMapObjMap[roleId] = mapPlayer;
 
         Log.Info($"玩家进入地图 RoleId:{roleId} MapId:{cfgId} Line:{line} Pos:({x},{y})");
         return true;
@@ -122,13 +99,10 @@ public class MapManager
     /// <summary>玩家离开地图</summary>
     public bool QuitMap(long roleId)
     {
-        lock (_lock)
-        {
-            return QuitMapLocked(roleId);
-        }
+        return QuitMapInternal(roleId);
     }
 
-    private bool QuitMapLocked(long roleId)
+    private bool QuitMapInternal(long roleId)
     {
         if (!_playerMapMap.Remove(roleId, out var map))
             return false;
@@ -143,14 +117,11 @@ public class MapManager
     /// <summary>玩家切图（从当前地图移动到新地图）</summary>
     public bool ChangeMap(long roleId, string roleName, int newCfgId, int newLine, int newX, int newY)
     {
-        lock (_lock)
-        {
-            QuitMapLocked(roleId);
-            return EnterMapUnlocked(roleId, roleName, newCfgId, newLine, newX, newY);
-        }
+        QuitMapInternal(roleId);
+        return EnterMapInternal(roleId, roleName, newCfgId, newLine, newX, newY);
     }
 
-    private bool EnterMapUnlocked(long roleId, string roleName, int cfgId, int line, int x, int y)
+    private bool EnterMapInternal(long roleId, string roleName, int cfgId, int line, int x, int y)
     {
         var map = GetMap(cfgId, line);
         if (map == null) return false;
@@ -166,39 +137,30 @@ public class MapManager
     /// <summary>玩家移动（同地图内）</summary>
     public bool Move(long roleId, int newX, int newY)
     {
-        lock (_lock)
-        {
-            if (!_playerMapMap.TryGetValue(roleId, out var map))
-                return false;
+        if (!_playerMapMap.TryGetValue(roleId, out var map))
+            return false;
 
-            return map.MoveObject(roleId, newX, newY);
-        }
+        return map.MoveObject(roleId, newX, newY);
     }
 
     /// <summary>获取玩家位置信息</summary>
     public (int mapId, int line, int x, int y)? GetPlayerPosition(long roleId)
     {
-        lock (_lock)
-        {
-            if (!_playerMapObjMap.TryGetValue(roleId, out var obj))
-                return null;
-            return (obj.MapId, obj.Line, obj.X, obj.Y);
-        }
+        if (!_playerMapObjMap.TryGetValue(roleId, out var obj))
+            return null;
+        return (obj.MapId, obj.Line, obj.X, obj.Y);
     }
 
     /// <summary>获取同地图的玩家列表（排除自己）</summary>
     public List<MapPlayer> GetNearbyPlayers(long roleId)
     {
-        lock (_lock)
-        {
-            if (!_playerMapObjMap.TryGetValue(roleId, out var obj))
-                return new List<MapPlayer>();
+        if (!_playerMapObjMap.TryGetValue(roleId, out var obj))
+            return new List<MapPlayer>();
 
-            if (!_playerMapMap.TryGetValue(roleId, out var map))
-                return new List<MapPlayer>();
+        if (!_playerMapMap.TryGetValue(roleId, out var map))
+            return new List<MapPlayer>();
 
-            return map.GetAllPlayers().Where(p => p.RoleId != roleId).ToList();
-        }
+        return map.GetAllPlayers().Where(p => p.RoleId != roleId).ToList();
     }
 
     #endregion
@@ -219,12 +181,9 @@ public class MapManager
     /// <summary>移除所有玩家（服务器关闭时调用）</summary>
     public void RemoveAll()
     {
-        lock (_lock)
-        {
-            _playerMapMap.Clear();
-            _playerMapObjMap.Clear();
-            _maps.Clear();
-        }
+        _playerMapMap.Clear();
+        _playerMapObjMap.Clear();
+        _maps.Clear();
         Log.Info("地图管理器已清空");
     }
 

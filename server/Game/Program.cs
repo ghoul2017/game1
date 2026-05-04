@@ -15,7 +15,30 @@ namespace Game;
 public class Program
 {
     private static readonly ILog Log = LogManager.GetLogger<Program>();
+
+    /// <summary>游戏主线程同步上下文</summary>
+    private static GameSynchronizationContext? _gameCtx;
+
     static async Task<int> Main(string[] args)
+    {
+        // 安装游戏主线程同步上下文，确保所有 await 恢复后回到主线程
+        _gameCtx = new GameSynchronizationContext();
+        _gameCtx.Start();
+
+        // 将主逻辑投递到游戏主线程执行
+        try
+        {
+            await _gameCtx.PostAsync(() => RunServerAsync(args));
+        }
+        finally
+        {
+            _gameCtx.Stop();
+        }
+        return 0;
+    }
+
+    /// <summary>服务端主逻辑（在游戏主线程上执行）</summary>
+    private static async Task RunServerAsync(string[] args)
     {
         var json = await File.ReadAllTextAsync("appsettings.json");
         var config =
@@ -37,20 +60,20 @@ public class Program
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
-            cts.Cancel();
+            // 从非主线程触发关闭，投递到主线程执行
+            _gameCtx!.Post(_ => cts.Cancel(), null);
         };
 
         try
         {
             await registry.InitAllAsync();
             await registry.StartAllAsync(cts.Token);
-            
+
             await networkComponent.Listen(config.Server.Host, config.Server.Port, cts.Token);
         }
         finally
         {
             await registry.StopAllAsync();
         }
-        return 0;
     }
 }
