@@ -15,24 +15,20 @@ namespace Game;
 public class Program
 {
     private static readonly ILog Log = LogManager.GetLogger<Program>();
-
-    /// <summary>游戏主线程同步上下文</summary>
-    private static GameSynchronizationContext? _gameCtx;
-
+    
     static async Task<int> Main(string[] args)
     {
         // 安装游戏主线程同步上下文，确保所有 await 恢复后回到主线程
-        _gameCtx = new GameSynchronizationContext();
-        _gameCtx.Start();
+        Context.GameCtx.Start();
 
         // 将主逻辑投递到游戏主线程执行
         try
         {
-            await _gameCtx.PostAsync(() => RunServerAsync(args));
+            await Context.GameCtx.PostAsync(() => RunServerAsync(args));
         }
         finally
         {
-            _gameCtx.Stop();
+            Context.GameCtx.Stop();
         }
         return 0;
     }
@@ -61,7 +57,7 @@ public class Program
         {
             e.Cancel = true;
             // 从非主线程触发关闭，投递到主线程执行
-            _gameCtx!.Post(_ => cts.Cancel(), null);
+            Context.GameCtx.Post(_ => cts.Cancel(), null);
         };
 
         try

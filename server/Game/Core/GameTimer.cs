@@ -34,7 +34,7 @@ public static class GameTimer
     /// <summary>停止定时器</summary>
     public static void Stop(GameTimerHandle handle)
     {
-        if (_timers.Remove(handle.Id, out var entry))
+        if (_timers.TryRemove(handle.Id, out var entry))
         {
             entry.Timer.Dispose();
         }
@@ -53,10 +53,9 @@ public static class GameTimer
     private static void OnTick(long id, TimerEntry entry)
     {
         // 投递到游戏主线程执行
-        var ctx = GameSynchronizationContext.Instance;
-        if (ctx != null)
+        if (Context.GameCtx != null)
         {
-            ctx.Post(_ =>
+            Context.GameCtx.Post(_ =>
             {
                 if (_timers.ContainsKey(id))
                 {
