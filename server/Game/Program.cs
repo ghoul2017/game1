@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Components.User;
 using Game.Config;
@@ -15,7 +14,7 @@ namespace Game;
 public class Program
 {
     private static readonly ILog Log = LogManager.GetLogger<Program>();
-    
+
     static async Task<int> Main(string[] args)
     {
         // 安装游戏主线程同步上下文，确保所有 await 恢复后回到主线程
@@ -52,20 +51,15 @@ public class Program
 
         var registry = ModuleRegistry.Create(config);
 
-        var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            // 从非主线程触发关闭，投递到主线程执行
-            Context.GameCtx.Post(_ => cts.Cancel(), null);
-        };
+        // 注册 Ctrl+C 关闭信号
+        Context.Shutdown.RegisterConsoleCancel();
 
         try
         {
             await registry.InitAllAsync();
-            await registry.StartAllAsync(cts.Token);
+            await registry.StartAllAsync(Context.Shutdown.Token);
 
-            await networkComponent.Listen(config.Server.Host, config.Server.Port, cts.Token);
+            await networkComponent.Listen(config.Server.Host, config.Server.Port, Context.Shutdown.Token);
         }
         finally
         {

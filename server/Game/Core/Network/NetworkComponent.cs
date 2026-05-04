@@ -29,8 +29,6 @@ public class NetworkComponent : Component
     public int Port { get; set; } = 9000;
     public int MaxConnections { get; set; } = 5000;
 
-    private CancellationTokenSource? _cts;
-
     // ==================== 服务端 ====================
     private Socket? _listenSocket;
     private readonly Dictionary<long, TcpSession> _sessionMap = new(); // sessionId -> session
@@ -56,8 +54,6 @@ public class NetworkComponent : Component
         Host = host;
         Port = port;
         MaxConnections = maxConnections;
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
 
         var endpoint = new IPEndPoint(IPAddress.Parse(Host), Port);
         _listenSocket = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -66,7 +62,7 @@ public class NetworkComponent : Component
 
         Log.Info($"监听 {Host}:{Port}");
 
-        await AcceptAsync(_listenSocket, _cts.Token);
+        await AcceptAsync(_listenSocket, cancellationToken);
     }
 
     private async Task AcceptAsync(Socket listenSocket, CancellationToken token)
