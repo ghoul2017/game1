@@ -48,14 +48,6 @@ public class NetworkComponent : Component
     {
         _router = new MessageRouter();
         _router.AutoRegister();
-
-        // 设置消息调度到游戏主线程，确保 Handler 串行执行
-        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
-        if (gameCtx != null)
-        {
-            _router.DispatchContext = gameCtx;
-            Log.Info("消息路由已绑定游戏主线程");
-        }
         _heartbeatTimer = new System.Timers.Timer(CheckIntervalSeconds * 1000);
         _heartbeatTimer.Elapsed += OnHeartbeatCheck;
         _heartbeatTimer.AutoReset = true;
