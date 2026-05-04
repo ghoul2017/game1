@@ -15,6 +15,7 @@ public class GameSynchronizationContext : SynchronizationContext
     private static readonly ILog Log = LogManager.GetLogger<GameSynchronizationContext>();
 
     private readonly ConcurrentQueue<(SendOrPostCallback callback, object? state)> _queue = new();
+    private readonly AutoResetEvent _wakeSignal = new(false);
     private readonly Thread _thread;
     private volatile bool _stopped;
     private int _pendingCount;
@@ -43,6 +44,7 @@ public class GameSynchronizationContext : SynchronizationContext
     public void Stop()
     {
         _stopped = true;
+        _wakeSignal.Set(); // 唤醒主线程退出 WaitOne
         _thread.Join();
         Log.Info("游戏主线程已停止");
     }
@@ -53,6 +55,7 @@ public class GameSynchronizationContext : SynchronizationContext
         if (_stopped) return;
         Interlocked.Increment(ref _pendingCount);
         _queue.Enqueue((d, state));
+        _wakeSignal.Set();
     }
 
     /// <summary>在主线程上同步执行（仅限从主线程调用，否则抛异常）</summary>
@@ -104,7 +107,8 @@ public class GameSynchronizationContext : SynchronizationContext
 
         while (!_stopped || !_queue.IsEmpty)
         {
-            if (_queue.TryDequeue(out var item))
+            // 批量消费队列，直到为空
+            while (_queue.TryDequeue(out var item))
             {
                 try
                 {
@@ -116,9 +120,11 @@ public class GameSynchronizationContext : SynchronizationContext
                 }
                 Interlocked.Decrement(ref _pendingCount);
             }
-            else
+
+            // 队列空，等待唤醒信号（无轮询开销）
+            if (!_stopped)
             {
-                Thread.Sleep(1);
+                _wakeSignal.WaitOne();
             }
         }
     }
