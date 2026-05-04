@@ -12,7 +12,6 @@ namespace Client.Core
 
             NetClient.EnsureCreated();
             NetClient.Instance.SetDispatcher(new MessageDispatcher());
-            MsgTypeRegistry.Init();
 
             UIManager.EnsureCreated();
             NetworkStatusPanel.EnsureCreated();

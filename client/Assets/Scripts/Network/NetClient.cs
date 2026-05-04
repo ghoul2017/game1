@@ -20,31 +20,48 @@ namespace Client.Network
     {
         public static NetClient Instance { get; private set; }
 
-        [Header("Server")]
-        public string host = "127.0.0.1";
+        [Header("Server")] public string host = "127.0.0.1";
         public int port = 9000;
 
-        [Header("Heartbeat")]
-        public float heartbeatInterval = 30f;
+        [Header("Heartbeat")] public float heartbeatInterval = 30f;
         public float recvTimeout = 60f;
 
-        [Header("Reconnect")]
-        public bool autoReconnect = true;
+        [Header("Reconnect")] public bool autoReconnect = true;
         public int maxReconnectAttempts = 5;
         public float baseReconnectDelay = 1f;
         public float maxReconnectDelay = 30f;
 
         // --- State ---
-        public enum ConnState { Disconnected, Connecting, Handshaking, Connected, Reconnecting }
+        public enum ConnState
+        {
+            Disconnected,
+            Connecting,
+            Handshaking,
+            Connected,
+            Reconnecting
+        }
 
-        public bool IsConnected { get { return _state == ConnState.Connected && IsSocketAlive(); } }
-        public bool IsConnecting { get { return _state == ConnState.Connecting || _state == ConnState.Reconnecting || _state == ConnState.Handshaking; } }
+        public bool IsConnected
+        {
+            get { return _state == ConnState.Connected && IsSocketAlive(); }
+        }
+
+        public bool IsConnecting
+        {
+            get
+            {
+                return _state == ConnState.Connecting || _state == ConnState.Reconnecting ||
+                       _state == ConnState.Handshaking;
+            }
+        }
 
         public ConnState State => _state;
         public int PingMs { get; private set; }
         public int CurrentReconnectAttempt => _reconnectAttempts;
         public int MaxReconnectAttempt => maxReconnectAttempts;
-        public float ReconnectCountdown => _state == ConnState.Reconnecting ? Mathf.Max(0f, _nextReconnectTime - Time.time) : 0f;
+
+        public float ReconnectCountdown =>
+            _state == ConnState.Reconnecting ? Mathf.Max(0f, _nextReconnectTime - Time.time) : 0f;
 
         private ConnState _state = ConnState.Disconnected;
 
@@ -80,6 +97,7 @@ namespace Client.Network
 
         // --- External ---
         private MessageDispatcher _dispatcher;
+        private MessageRouter _router;
 
         void Awake()
         {
@@ -88,8 +106,11 @@ namespace Client.Network
                 Destroy(gameObject);
                 return;
             }
+
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            _router = new MessageRouter();
+            _router.AutoRegister();
         }
 
         void Update()
@@ -97,8 +118,14 @@ namespace Client.Network
             // Drain main-thread queue
             while (_mainQueue.TryDequeue(out Action action))
             {
-                try { action(); }
-                catch (Exception e) { Debug.LogException(e); }
+                try
+                {
+                    action();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
             }
 
             // Reconnect timer
@@ -126,6 +153,7 @@ namespace Client.Network
                 {
                     SendHeartbeat();
                 }
+
                 if (now - _lastRecvTime > recvTimeout)
                 {
                     Debug.LogWarning("[NetClient] Receive timeout, disconnecting");
@@ -142,7 +170,10 @@ namespace Client.Network
 
         // ==================== Public API ====================
 
-        public MessageDispatcher Dispatcher { get { return _dispatcher; } }
+        public MessageDispatcher Dispatcher
+        {
+            get { return _dispatcher; }
+        }
 
         public void SetDispatcher(MessageDispatcher dispatcher)
         {
@@ -187,6 +218,7 @@ namespace Client.Network
                     _stream.Write(packet, 0, packet.Length);
                     _stream.Flush();
                 }
+
                 _lastSendTime = Time.time;
             }
             catch (Exception ex)
@@ -246,12 +278,6 @@ namespace Client.Network
                     _lastRecvTime = Time.time;
                     Debug.Log("[NetClient] TCP connected, sending handshake...");
 
-                    // Register handshake response handler
-                    if (_dispatcher != null)
-                    {
-                        _dispatcher.Register<HandshakeRes>(MsgIdConst.HandshakeRes, HandleHandshakeRes);
-                        _dispatcher.Register<KickNtf>(MsgIdConst.KickNtf, HandleKickNtf);
-                    }
 
                     // Send handshake request
                     Send(new HandshakeReq());
@@ -276,7 +302,8 @@ namespace Client.Network
                     maxReconnectDelay);
                 _nextReconnectTime = Time.time + delay;
                 _state = ConnState.Reconnecting;
-                Debug.Log("[NetClient] Retry in " + delay + "s (" + _reconnectAttempts + "/" + maxReconnectAttempts + ")");
+                Debug.Log("[NetClient] Retry in " + delay + "s (" + _reconnectAttempts + "/" + maxReconnectAttempts +
+                          ")");
             }
             else
             {
@@ -315,22 +342,33 @@ namespace Client.Network
 
         private void DoDisconnect()
         {
-            // Cleanup handlers
-            if (_dispatcher != null)
-            {
-                _dispatcher.Unregister(MsgIdConst.HandshakeRes);
-                _dispatcher.Unregister(MsgIdConst.HeartbeatRes);
-                _dispatcher.Unregister(MsgIdConst.ReconnectRes);
-                _dispatcher.Unregister(MsgIdConst.KickNtf);
-            }
-
             _running = false;
             _state = ConnState.Disconnected;
             PingMs = 0;
 
-            try { _stream?.Close(); } catch { }
-            try { _tcp?.Close(); } catch { }
-            try { if (_recvThread != null && _recvThread.IsAlive) _recvThread.Join(1000); } catch { }
+            try
+            {
+                _stream?.Close();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                _tcp?.Close();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                if (_recvThread != null && _recvThread.IsAlive) _recvThread.Join(1000);
+            }
+            catch
+            {
+            }
 
             _stream = null;
             _tcp = null;
@@ -392,7 +430,7 @@ namespace Client.Network
 
                 if (_dispatcher != null)
                     _dispatcher.Dispatch(result.MsgId, result.Payload);
-
+                _router.RouteAsync(null, result.MsgId, result.Payload);
                 offset += result.Consumed;
             }
 
@@ -402,44 +440,34 @@ namespace Client.Network
 
         // ==================== Handshake ====================
 
-        private void HandleHandshakeRes(HandshakeRes res)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void HandleHandshakeRes(TcpSession session,HandshakeRes res)
         {
-            // Unregister handler
-            if (_dispatcher != null)
-                _dispatcher.Unregister(MsgIdConst.HandshakeRes);
-
-            if (res.Code == 0)
+            if (res.Code != 0)
             {
-                if (_hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
-                {
-                    // Had previous session — attempt application-level reconnect
-                    Debug.Log("[NetClient] Handshake OK, sending ReconnectReq...");
-                    if (_dispatcher != null)
-                        _dispatcher.Register<ReconnectRes>(MsgIdConst.ReconnectRes, HandleReconnectRes);
+                Debug.LogWarning("[NetClient] Handshake failed: " + res.Message);
+                Instance._hadSession = false;
+                Instance.HandleDisconnect("Handshake rejected: " + res.Message);
+                return;
+            }
 
-                    var req = new ReconnectReq();
-                    req.Token = GameData.Token;
-                    req.RoleId = GameData.CurrentRole.RoleId;
-                    Send(req);
-                }
-                else
-                {
-                    // Fresh connection
-                    Debug.Log("[NetClient] Handshake OK, connected to " + host + ":" + port);
-                    _state = ConnState.Connected;
-
-                    // Register heartbeat handler for ping measurement
-                    if (_dispatcher != null)
-                        _dispatcher.Register<HeartbeatRes>(MsgIdConst.HeartbeatRes, HandleHeartbeatRes);
-
-                    OnConnected?.Invoke();
-                }
+            if (Instance._hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
+            {
+                // Had previous session — attempt application-level reconnect
+                Debug.Log("[NetClient] Handshake OK, sending ReconnectReq...");
+                var req = new ReconnectReq();
+                req.Token = GameData.Token;
+                req.RoleId = GameData.CurrentRole.RoleId;
+                Instance.Send(req);
             }
             else
             {
-                Debug.LogWarning("[NetClient] Handshake failed: " + res.Message);
-                _hadSession = false;
-                HandleDisconnect("Handshake rejected: " + res.Message);
+                // Fresh connection
+                Debug.Log("[NetClient] Handshake OK, connected to " + Instance.host + ":" + Instance.port);
+                Instance._state = ConnState.Connected;
+
+
+                Instance.OnConnected?.Invoke();
             }
         }
 
@@ -452,21 +480,20 @@ namespace Client.Network
             Send(req);
         }
 
-        private void HandleHeartbeatRes(HeartbeatRes res)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void HandleHeartbeatRes(TcpSession session,HeartbeatRes res)
         {
             long nowTicks = DateTime.UtcNow.Ticks;
             long rttTicks = nowTicks - res.ClientTime;
-            PingMs = (int)(rttTicks / System.TimeSpan.TicksPerMillisecond);
+            Instance.PingMs = (int)(rttTicks / System.TimeSpan.TicksPerMillisecond);
         }
 
         // ==================== Reconnect ====================
 
-        private void HandleReconnectRes(ReconnectRes res)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void HandleReconnectRes(TcpSession session,ReconnectRes res)
         {
-            if (_dispatcher != null)
-                _dispatcher.Unregister(MsgIdConst.ReconnectRes);
-
-            _hadSession = false;
+            Instance._hadSession = false;
 
             if (res.Code == 0)
             {
@@ -479,11 +506,9 @@ namespace Client.Network
                 GameData.CurrentRole.Name = res.Name;
                 GameData.CurrentRole.Level = res.Level;
 
-                _state = ConnState.Connected;
-                if (_dispatcher != null)
-                    _dispatcher.Register<HeartbeatRes>(MsgIdConst.HeartbeatRes, HandleHeartbeatRes);
+                Instance._state = ConnState.Connected;
 
-                OnReconnected?.Invoke();
+                Instance.OnReconnected?.Invoke();
             }
             else
             {
@@ -492,34 +517,39 @@ namespace Client.Network
                 GameData.CurrentRole = null;
                 GameData.CurrentMap = null;
 
-                _state = ConnState.Connected;
-                if (_dispatcher != null)
-                    _dispatcher.Register<HeartbeatRes>(MsgIdConst.HeartbeatRes, HandleHeartbeatRes);
+                Instance._state = ConnState.Connected;
 
-                OnReconnectFailed?.Invoke(res.Message);
+                Instance.OnReconnectFailed?.Invoke(res.Message);
             }
         }
 
         // ==================== Kick ====================
 
-        private void HandleKickNtf(KickNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void HandleKickNtf(TcpSession session,KickNtf ntf)
         {
             Debug.Log("[NetClient] Kicked, reason=" + ntf.Reason);
-            _userDisconnect = true;
-            _hadSession = false;
+            Instance._userDisconnect = true;
+            Instance._hadSession = false;
             GameData.Token = "";
             GameData.CurrentRole = null;
             GameData.CurrentMap = null;
-            OnKicked?.Invoke(ntf.Reason);
-            HandleDisconnect("Kicked by server");
+            Instance.OnKicked?.Invoke(ntf.Reason);
+            Instance.HandleDisconnect("Kicked by server");
         }
 
         // ==================== Helpers ====================
 
         private bool IsSocketAlive()
         {
-            try { return _tcp != null && _tcp.Connected; }
-            catch { return false; }
+            try
+            {
+                return _tcp != null && _tcp.Connected;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
