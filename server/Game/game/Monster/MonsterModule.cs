@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Core;
 using Game.Game.Monster;
@@ -21,7 +20,7 @@ public class MonsterModule : IModule
         return Task.CompletedTask;
     }
 
-    public Task StartAsync(CancellationToken ct)
+    public Task StartAsync()
     {
         MonsterManager.Instance.Start();
         Log.Info("怪物模块启动");

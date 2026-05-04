@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Core;
 using Game.Core.Entity;
@@ -24,7 +23,7 @@ public class PlayerModel : IModule
         Log.Info("玩家模块初始化完成 — Role 实体工厂已注册");
     }
 
-    public Task StartAsync(CancellationToken ct)
+    public Task StartAsync()
     {
         Log.Info("玩家模块启动");
         return Task.CompletedTask;

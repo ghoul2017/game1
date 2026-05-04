@@ -13,6 +13,7 @@ namespace Game.Core;
 public class GameSynchronizationContext : SynchronizationContext
 {
     private static readonly ILog Log = LogManager.GetLogger<GameSynchronizationContext>();
+    public static readonly GameSynchronizationContext Instance = new();
 
     private readonly ConcurrentQueue<(SendOrPostCallback callback, object? state)> _queue = new();
     private readonly AutoResetEvent _wakeSignal = new(false);
@@ -98,7 +99,11 @@ public class GameSynchronizationContext : SynchronizationContext
     /// <summary>向主线程投递一个同步操作</summary>
     public Task PostAsync(Action action)
     {
-        return PostAsync(() => { action(); return Task.CompletedTask; });
+        return PostAsync(() =>
+        {
+            action();
+            return Task.CompletedTask;
+        });
     }
 
     private void Loop()
@@ -118,6 +123,7 @@ public class GameSynchronizationContext : SynchronizationContext
                 {
                     Log.Error($"主线程消息处理异常: {ex.Message}");
                 }
+
                 Interlocked.Decrement(ref _pendingCount);
             }
 

@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Core;
 using Shared.Core.Log;
@@ -20,7 +19,7 @@ public class ChatModel : IModule
         return Task.CompletedTask;
     }
 
-    public Task StartAsync(CancellationToken ct)
+    public Task StartAsync()
     {
         Log.Info("聊天模块启动");
         return Task.CompletedTask;

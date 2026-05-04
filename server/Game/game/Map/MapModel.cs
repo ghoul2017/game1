@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Core;
 using Shared.Core.Log;
@@ -20,7 +19,7 @@ public class MapModel : IModule
         return Task.CompletedTask;
     }
 
-    public Task StartAsync(CancellationToken ct)
+    public Task StartAsync()
     {
         // 启动时创建默认地图
         MapManager.Instance.InitDefaultMaps();

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Game.Core;
@@ -69,11 +68,11 @@ public class ModuleRegistry
     }
 
     /// <summary>按 Order 升序启动所有模块</summary>
-    public async Task StartAllAsync(CancellationToken ct)
+    public async Task StartAllAsync()
     {
         foreach (var module in _orderedModules)
         {
-            await module.StartAsync(ct);
+            await module.StartAsync();
         }
     }
 

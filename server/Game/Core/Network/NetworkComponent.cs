@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Components.User;
 using Game.Game.Player;
@@ -48,8 +47,7 @@ public class NetworkComponent : Component
         _heartbeatTimer = GameTimer.Start(CheckIntervalSeconds * 1000, DoHeartbeatCheck);
     }
 
-    public async Task Listen(string host, int port, CancellationToken cancellationToken = default,
-        int maxConnections = 5000)
+    public async Task Listen(string host, int port, int maxConnections = 5000)
     {
         Host = host;
         Port = port;
@@ -62,16 +60,16 @@ public class NetworkComponent : Component
 
         Log.Info($"监听 {Host}:{Port}");
 
-        await AcceptAsync(_listenSocket, cancellationToken);
+        await AcceptAsync(_listenSocket);
     }
 
-    private async Task AcceptAsync(Socket listenSocket, CancellationToken token)
+    private async Task AcceptAsync(Socket listenSocket)
     {
         try
         {
-            while (!token.IsCancellationRequested)
+            while (!ShutdownToken.Instance.IsCancellationRequested)
             {
-                var clientSocket = await listenSocket.AcceptAsync(token);
+                var clientSocket = await listenSocket.AcceptAsync(ShutdownToken.Instance.Token);
                 var session = new TcpSession(clientSocket, _router);
 
                 if (_sessionMap.Count >= MaxConnections)

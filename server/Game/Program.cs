@@ -18,17 +18,20 @@ public class Program
     static async Task<int> Main(string[] args)
     {
         // 安装游戏主线程同步上下文，确保所有 await 恢复后回到主线程
-        Context.GameCtx.Start();
+        GameSynchronizationContext.Instance.Start();
 
+        // 注册 Ctrl+C 关闭信号
+        ShutdownToken.Instance.RegisterConsoleCancel();
         // 将主逻辑投递到游戏主线程执行
         try
         {
-            await Context.GameCtx.PostAsync(() => RunServerAsync(args));
+            await GameSynchronizationContext.Instance.PostAsync(() => RunServerAsync(args));
         }
         finally
         {
-            Context.GameCtx.Stop();
+            GameSynchronizationContext.Instance.Stop();
         }
+
         return 0;
     }
 
@@ -51,15 +54,13 @@ public class Program
 
         var registry = ModuleRegistry.Create(config);
 
-        // 注册 Ctrl+C 关闭信号
-        Context.Shutdown.RegisterConsoleCancel();
 
         try
         {
             await registry.InitAllAsync();
-            await registry.StartAllAsync(Context.Shutdown.Token);
+            await registry.StartAllAsync();
 
-            await networkComponent.Listen(config.Server.Host, config.Server.Port, Context.Shutdown.Token);
+            await networkComponent.Listen(config.Server.Host, config.Server.Port);
         }
         finally
         {

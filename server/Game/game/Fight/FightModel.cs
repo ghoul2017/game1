@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Config;
 using Game.Core;
@@ -22,7 +21,7 @@ public class FightModel : IModule
         return Task.CompletedTask;
     }
 
-    public Task StartAsync(CancellationToken ct)
+    public Task StartAsync()
     {
         Log.Info("战斗模块启动");
         return Task.CompletedTask;

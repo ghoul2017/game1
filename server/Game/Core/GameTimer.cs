@@ -53,9 +53,9 @@ public static class GameTimer
     private static void OnTick(long id, TimerEntry entry)
     {
         // 投递到游戏主线程执行
-        if (Context.GameCtx != null)
+        if (GameSynchronizationContext.Instance != null)
         {
-            Context.GameCtx.Post(_ =>
+            GameSynchronizationContext.Instance.Post(_ =>
             {
                 if (_timers.ContainsKey(id))
                 {

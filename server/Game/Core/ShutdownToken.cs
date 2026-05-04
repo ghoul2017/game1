@@ -9,6 +9,7 @@ namespace Game.Core;
 /// </summary>
 public sealed class ShutdownToken
 {
+    public static readonly ShutdownToken Instance = new();
     private readonly CancellationTokenSource _cts = new();
 
     /// <summary>关闭令牌，模块可监听此 token 实现优雅退出</summary>
@@ -23,7 +24,7 @@ public sealed class ShutdownToken
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
-            Context.GameCtx.Post(_ => Cancel(), null);
+            GameSynchronizationContext.Instance.Post(_ => Cancel(), null);
         };
     }
 

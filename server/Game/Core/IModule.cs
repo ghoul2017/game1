@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Game.Core;
@@ -15,7 +14,7 @@ public interface IModule
     Task InitAsync();
 
     /// <summary>启动（所有 Init 完成后，按 Order 升序执行）</summary>
-    Task StartAsync(CancellationToken ct);
+    Task StartAsync();
 
     /// <summary>停止（按 Order 降序执行）</summary>
     Task StopAsync();
