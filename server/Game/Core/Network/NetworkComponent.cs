@@ -107,18 +107,6 @@ public class NetworkComponent : Component
 
     private void OnSessionDisconnected(TcpSession session)
     {
-        // 断线回调可能来自非主线程，投递到游戏主线程执行
-        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
-        if (gameCtx != null && !GameSynchronizationContext.IsMainThread)
-        {
-            gameCtx.Post(_ => HandleDisconnection(session), null);
-            return;
-        }
-        HandleDisconnection(session);
-    }
-
-    private void HandleDisconnection(TcpSession session)
-    {
         // 如果已选角，从在线列表移除并保存数据
         if (session.RoleId != 0)
         {

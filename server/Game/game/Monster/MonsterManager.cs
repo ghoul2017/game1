@@ -47,16 +47,8 @@ public class MonsterManager
     public void Start()
     {
         _updateCts = new CancellationTokenSource();
-        // AI 更新循环投递到游戏主线程，确保与 Handler 串行执行
-        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
-        if (gameCtx != null)
-        {
-            _updateTask = gameCtx.PostAsync(() => UpdateLoop(_updateCts.Token));
-        }
-        else
-        {
-            _updateTask = Task.Run(() => UpdateLoop(_updateCts.Token));
-        }
+        // Start 在主线程上调用，UpdateLoop 中的 await Task.Delay 恢复后也回到主线程
+        _updateTask = UpdateLoop(_updateCts.Token);
         Log.Info("怪物管理器已启动");
     }
 
