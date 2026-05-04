@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Game.Components.User;
 using Game.Game.Player;
 using Game.Network;
@@ -42,16 +41,13 @@ public class NetworkComponent : Component
     /// <summary>心跳检测间隔（秒）</summary>
     private const int CheckIntervalSeconds = 20;
 
-    private readonly System.Timers.Timer _heartbeatTimer;
+    private GameTimerHandle _heartbeatTimer;
 
     public NetworkComponent()
     {
         _router = new MessageRouter();
         _router.AutoRegister();
-        _heartbeatTimer = new System.Timers.Timer(CheckIntervalSeconds * 1000);
-        _heartbeatTimer.Elapsed += OnHeartbeatCheck;
-        _heartbeatTimer.AutoReset = true;
-        _heartbeatTimer.Start();
+        _heartbeatTimer = GameTimer.Start(CheckIntervalSeconds * 1000, DoHeartbeatCheck);
     }
 
     public async Task Listen(string host, int port, CancellationToken cancellationToken = default,
@@ -176,20 +172,6 @@ public class NetworkComponent : Component
         }
 
         Log.Info($"全部断开，共 {sessions.Count} 个连接");
-    }
-
-    private void OnHeartbeatCheck(object? sender, ElapsedEventArgs e)
-    {
-        // Timer 回调在非主线程，投递到游戏主线程执行
-        var gameCtx = SynchronizationContext.Current as GameSynchronizationContext;
-        if (gameCtx != null)
-        {
-            gameCtx.Post(_ => DoHeartbeatCheck(), null);
-        }
-        else
-        {
-            DoHeartbeatCheck();
-        }
     }
 
     private void DoHeartbeatCheck()

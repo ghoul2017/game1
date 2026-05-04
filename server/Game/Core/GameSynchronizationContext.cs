@@ -20,6 +20,9 @@ public class GameSynchronizationContext : SynchronizationContext
     private volatile bool _stopped;
     private int _pendingCount;
 
+    /// <summary>全局实例（Start 后可用）</summary>
+    public static GameSynchronizationContext? Instance { get; private set; }
+
     /// <summary>当前是否在主线程上</summary>
     public static bool IsMainThread => Current is GameSynchronizationContext ctx && ctx._thread == Thread.CurrentThread;
 
@@ -35,6 +38,7 @@ public class GameSynchronizationContext : SynchronizationContext
     /// <summary>启动主线程循环</summary>
     public void Start()
     {
+        Instance = this;
         SetSynchronizationContext(this);
         _thread.Start();
         Log.Info("游戏主线程已启动");

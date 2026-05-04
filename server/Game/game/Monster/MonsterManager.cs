@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Game.Config;
 using Game.Core;
 using Game.Game.Bag;
@@ -36,8 +35,7 @@ public class MonsterManager
     /// <summary>刷新计时器 key=(mapId,line,cfgId), value=下次刷新时间</summary>
     private readonly Dictionary<string, long> _spawnTimers = new();
 
-    private CancellationTokenSource? _updateCts;
-    private Task? _updateTask;
+    private GameTimerHandle _updateTimer;
 
     private MonsterManager() { }
 
@@ -46,18 +44,14 @@ public class MonsterManager
     /// <summary>启动怪物管理器</summary>
     public void Start()
     {
-        _updateCts = new CancellationTokenSource();
-        // Start 在主线程上调用，UpdateLoop 中的 await Task.Delay 恢复后也回到主线程
-        _updateTask = UpdateLoop(_updateCts.Token);
+        _updateTimer = GameTimer.Start(1000, UpdateAllMonsters);
         Log.Info("怪物管理器已启动");
     }
 
     /// <summary>停止怪物管理器</summary>
     public void Stop()
     {
-        _updateCts?.Cancel();
-        _updateTask?.Wait(1000);
-        _updateCts?.Dispose();
+        GameTimer.Stop(_updateTimer);
         _mapMonsters.Clear();
         Log.Info("怪物管理器已停止");
     }
@@ -354,44 +348,28 @@ public class MonsterManager
 
     #region AI更新
 
-    /// <summary>AI更新循环（在游戏主线程上执行）</summary>
-    private async Task UpdateLoop(CancellationToken ct)
+    /// <summary>AI更新（由 GameTimer 每秒触发，在主线程执行）</summary>
+    private void UpdateAllMonsters()
     {
-        while (!ct.IsCancellationRequested)
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var allMonsters = _mapMonsters.Values
+            .SelectMany(m => m.Values)
+            .ToList();
+
+        foreach (var monster in allMonsters)
         {
             try
             {
-                await Task.Delay(1000, ct);
-
-                long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                var allMonsters = _mapMonsters.Values
-                    .SelectMany(m => m.Values)
-                    .ToList();
-
-                foreach (var monster in allMonsters)
-                {
-                    try
-                    {
-                        UpdateMonsterAi(monster, now);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"AI更新异常 MonsterId:{monster.ObjectId}", ex);
-                    }
-                }
-
-                // 检查刷新
-                CheckSpawnTimers(now);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
+                UpdateMonsterAi(monster, now);
             }
             catch (Exception ex)
             {
-                Log.Error("怪物AI更新循环异常", ex);
+                Log.Error($"AI更新异常 MonsterId:{monster.ObjectId}", ex);
             }
         }
+
+        // 检查刷新
+        CheckSpawnTimers(now);
     }
 
     /// <summary>更新单个怪物AI</summary>
