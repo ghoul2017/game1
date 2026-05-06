@@ -16,18 +16,27 @@ Assets/
 ├── Scenes/           # Unity 场景
 ├── Settings/         # URP 渲染管线资源
 ├── Plugins/          # 第三方插件（protobuf-net）
-├── Resources/UI/     # UI 面板预制体（可选，无预制体时代码动态构建）
 └── Scripts/
-    ├── GameShared/   #   directory junction → shared/（消息、IMessage、PacketCodec）
+    ├── shared/       #   双端共享代码（服务端通过 csproj Compile Include 引用）
+    │   ├── Core/     #     ECS, Network, Config, Log, IdGenerator
+    │   └── Common/   #     Protos（消息定义）, Config（配置表定义）, MsgIdConst
     ├── Core/         #   核心框架（UIManager, UIPanel, UIBuilder, GameEntry, UIToast, UIMessageBox）
+    ├── Config/       #   ClientConfigManager
     ├── Editor/       #   编辑器工具（SceneCreator）
     ├── Loading/      #   加载界面（LoadingPanel）
     ├── Login/        #   登录 & 角色选择（LoginPanel, RoleSelectPanel）
-    ├── Game/         #   主界面 & 游戏场景（MainPanel, PlayerController, MapGround 等）
-    └── Network/      #   网络层（MessageDispatcher, MsgTypeRegistry）
+    ├── Game/         #   主界面 & 游戏场景（MainPanel, PlayerController, MapGround, BagPanel, MailPanel, TaskPanel, ChangeMapPanel, MonsterView, OtherPlayerManager, VirtualJoystick, CameraFollow, GameData, GameSceneEntry）
+    └── Network/      #   网络层（NetClient, MessageDispatcher, NetworkStatusPanel, NtfMethodHandler）
 ```
 
 `Library/`、`Temp/`、`obj/` 为 Unity 自动生成，不要修改。
+
+## 网络层
+
+- **NetClient** — MonoBehaviour 单例，管理 TCP 连接/心跳/断线重连
+- **MessageRouter** — 自动扫描 `[MessageHandler]` 标记的静态方法（与服务端共享同一路由机制）
+- **MessageDispatcher** — 手动注册的按 MsgId 分发器（与 MessageRouter 并存）
+- **双路由**: `ProcessReceivedBytes` 同时调用 `_dispatcher.Dispatch()` 和 `_router.RouteAsync()`
 
 ## UI 框架约定
 
@@ -43,6 +52,7 @@ Assets/
 - **相机** — 正交投影，45度俯视角（rotation X=45），Size=8，跟随玩家
 - **坐标映射** — 1格=1世界单位，服务端Y → Unity Z轴（`MapData.GridToWorld`）
 - **角色表现** — `PlayerView` 负责几何体模型+名字板，`PlayerController` 负责移动逻辑
+- **怪物表现** — `MonsterView` 管理怪物视觉，`OtherPlayerManager` 管理其他玩家
 - **地面生成** — `MapGround.Generate()` 根据地图配置程序化生成地面+边界+装饰物
 - **场景入口** — `GameSceneEntry` 初始化场景，提供静态引用 `PlayerController`/`MapGround`
 - **UI叠加** — `UIManager` Canvas（ScreenSpaceOverlay + DontDestroyOnLoad）自然叠加在3D场景上
