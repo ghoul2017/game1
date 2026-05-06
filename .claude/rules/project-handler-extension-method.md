@@ -1,24 +1,17 @@
-# 扩展方法风格 Handler
+# Handler 约定
 
-Handler 使用扩展方法 + 组件模式，业务逻辑内聚到组件扩展类。
+Handler 使用 `[MessageHandler]` 标记的静态方法，通过 MessageRouter 自动扫描注册。
 
-## 签名约定
+## 签名
 
 RPC 风格（有响应）：
 ```csharp
-[MessageHandler(typeof(MessageHandler<,>))]
-public static async Task<IMessage?> XxxHandler(this TComponent self, TcpSession session, TReq req, TResp res)
+[MessageHandler(typeof(RpcMethodHandler))]
+public static async Task<IMessage> XxxHandler(TcpSession session, TReq req, TResp res)
 ```
 
 通知风格（无响应）：
 ```csharp
-[MessageHandler(typeof(MessageNtfHandler<>))]
-public static async Task XxxHandler(this TComponent self, TcpSession session, TReq req)
+[MessageHandler(typeof(NtfMethodHandler))]
+public static async Task XxxHandler(TcpSession session, TReq req)
 ```
-
-## 核心文件
-
-- `MessageHandlerTypes.cs` — 类型标记定义
-- `RpcMethodHandler.cs` — RPC 适配器
-- `NtfMethodHandler.cs` — 通知适配器
-- `MessageRouter.cs` — 扫描 [MessageHandler] 特性的静态方法

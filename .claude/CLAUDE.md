@@ -147,34 +147,12 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
 - 提交前确认编译通过
 - 允许在分析阶段提问，实现阶段全自动
 - 实现代码后自动 commit，无需额外确认
-- 记忆文件必须实际写入文件，口头答应不算数
+- **核心约束必须写在 rules 和 CLAUDE.md 里，不要只写在 memory 里——memory 不自动加载，你不会主动查**
 - 记忆文件写在项目目录 `.claude/memory/` 下，便于 Git 管理
-- 编码和 Git 规则见 `.claude/rules/`
 
-## 自动化流水线
+## 开发工作流
 
-```
-/pp        → 需求拆解（交互式，产品经理角色）
-/dev       → 单功能开发（协调流程：准备→开发→验证→记录→提交→报告）
-/devloop   → 循环开发（配额守卫：8轮/session，3连失败停止）
-/qdev      → 临时任务（交互式分析 + 自动流水线）
-/status    → 进度报告
-/init      → 首次初始化
-/agent     → 创建/优化 agent 或 command
-```
-
-### 流水线架构
-
-```
-Commands（主会话中运行，可使用 Agent 工具委托子 agent）
-  /dev, /qdev, /devloop ──┬── dev-worker      (代码实现，tools: 读写+搜索+Bash)
-                          ├── verify-feature  (功能验证，tools: 只读)  ─┐
-                          ├── verify-quality  (质量验证，tools: 只读)  ─┤ 并行
-                          └── mem-writer      (知识归档，tools: 读写+搜索)
-
-Agents 位于 .claude/agents/，带 YAML frontmatter（name, description, tools, model）
-Commands 位于 .claude/commands/，包含完整工作流逻辑
-```
+执行准则见 `.claude/rules/dev-workflow.md` — 自主判断、底线规则、子 agent 分工、需求拆解、进度记录。
 
 ## 记忆系统
 

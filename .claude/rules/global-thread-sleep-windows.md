@@ -1,8 +1,13 @@
+---
+name: thread-sleep-windows
+description: Windows 下 Thread.Sleep(1) 实际休眠 ~15.6ms，轮询场景用 AutoResetEvent 替代
+type: reference
+---
+
 # Windows 下 Thread.Sleep(1) 实际休眠 ~15.6ms
 
-Windows 默认时钟分辨率 ~15.6ms，`Thread.Sleep(1)` 远超 1ms。轮询场景用 `AutoResetEvent` 替代：`Post` 时 `Set()` 唤醒，空闲时 `WaitOne()` 零开销等待。
+Windows 默认时钟分辨率 ~15.6ms，`Thread.Sleep(1)` 远超 1ms。轮询场景用 `AutoResetEvent` 替代。
 
-## 示例
 ```csharp
 // 错误：实际 15.6ms 延迟
 while (running) { if (!queue.TryDequeue(...)) Thread.Sleep(1); }
