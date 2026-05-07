@@ -1,4 +1,3 @@
-using Game.Components.Mail;
 using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,9 +9,9 @@ using Shared.Common.Protos;
 
 namespace Game.Components.Mail;
 
-public static class MailHandlers
+public static class RoleMailHandlers
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(MailHandlers));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleMailHandlers));
 
     [MessageHandler(typeof(RpcMethodHandler))]
     public static async Task<IMessage> QueryMailListHandler(TcpSession session, QueryMailListReq req, QueryMailListAck res)
@@ -24,11 +23,11 @@ public static class MailHandlers
             return res;
         }
 
-        var mailList = await player.Mail.LoadMailsAsync(player.Id);
-        var mails = player.Mail.GetMailList(mailList);
+        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
+        var mails = player.RoleMail.GetMailList();
 
         res.Code = MailErrorCode.Ok;
-        res.Mails = mails.Select(player.Mail.ToMailInfo).ToList();
+        res.Mails = mails.Select(player.RoleMail.ToMailInfo).ToList();
 
         return res;
     }
@@ -43,12 +42,12 @@ public static class MailHandlers
             return res;
         }
 
-        var mailList = await player.Mail.LoadMailsAsync(player.Id);
-        var result = player.Mail.MarkRead(mailList, req.MailIds);
+        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
+        var result = player.RoleMail.MarkRead(req.MailIds);
 
         if (result.Changed)
         {
-            await player.Mail.SaveMailsAsync(mailList);
+            await player.RoleMail.SaveMailsAsync();
         }
 
         res.Code = MailErrorCode.Ok;
@@ -67,8 +66,8 @@ public static class MailHandlers
             return res;
         }
 
-        var mailList = await player.Mail.LoadMailsAsync(player.Id);
-        var result = await player.Mail.ClaimAttachmentsAsync(mailList, req.MailIds);
+        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
+        var result = await player.RoleMail.ClaimAttachmentsAsync(req.MailIds);
 
         res.Code = MailErrorCode.Ok;
         res.ClaimedMailIds = result.ClaimedIds;
@@ -96,12 +95,12 @@ public static class MailHandlers
             return res;
         }
 
-        var mailList = await player.Mail.LoadMailsAsync(player.Id);
-        var result = player.Mail.DeleteMails(mailList, req.MailIds);
+        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
+        var result = player.RoleMail.DeleteMails(req.MailIds);
 
         if (result.Changed)
         {
-            await player.Mail.SaveMailsAsync(mailList);
+            await player.RoleMail.SaveMailsAsync();
         }
 
         res.Code = MailErrorCode.Ok;

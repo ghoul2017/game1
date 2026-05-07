@@ -247,9 +247,10 @@ public static class MonsterSystem
     {
         if (exp <= 0) return;
 
-        var roleAttr = await BagSystem.LoadRoleAttributeAsync(roleId);
-        if (roleAttr == null) return;
+        var player = Context.Players.GetByRoleId(roleId);
+        if (player == null) return;
 
+        var roleAttr = player.RoleAttribute;
         roleAttr.Exp += exp;
         // 检查升级（简化处理）
         int newLevel = CalculateLevel(roleAttr.Exp);
@@ -266,7 +267,7 @@ public static class MonsterSystem
             Log.Info($"玩家升级 RoleId:{roleId} Level:{newLevel}");
         }
 
-        await BagSystem.SaveRoleAttributeAsync(roleAttr);
+        await roleAttr.SaveAttributeAsync();
 
         // 发送经验变化通知
         Context.Players.SendToPlayer(roleId, new ExpChangedNtf { Exp = roleAttr.Exp, Level = roleAttr.Level });
@@ -279,11 +280,12 @@ public static class MonsterSystem
     {
         if (gold <= 0) return;
 
-        var roleAttr = await BagSystem.LoadRoleAttributeAsync(roleId);
-        if (roleAttr == null) return;
+        var player = Context.Players.GetByRoleId(roleId);
+        if (player == null) return;
 
+        var roleAttr = player.RoleAttribute;
         roleAttr.Gold += gold;
-        await BagSystem.SaveRoleAttributeAsync(roleAttr);
+        await roleAttr.SaveAttributeAsync();
 
         // 发送金币变化通知
         Context.Players.SendToPlayer(roleId, new GoldChangedNtf { Gold = roleAttr.Gold });
@@ -297,11 +299,11 @@ public static class MonsterSystem
         var player = Context.Players.GetByRoleId(roleId);
         if (player == null) return;
 
-        var bag = await player.Bag.LoadBagAsync(roleId);
-        var result = player.Bag.AddItem(bag, configId, count);
+        var bag = await player.RoleBag.LoadBagAsync(roleId);
+        var result = player.RoleBag.AddItem(configId, count);
         if (result.Success)
         {
-            await player.Bag.SaveBagAsync(bag);
+            await player.RoleBag.SaveBagAsync();
 
             // 发送物品获得通知
             Context.Players.SendToPlayer(roleId, new ItemGainNtf

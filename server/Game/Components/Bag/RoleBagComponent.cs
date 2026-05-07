@@ -1,39 +1,35 @@
 using System.Collections.Generic;
+using Game.Components.Player;
 using Game.Core.Entity;
 using MongoDB.Bson.Serialization.Attributes;
-using ProtoBuf;
+using Shared.Core.ECS;
 
 namespace Game.Components.Bag;
 
 /// <summary>
-/// 角色背包实体。持久化到数据库。
-/// 对应数据库表: p_role_bag (id=roleId, data=protobuf)
+/// 角色背包组件。持久化到 MongoDB（集合名 role_bag）。
 /// </summary>
-[ProtoContract]
-public class RoleBag : IEntity
+[ComponentOf(typeof(PlayerEntity))]
+public class RoleBagComponent : Component, IEntity
 {
-    [ProtoMember(1)]
     [BsonId]
     public long Id { get; set; }
 
     /// <summary>背包容量（最大格子数）</summary>
-    [ProtoMember(2)]
     public int Capacity { get; set; } = 100;
 
     /// <summary>物品列表</summary>
-    [ProtoMember(3)]
     public List<BagItem> Items { get; set; } = [];
 
+    /// <summary>物品UID生成器</summary>
+    [BsonIgnore]
+    internal long _nextItemUid;
+
     /// <summary>运行时索引：index → BagItem（不序列化）</summary>
-    [ProtoIgnore]
     [BsonIgnore]
     private Dictionary<int, BagItem>? _indexMap;
 
-    [ProtoAfterDeserialization]
-    internal void AfterDeserialize()
-    {
-        RebuildIndex();
-    }
+    internal void AfterDeserialize() { RebuildIndex(); }
 
     internal void RebuildIndex()
     {

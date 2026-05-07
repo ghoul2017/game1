@@ -1,6 +1,5 @@
 using Game.Components.Bag;
 using Game.Components.Mail;
-using Game.Components.Player;
 using Game.Components.GameTask;
 using Shared.Core.ECS;
 
@@ -20,14 +19,14 @@ public class PlayerEntity : Entity
     /// <summary>角色属性组件</summary>
     public RoleAttributeComponent RoleAttribute => GetComponent<RoleAttributeComponent>();
 
-    /// <summary>背包组件</summary>
-    public BagComponent Bag => GetComponent<BagComponent>();
+    /// <summary>角色背包组件</summary>
+    public RoleBagComponent RoleBag => GetComponent<RoleBagComponent>();
 
-    /// <summary>邮件组件</summary>
-    public MailComponent Mail => GetComponent<MailComponent>();
+    /// <summary>角色邮件组件</summary>
+    public RoleMailComponent RoleMail => GetComponent<RoleMailComponent>();
 
-    /// <summary>任务组件</summary>
-    public TaskComponent Task => GetComponent<TaskComponent>();
+    /// <summary>角色任务组件</summary>
+    public RoleTaskComponent RoleTask => GetComponent<RoleTaskComponent>();
 
     /// <summary>创建玩家实体（选角入场时调用）</summary>
     public static PlayerEntity Create(long roleId, long userId, Role role)

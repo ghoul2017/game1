@@ -242,17 +242,17 @@ public static class UserHandler
         var player = PlayerEntity.Create(role.Id, session.UserId, role);
 
         // 一次性挂载全部数据组件并加载数据
-        var bagComp = player.AddComponent<BagComponent>();
-        bagComp.RoleBag = await bagComp.LoadBagAsync(role.Id);
+        var bagComp = player.AddComponent<RoleBagComponent>();
+        await bagComp.LoadBagAsync(role.Id);
 
-        var mailComp = player.AddComponent<MailComponent>();
-        mailComp.RoleMailList = await mailComp.LoadMailsAsync(role.Id);
+        var mailComp = player.AddComponent<RoleMailComponent>();
+        await mailComp.LoadMailsAsync(role.Id);
 
-        var taskComp = player.AddComponent<TaskComponent>();
-        taskComp.RoleTaskList = await taskComp.LoadTasksAsync(role.Id);
+        var taskComp = player.AddComponent<RoleTaskComponent>();
+        await taskComp.LoadTasksAsync(role.Id);
 
         var attrComp = player.AddComponent<RoleAttributeComponent>();
-        attrComp.RoleAttribute = await ItemEffectSystem.LoadRoleAttributeAsync(role.Id);
+        await attrComp.LoadAttributeAsync(role.Id);
 
         Context.Players.AddPlayer(player);
 
@@ -315,17 +315,17 @@ public static class UserHandler
                 var player = PlayerEntity.Create(role.Id, userId, role);
 
                 // 一次性挂载全部数据组件并加载数据
-                var bagComp = player.AddComponent<BagComponent>();
-                bagComp.RoleBag = await bagComp.LoadBagAsync(role.Id);
+                var bagComp = player.AddComponent<RoleBagComponent>();
+                await bagComp.LoadBagAsync(role.Id);
 
-                var mailComp = player.AddComponent<MailComponent>();
-                mailComp.RoleMailList = await mailComp.LoadMailsAsync(role.Id);
+                var mailComp = player.AddComponent<RoleMailComponent>();
+                await mailComp.LoadMailsAsync(role.Id);
 
-                var taskComp = player.AddComponent<TaskComponent>();
-                taskComp.RoleTaskList = await taskComp.LoadTasksAsync(role.Id);
+                var taskComp = player.AddComponent<RoleTaskComponent>();
+                await taskComp.LoadTasksAsync(role.Id);
 
                 var attrComp = player.AddComponent<RoleAttributeComponent>();
-                attrComp.RoleAttribute = await ItemEffectSystem.LoadRoleAttributeAsync(role.Id);
+                await attrComp.LoadAttributeAsync(role.Id);
 
                 Context.Players.AddPlayer(player);
 

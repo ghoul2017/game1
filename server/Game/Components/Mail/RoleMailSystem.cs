@@ -14,49 +14,53 @@ namespace Game.Components.Mail;
 
 /// <summary>
 /// 邮件系统。提供邮件收发、已读标记、附件领取、删除等功能。
-/// 每个角色的邮件列表以单个实体 RoleMailList 存储，避免逐条操作。
 /// </summary>
-public static class MailSystem
+public static class RoleMailSystem
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(MailSystem));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleMailSystem));
 
-    /// <summary>每个角色邮件数量上限</summary>
     private const int MaxMailCount = 100;
 
     /// <summary>加载角色邮件列表</summary>
-    public static async Task<RoleMailList> LoadMailsAsync(this MailComponent self, long roleId)
+    public static async Task<RoleMailComponent> LoadMailsAsync(this RoleMailComponent self, long roleId)
     {
-        var mailList = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleMailList>(roleId);
+        var mailList = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleMailComponent>(roleId);
         if (mailList == null)
         {
-            mailList = new RoleMailList { Id = roleId };
+            mailList = new RoleMailComponent { Id = roleId };
             await DatabaseManager.Instance.EntityRepo.InsertAsync(mailList);
             Log.Info($"创建新邮件列表 RoleId:{roleId}");
         }
 
-        // 清理过期邮件
-        CleanExpired(mailList);
+        // 把数据库加载的数据拷贝到当前 Component
+        self.Id = mailList.Id;
+        self.Mails = mailList.Mails;
+        self.NextMailId = mailList.NextMailId;
+        self.RebuildIndex();
 
-        return mailList;
+        // 清理过期邮件
+        CleanExpired(self);
+
+        return self;
     }
 
     /// <summary>保存邮件列表</summary>
-    public static async Task SaveMailsAsync(this MailComponent self, RoleMailList mailList)
+    public static async Task SaveMailsAsync(this RoleMailComponent self)
     {
-        await DatabaseManager.Instance.EntityRepo.UpdateAsync(mailList);
+        await DatabaseManager.Instance.EntityRepo.UpdateAsync(self);
     }
 
     /// <summary>发送邮件给指定角色</summary>
-    public static MailResult SendMail(this MailComponent self, RoleMailList mailList, string sender, string title, string content,
+    public static MailResult SendMail(this RoleMailComponent self, string sender, string title, string content,
         List<MailAttachment>? attachments = null, long expireTime = 0)
     {
-        if (mailList.Mails.Count >= MaxMailCount)
+        if (self.Mails.Count >= MaxMailCount)
             return MailResult.Fail(MailErrorCode.MailFull);
 
         var mail = new RoleMail
         {
             Id = Interlocked.Increment(ref self.NextMailId),
-            RoleId = mailList.Id,
+            RoleId = self.Id,
             Sender = sender,
             Title = title,
             Content = content,
@@ -66,24 +70,23 @@ public static class MailSystem
             State = 0,
         };
 
-        mailList.Mails.Add(mail);
-        mailList.GetMailMap()[mail.Id] = mail;
+        self.Mails.Add(mail);
+        self.GetMailMap()[mail.Id] = mail;
 
         return MailResult.Ok(mail.Id);
     }
 
     /// <summary>发送系统邮件（给在线玩家实时推送通知）</summary>
-    public static async Task SendSystemMailAsync(this MailComponent self, long roleId, string title, string content,
+    public static async Task SendSystemMailAsync(this RoleMailComponent self, long roleId, string title, string content,
         List<MailAttachment>? attachments = null, long expireTime = 0)
     {
         var mailList = await self.LoadMailsAsync(roleId);
-        var result = self.SendMail(mailList, "系统", title, content, attachments, expireTime);
+        var result = self.SendMail("系统", title, content, attachments, expireTime);
         if (result.Success)
         {
-            await self.SaveMailsAsync(mailList);
+            await self.SaveMailsAsync();
 
-            // 如果玩家在线，推送新邮件通知
-            var mail = mailList.Mails.First(m => m.Id == result.MailId);
+            var mail = self.Mails.First(m => m.Id == result.MailId);
             var ntf = new MailNewNtf { Mail = self.ToMailInfo(mail) };
             Context.Players.SendToPlayer(roleId, ntf);
 
@@ -92,19 +95,19 @@ public static class MailSystem
     }
 
     /// <summary>获取邮件列表（按发送时间倒序）</summary>
-    public static List<RoleMail> GetMailList(this MailComponent self, RoleMailList mailList)
+    public static List<RoleMail> GetMailList(this RoleMailComponent self)
     {
-        return mailList.Mails
+        return self.Mails
             .Where(m => !m.IsExpired)
             .OrderByDescending(m => m.SendTime)
             .ToList();
     }
 
     /// <summary>标记邮件已读</summary>
-    public static MarkResult MarkRead(this MailComponent self, RoleMailList mailList, List<long> mailIds)
+    public static MarkResult MarkRead(this RoleMailComponent self, List<long> mailIds)
     {
         var readIds = new List<long>();
-        var map = mailList.GetMailMap();
+        var map = self.GetMailMap();
 
         foreach (var mailId in mailIds)
         {
@@ -119,13 +122,12 @@ public static class MailSystem
     }
 
     /// <summary>领取附件（将物品加入背包）</summary>
-    public static async Task<ClaimResult> ClaimAttachmentsAsync(this MailComponent self, RoleMailList mailList, List<long> mailIds)
+    public static async Task<ClaimResult> ClaimAttachmentsAsync(this RoleMailComponent self, List<long> mailIds)
     {
         var claimedIds = new List<long>();
         var allItems = new List<MailAttachment>();
-        var map = mailList.GetMailMap();
+        var map = self.GetMailMap();
 
-        // 先收集所有要领取的附件
         foreach (var mailId in mailIds)
         {
             if (!map.TryGetValue(mailId, out var mail)) continue;
@@ -139,38 +141,36 @@ public static class MailSystem
         if (claimedIds.Count == 0)
             return ClaimResult.None();
 
-        // 加载背包并添加物品
-        var player = Context.Players.GetByRoleId(mailList.Id);
+        var player = Context.Players.GetByRoleId(self.Id);
         if (player == null) return ClaimResult.None();
 
-        var bag = player.Bag.RoleBag ?? await player.Bag.LoadBagAsync(mailList.Id);
+        var bag = await player.RoleBag.LoadBagAsync(self.Id);
         foreach (var att in allItems)
         {
-            player.Bag.AddItem(bag, att.ConfigId, att.Count);
+            player.RoleBag.AddItem(att.ConfigId, att.Count);
         }
 
-        await player.Bag.SaveBagAsync(bag);
-        await self.SaveMailsAsync(mailList);
+        await player.RoleBag.SaveBagAsync();
+        await self.SaveMailsAsync();
 
         return ClaimResult.Ok(claimedIds, allItems);
     }
 
-    /// <summary>删除邮件（只能删除已读且无未领取附件的邮件）</summary>
-    public static DeleteResult DeleteMails(this MailComponent self, RoleMailList mailList, List<long> mailIds)
+    /// <summary>删除邮件</summary>
+    public static DeleteResult DeleteMails(this RoleMailComponent self, List<long> mailIds)
     {
         var deletedIds = new List<long>();
-        var map = mailList.GetMailMap();
+        var map = self.GetMailMap();
 
         foreach (var mailId in mailIds)
         {
             if (!map.TryGetValue(mailId, out var mail)) continue;
 
-            // 有未领取附件的邮件不能删除
             if (mail.HasUnclaimedAttachment)
                 continue;
 
             map.Remove(mailId);
-            mailList.Mails.Remove(mail);
+            self.Mails.Remove(mail);
             deletedIds.Add(mailId);
         }
 
@@ -178,13 +178,13 @@ public static class MailSystem
     }
 
     /// <summary>获取未读邮件数量</summary>
-    public static int GetUnreadCount(this MailComponent self, RoleMailList mailList)
+    public static int GetUnreadCount(this RoleMailComponent self)
     {
-        return mailList.Mails.Count(m => !m.IsRead && !m.IsExpired);
+        return self.Mails.Count(m => !m.IsRead && !m.IsExpired);
     }
 
     /// <summary>转换为网络传输用的 MailInfo</summary>
-    public static MailInfo ToMailInfo(this MailComponent self, RoleMail mail)
+    public static MailInfo ToMailInfo(this RoleMailComponent self, RoleMail mail)
     {
         return new MailInfo
         {
@@ -204,18 +204,18 @@ public static class MailSystem
     }
 
     /// <summary>清理过期邮件</summary>
-    private static void CleanExpired(RoleMailList mailList)
+    private static void CleanExpired(RoleMailComponent self)
     {
-        var expired = mailList.Mails.Where(m => m.IsExpired).ToList();
+        var expired = self.Mails.Where(m => m.IsExpired).ToList();
         if (expired.Count == 0) return;
 
         foreach (var mail in expired)
         {
-            mailList.Mails.Remove(mail);
-            mailList.GetMailMap().Remove(mail.Id);
+            self.Mails.Remove(mail);
+            self.GetMailMap().Remove(mail.Id);
         }
 
-        Log.Info($"清理过期邮件 RoleId:{mailList.Id} Count:{expired.Count}");
+        Log.Info($"清理过期邮件 RoleId:{self.Id} Count:{expired.Count}");
     }
 }
 

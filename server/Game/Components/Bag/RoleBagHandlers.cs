@@ -1,4 +1,3 @@
-using Game.Components.Bag;
 using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,9 +9,9 @@ using Shared.Common.Protos;
 
 namespace Game.Components.Bag;
 
-public static class BagHandlers
+public static class RoleBagHandlers
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(BagHandlers));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleBagHandlers));
 
     [MessageHandler(typeof(RpcMethodHandler))]
     public static async Task<IMessage> QueryBagHandler(TcpSession session, QueryBagReq req, QueryBagAck res)
@@ -24,7 +23,7 @@ public static class BagHandlers
             return res;
         }
 
-        var bag = await player.Bag.LoadBagAsync(player.Id);
+        var bag = await player.RoleBag.LoadBagAsync(player.Id);
         res.Code = ErrorCode.Ok;
         res.Capacity = bag.Capacity;
         res.Items = bag.Items.Select(ToInfo).ToList();
@@ -42,9 +41,9 @@ public static class BagHandlers
             return res;
         }
 
-        var bag = await player.Bag.LoadBagAsync(player.Id);
-        player.Bag.Tidy(bag);
-        await player.Bag.SaveBagAsync(bag);
+        var bag = await player.RoleBag.LoadBagAsync(player.Id);
+        player.RoleBag.Tidy();
+        await player.RoleBag.SaveBagAsync();
 
         res.Code = ErrorCode.Ok;
         res.Items = bag.Items.Select(ToInfo).ToList();
@@ -62,9 +61,9 @@ public static class BagHandlers
             return res;
         }
 
-        var bag = await player.Bag.LoadBagAsync(player.Id);
-        player.Bag.Swap(bag, req.Index1, req.Index2);
-        await player.Bag.SaveBagAsync(bag);
+        var bag = await player.RoleBag.LoadBagAsync(player.Id);
+        player.RoleBag.Swap(req.Index1, req.Index2);
+        await player.RoleBag.SaveBagAsync();
 
         res.Code = ErrorCode.Ok;
         return res;
@@ -80,7 +79,7 @@ public static class BagHandlers
             return res;
         }
 
-        var bag = await player.Bag.LoadBagAsync(player.Id);
+        var bag = await player.RoleBag.LoadBagAsync(player.Id);
 
         var bagItem = bag.GetByIndex(req.Index);
         if (bagItem == null)
@@ -103,14 +102,14 @@ public static class BagHandlers
             return res;
         }
 
-        var useResult = player.Bag.UseItem(bag, req.Index, req.Count);
+        var useResult = player.RoleBag.UseItem(req.Index, req.Count);
         if (!useResult.Success)
         {
             res.Code = useResult.ErrorCode;
             return res;
         }
 
-        await player.Bag.SaveBagAsync(bag);
+        await player.RoleBag.SaveBagAsync();
 
         var effectResult = await ItemEffectSystem.ApplyItemEffectAsync(session.RoleId, configId);
 

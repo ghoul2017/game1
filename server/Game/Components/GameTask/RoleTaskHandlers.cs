@@ -1,4 +1,3 @@
-using Game.Components.GameTask;
 using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,9 +9,9 @@ using Shared.Common.Protos;
 
 namespace Game.Components.GameTask;
 
-public static class TaskHandlers
+public static class RoleTaskHandlers
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(TaskHandlers));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleTaskHandlers));
 
     [MessageHandler(typeof(RpcMethodHandler))]
     public static async Task<IMessage> QueryTaskListHandler(TcpSession session, QueryTaskListReq req, QueryTaskListAck res)
@@ -24,11 +23,11 @@ public static class TaskHandlers
             return res;
         }
 
-        var taskList = await player.Task.LoadTasksAsync(player.Id);
-        var tasks = player.Task.GetTaskList(taskList);
+        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
+        var tasks = player.RoleTask.GetTaskList();
 
         res.Code = TaskErrorCode.Ok;
-        res.Tasks = tasks.Select(player.Task.ToTaskInfo).ToList();
+        res.Tasks = tasks.Select(player.RoleTask.ToTaskInfo).ToList();
 
         return res;
     }
@@ -43,14 +42,14 @@ public static class TaskHandlers
             return res;
         }
 
-        var taskList = await player.Task.LoadTasksAsync(player.Id);
-        var result = player.Task.AcceptTask(taskList, req.TaskId);
+        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
+        var result = player.RoleTask.AcceptTask(req.TaskId);
 
         if (result.Success)
         {
-            await player.Task.SaveTasksAsync(taskList);
-            var task = taskList.GetByTaskId(req.TaskId);
-            res.Task = player.Task.ToTaskInfo(task!);
+            await player.RoleTask.SaveTasksAsync();
+            var task = taskComp.GetByTaskId(req.TaskId);
+            res.Task = player.RoleTask.ToTaskInfo(task!);
             Log.Info($"接取任务 RoleId:{session.RoleId} TaskId:{req.TaskId}");
         }
 
@@ -69,12 +68,12 @@ public static class TaskHandlers
             return res;
         }
 
-        var taskList = await player.Task.LoadTasksAsync(player.Id);
-        var result = await player.Task.SubmitTaskAsync(taskList, session.RoleId, req.TaskId);
+        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
+        var result = await player.RoleTask.SubmitTaskAsync(session.RoleId, req.TaskId);
 
         if (result.Success)
         {
-            await player.Task.SaveTasksAsync(taskList);
+            await player.RoleTask.SaveTasksAsync();
             Log.Info($"提交任务领奖 RoleId:{session.RoleId} TaskId:{req.TaskId}");
         }
 
@@ -94,12 +93,12 @@ public static class TaskHandlers
             return res;
         }
 
-        var taskList = await player.Task.LoadTasksAsync(player.Id);
-        var result = player.Task.GiveUpTask(taskList, req.TaskId);
+        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
+        var result = player.RoleTask.GiveUpTask(req.TaskId);
 
         if (result.Success)
         {
-            await player.Task.SaveTasksAsync(taskList);
+            await player.RoleTask.SaveTasksAsync();
             Log.Info($"放弃任务 RoleId:{session.RoleId} TaskId:{req.TaskId}");
         }
 

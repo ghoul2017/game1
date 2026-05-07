@@ -3,81 +3,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Game.Components.Fight;
-using Game.Components.Player;
-using Game.Config;
 using Game.Database;
-using Game.Network;
-using Shared.Common.Config;
-using Shared.Common.Protos;
 using Shared.Core.Log;
-using Shared.Core.Network;
 
 namespace Game.Components.Bag;
 
 /// <summary>
 /// 背包系统。提供物品增删改查、整理、使用、容量检查等功能。
 /// </summary>
-public static class BagSystem
+public static class RoleBagSystem
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(BagSystem));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleBagSystem));
 
     #region 物品效果类型
 
-    /// <summary>效果类型枚举</summary>
-    public const int EffectHp = 1;      // 恢复HP
-    public const int EffectMp = 2;      // 恢复MP
-    public const int EffectBuff = 3;    // 增益BUFF
-    public const int EffectTeleport = 4; // 传送
-    public const int EffectRevive = 5;   // 复活
+    public const int EffectHp = 1;
+    public const int EffectMp = 2;
+    public const int EffectBuff = 3;
+    public const int EffectTeleport = 4;
+    public const int EffectRevive = 5;
 
     #endregion
 
     /// <summary>加载角色背包（从数据库）</summary>
-    public static async Task<RoleBag> LoadBagAsync(this BagComponent self, long roleId)
+    public static async Task<RoleBagComponent> LoadBagAsync(this RoleBagComponent self, long roleId)
     {
-        var bag = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleBag>(roleId);
+        var bag = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleBagComponent>(roleId);
         if (bag == null)
         {
-            bag = new RoleBag { Id = roleId, Capacity = 100 };
+            bag = new RoleBagComponent { Id = roleId, Capacity = 100 };
             await DatabaseManager.Instance.EntityRepo.InsertAsync(bag);
             Log.Info($"创建新背包 RoleId:{roleId}");
         }
-        self.RoleBag = bag;
-        return bag;
+        // 把数据库加载的数据拷贝到当前 Component
+        self.Id = bag.Id;
+        self.Capacity = bag.Capacity;
+        self.Items = bag.Items;
+        self.RebuildIndex();
+        return self;
     }
 
     /// <summary>保存背包</summary>
-    public static async Task SaveBagAsync(this BagComponent self, RoleBag bag)
+    public static async Task SaveBagAsync(this RoleBagComponent self)
     {
-        await DatabaseManager.Instance.EntityRepo.UpdateAsync(bag);
+        await DatabaseManager.Instance.EntityRepo.UpdateAsync(self);
     }
-
-    #region 角色属性管理
-
-    /// <summary>加载角色属性</summary>
-    public static async Task<RoleAttribute?> LoadRoleAttributeAsync(long roleId)
-    {
-        var attr = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleAttribute>(roleId);
-        if (attr == null)
-        {
-            attr = new RoleAttribute { Id = roleId };
-            await DatabaseManager.Instance.EntityRepo.InsertAsync(attr);
-            Log.Info($"创建新角色属性 RoleId:{roleId}");
-        }
-        return attr;
-    }
-
-    /// <summary>保存角色属性</summary>
-    public static async Task SaveRoleAttributeAsync(RoleAttribute attr)
-    {
-        await DatabaseManager.Instance.EntityRepo.UpdateAsync(attr);
-    }
-
-    #endregion
 
     /// <summary>添加物品（自动找空格或叠加）</summary>
-    public static AddItemResult AddItem(this BagComponent self, RoleBag bag, int configId, int count, int maxStack = 999)
+    public static AddItemResult AddItem(this RoleBagComponent self, int configId, int count, int maxStack = 999)
     {
         if (count <= 0)
             return AddItemResult.Fail(ErrorCode.InvalidParam);
@@ -85,7 +58,7 @@ public static class BagSystem
         var remaining = count;
 
         // 先尝试叠加到已有同类物品
-        foreach (var item in bag.Items)
+        foreach (var item in self.Items)
         {
             if (item.ConfigId == configId && item.Count < maxStack)
             {
@@ -99,7 +72,7 @@ public static class BagSystem
         // 剩余的放到新格子
         while (remaining > 0)
         {
-            var emptyIndex = FindEmptyIndex(bag);
+            var emptyIndex = FindEmptyIndex(self);
             if (emptyIndex < 0)
                 return AddItemResult.Partial(count - remaining, ErrorCode.BagFull);
 
@@ -113,8 +86,8 @@ public static class BagSystem
                 Bind = false,
                 ExpireTime = 0,
             };
-            bag.Items.Add(newItem);
-            bag.GetIndexMap()[emptyIndex] = newItem;
+            self.Items.Add(newItem);
+            self.GetIndexMap()[emptyIndex] = newItem;
             remaining -= addCount;
         }
 
@@ -122,22 +95,22 @@ public static class BagSystem
     }
 
     /// <summary>移除物品（按配置ID）</summary>
-    public static bool RemoveItem(this BagComponent self, RoleBag bag, int configId, int count)
+    public static bool RemoveItem(this RoleBagComponent self, int configId, int count)
     {
-        if (!HasEnough(bag, configId, count))
+        if (!HasEnough(self, configId, count))
             return false;
 
         var remaining = count;
-        for (int i = bag.Items.Count - 1; i >= 0; i--)
+        for (int i = self.Items.Count - 1; i >= 0; i--)
         {
-            var item = bag.Items[i];
+            var item = self.Items[i];
             if (item.ConfigId != configId) continue;
 
             if (item.Count <= remaining)
             {
                 remaining -= item.Count;
-                bag.RemoveFromIndex(item);
-                bag.Items.RemoveAt(i);
+                self.RemoveFromIndex(item);
+                self.Items.RemoveAt(i);
             }
             else
             {
@@ -152,16 +125,16 @@ public static class BagSystem
     }
 
     /// <summary>移除物品（按格子索引）</summary>
-    public static bool RemoveByIndex(this BagComponent self, RoleBag bag, int index, int count)
+    public static bool RemoveByIndex(this RoleBagComponent self, int index, int count)
     {
-        var item = bag.GetByIndex(index);
+        var item = self.GetByIndex(index);
         if (item == null) return false;
         if (item.Count < count) return false;
 
         if (item.Count == count)
         {
-            bag.RemoveFromIndex(item);
-            bag.Items.Remove(item);
+            self.RemoveFromIndex(item);
+            self.Items.Remove(item);
         }
         else
         {
@@ -172,42 +145,40 @@ public static class BagSystem
     }
 
     /// <summary>检查物品数量是否足够</summary>
-    public static bool HasEnough(RoleBag bag, int configId, int count)
+    public static bool HasEnough(this RoleBagComponent self, int configId, int count)
     {
-        var total = bag.Items.Where(i => i.ConfigId == configId).Sum(i => i.Count);
+        var total = self.Items.Where(i => i.ConfigId == configId).Sum(i => i.Count);
         return total >= count;
     }
 
     /// <summary>获取物品总数</summary>
-    public static int GetItemCount(RoleBag bag, int configId)
+    public static int GetItemCount(this RoleBagComponent self, int configId)
     {
-        return bag.Items.Where(i => i.ConfigId == configId).Sum(i => i.Count);
+        return self.Items.Where(i => i.ConfigId == configId).Sum(i => i.Count);
     }
 
     /// <summary>检查是否有空格子</summary>
-    public static bool HasSpace(RoleBag bag, int need = 1)
+    public static bool HasSpace(this RoleBagComponent self, int need = 1)
     {
-        return FindEmptyIndex(bag) >= 0;
+        return FindEmptyIndex(self) >= 0;
     }
 
     /// <summary>整理背包（按配置ID排序，紧凑排列）</summary>
-    public static void Tidy(this BagComponent self, RoleBag bag)
+    public static void Tidy(this RoleBagComponent self)
     {
-        // 按配置ID分组并合并
-        var grouped = bag.Items
+        var grouped = self.Items
             .GroupBy(i => i.ConfigId)
             .OrderBy(g => g.Key)
             .ToList();
 
-        bag.Items.Clear();
-        bag.GetIndexMap().Clear();
+        self.Items.Clear();
+        self.GetIndexMap().Clear();
 
         var index = 0;
         foreach (var group in grouped)
         {
             var totalCount = group.Sum(i => i.Count);
-            // 简化：每个配置ID放一个格子（不拆分堆叠）
-            bag.Items.Add(new BagItem
+            self.Items.Add(new BagItem
             {
                 Uid = Interlocked.Increment(ref self._nextItemUid),
                 ConfigId = group.Key,
@@ -215,20 +186,20 @@ public static class BagSystem
                 Index = index,
                 Bind = group.Any(i => i.Bind),
             });
-            bag.GetIndexMap()[index] = bag.Items[^1];
+            self.GetIndexMap()[index] = self.Items[^1];
             index++;
         }
     }
 
     /// <summary>交换两个格子的物品</summary>
-    public static bool Swap(this BagComponent self, RoleBag bag, int index1, int index2)
+    public static bool Swap(this RoleBagComponent self, int index1, int index2)
     {
         if (index1 == index2) return true;
 
-        var item1 = bag.GetByIndex(index1);
-        var item2 = bag.GetByIndex(index2);
+        var item1 = self.GetByIndex(index1);
+        var item2 = self.GetByIndex(index2);
 
-        var map = bag.GetIndexMap();
+        var map = self.GetIndexMap();
         map.Remove(index1);
         map.Remove(index2);
 
@@ -239,12 +210,12 @@ public static class BagSystem
     }
 
     /// <summary>使用物品</summary>
-    public static UseItemResult UseItem(this BagComponent self, RoleBag bag, int index, int count)
+    public static UseItemResult UseItem(this RoleBagComponent self, int index, int count)
     {
         if (count <= 0)
             return UseItemResult.Fail(ErrorCode.InvalidParam);
 
-        var item = bag.GetByIndex(index);
+        var item = self.GetByIndex(index);
         if (item == null)
             return UseItemResult.Fail(ErrorCode.ItemNotFound);
 
@@ -254,8 +225,8 @@ public static class BagSystem
         // 扣除物品
         if (item.Count == count)
         {
-            bag.RemoveFromIndex(item);
-            bag.Items.Remove(item);
+            self.RemoveFromIndex(item);
+            self.Items.Remove(item);
         }
         else
         {
@@ -266,15 +237,15 @@ public static class BagSystem
     }
 
     /// <summary>获取背包信息（所有物品快照）</summary>
-    public static List<BagItem> GetItems(RoleBag bag)
+    public static List<BagItem> GetItems(this RoleBagComponent self)
     {
-        return bag.Items.ToList();
+        return self.Items.ToList();
     }
 
-    private static int FindEmptyIndex(RoleBag bag)
+    private static int FindEmptyIndex(RoleBagComponent self)
     {
-        var map = bag.GetIndexMap();
-        for (int i = 0; i < bag.Capacity; i++)
+        var map = self.GetIndexMap();
+        for (int i = 0; i < self.Capacity; i++)
         {
             if (!map.ContainsKey(i))
                 return i;
