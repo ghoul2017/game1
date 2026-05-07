@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Game.Core;
 using Game.Database.MongoDb;
 using Game.Database.MongoDb.Repositories;
 using Shared.Core.Log;
@@ -18,9 +17,9 @@ public class DatabaseManager
     public MongoRoleRepository RoleRepo { get; private set; } = null!;
     public MongoEntityRepository EntityRepo { get; private set; } = null!;
 
-    public async Task Init(AppConfig config)
+    public async Task Init()
     {
-        MongoDb = new MongoDbManager(config.MongoDb);
+        MongoDb = new MongoDbManager(Context.Config.MongoDb);
 
         try
         {
