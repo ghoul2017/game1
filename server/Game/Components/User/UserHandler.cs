@@ -1,11 +1,14 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Game.Components.Bag;
+using Game.Components.GameTask;
+using Game.Components.Mail;
+using Game.Components.Player;
 using Game.Core;
 using Game.Core.Network;
 using Game.Database;
 using Game.Database.MongoDb.Repositories;
-using Game.Game.Player;
 using Game.Network;
 using Shared.Common.Protos;
 using Shared.Core.Log;
@@ -195,7 +198,7 @@ public static class UserHandler
     }
 
     /// <summary>
-    /// 选角入场。加载角色 → BindRole → 加入 PlayerManager → 进入游戏。
+    /// 选角入场。加载角色 → BindRole → 创建 PlayerEntity + 挂载全部 Component → 进入游戏。
     /// </summary>
     [MessageHandler(typeof(RpcMethodHandler))]
     public static async Task<IMessage> SelectRoleHandler(TcpSession session, SelectRoleReq req, SelectRoleRes res)
@@ -208,7 +211,7 @@ public static class UserHandler
         }
 
         // 加载角色
-        var role = await PlayerManager.Instance.LoadRoleAsync(req.RoleId);
+        var role = await Context.Players.LoadRoleAsync(req.RoleId);
         if (role == null)
         {
             res.Code = 1002;
@@ -237,7 +240,21 @@ public static class UserHandler
 
         // 创建在线玩家
         var player = PlayerEntity.Create(role.Id, session.UserId, role);
-        PlayerManager.Instance.AddPlayer(player);
+
+        // 一次性挂载全部数据组件并加载数据
+        var bagComp = player.AddComponent<BagComponent>();
+        bagComp.RoleBag = await bagComp.LoadBagAsync(role.Id);
+
+        var mailComp = player.AddComponent<MailComponent>();
+        mailComp.RoleMailList = await mailComp.LoadMailsAsync(role.Id);
+
+        var taskComp = player.AddComponent<TaskComponent>();
+        taskComp.RoleTaskList = await taskComp.LoadTasksAsync(role.Id);
+
+        var attrComp = player.AddComponent<RoleAttributeComponent>();
+        attrComp.RoleAttribute = await ItemEffectSystem.LoadRoleAttributeAsync(role.Id);
+
+        Context.Players.AddPlayer(player);
 
         res.Code = 0;
         res.Message = "OK";
@@ -290,13 +307,27 @@ public static class UserHandler
         // 如果有角色，恢复在线状态
         if (roleId > 0)
         {
-            var role = await PlayerManager.Instance.LoadRoleAsync(roleId);
+            var role = await Context.Players.LoadRoleAsync(roleId);
             if (role != null && role.UserId == userId)
             {
                 SessionManager.Instance.BindRole(session, role.Id);
 
                 var player = PlayerEntity.Create(role.Id, userId, role);
-                PlayerManager.Instance.AddPlayer(player);
+
+                // 一次性挂载全部数据组件并加载数据
+                var bagComp = player.AddComponent<BagComponent>();
+                bagComp.RoleBag = await bagComp.LoadBagAsync(role.Id);
+
+                var mailComp = player.AddComponent<MailComponent>();
+                mailComp.RoleMailList = await mailComp.LoadMailsAsync(role.Id);
+
+                var taskComp = player.AddComponent<TaskComponent>();
+                taskComp.RoleTaskList = await taskComp.LoadTasksAsync(role.Id);
+
+                var attrComp = player.AddComponent<RoleAttributeComponent>();
+                attrComp.RoleAttribute = await ItemEffectSystem.LoadRoleAttributeAsync(role.Id);
+
+                Context.Players.AddPlayer(player);
 
                 res.RoleId = role.Id;
                 res.Name = role.Name;

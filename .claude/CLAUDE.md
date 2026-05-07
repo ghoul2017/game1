@@ -25,7 +25,7 @@ scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 | 序列化 | protobuf-net (`[ProtoContract]`/`[ProtoMember]`) |
 | 读表 | CsvHelper + `[ConfigTable]` 自动扫描 |
 | 数据库 | MongoDB（BSON 文档存储） |
-| 实体 | Entity + Component + ComponentOf（ECS 风格） |
+| 实体 | Entity + Component + System（ECS 风格：E 节点 / C 放数据 / S 负责方法） |
 | 事件 | EventBus 发布订阅（类型安全） |
 | 日志 | 自研 ILog + Appender（参考 SLF4J） |
 | 线程模型 | GameSynchronizationContext 单线程调度，await 自动回主线程 |
@@ -56,18 +56,19 @@ client/Assets/Scripts/
 
 server/Game/
   Program.cs            # 入口：单线程调度 → Component 挂载 + 子系统初始化
-  Context.cs            # 静态上下文：Context.Server(Module 实体), Context.Config
-  Entities/Module.cs    # 根实体（所有 Component 挂载于此）
+  Context.cs            # 静态上下文：Context.Server(Module), Context.Players, Context.Fight 等
+  Entities/Module.cs    # 根实体（所有 Module 级 Component 挂载于此）
   Components/
     User/               # UserComponent + UserComponentSystem + UserHandler
-    Player/             # PlayerComponent
-    Bag/                # BagComponent
-    Mail/               # MailComponent
-    Fight/              # FightComponent
-    Chat/               # ChatComponent
-    Map/                # MapComponent
-    Task/               # TaskComponent
-    Monster/            # MonsterComponent
+    Player/             # PlayerComponent + PlayerSystem + PlayerEntity + PlayerOnlineComponent + RoleDataComponent + RoleAttributeComponent + Role + RoleAttribute
+    Bag/                # BagComponent + BagSystem + ItemEffectSystem + BagHandlers + RoleBag + BagItem
+    Mail/               # MailComponent + MailSystem + MailHandlers + RoleMail
+    Chat/               # ChatComponent + ChatSystem + ChatHandlers
+    GameTask/            # TaskComponent + TaskSystem + TaskHandlers + RoleTaskList
+    Fight/              # FightComponent + FightSystem + FightHandlers + FightCore + FightUnit + FightAttribute + Skill
+    Map/                # MapComponent + MapSystem + MapHandlers + GameMap + MapPlayer + MapNpc + MapAoiNotifier + IMapObject
+    Monster/            # MonsterComponent + MonsterSystem + MonsterUnit + AiState
+    Misc/               # MiscHandlers（握手+心跳）
   Core/
     AppConfig.cs        # 配置根（Server, MongoDb, Tables, Log）
     Options.cs          # 各子配置 Options 类
@@ -75,21 +76,11 @@ server/Game/
     GameTimer.cs        # 定时器（回调自动回主线程）
     ShutdownToken.cs    # 统一关闭信号
     TokenStore.cs       # 内存 Token 存储
+    Aoi/                # TowerAoi, Tower, IAoiObject, IAoiEventListener
     Database/           # DatabaseManager, MongoDbManager, MongoEntityRepository, MongoPlayerRepository, MongoRoleRepository
     Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener
     Network/            # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler
-  game/                 # 子系统
-    Player/             # PlayerManager, PlayerEntity, PlayerOnlineComponent, RoleDataComponent, Role, RoleAttribute
-    Bag/                # BagManager, BagHandlers, RoleBag, BagItem, ItemEffectManager
-    Mail/               # MailManager, MailHandlers, RoleMail
-    Chat/               # ChatManager, ChatHandlers
-    GameTask/           # TaskManager, TaskHandlers, RoleTaskList
-    Map/                # MapManager, MapHandlers, GameMap, MapPlayer, MapNpc, MapAoiNotifier
-    Fight/              # FightManager, FightHandlers, FightCore, FightUnit, Skill
-    Monster/            # MonsterManager, MonsterUnit
-    Aoi/                # TowerAoi, Tower, IAoiObject, AoiEventListener
-    misc/               # HandshakeHandler, HeartbeatHandler
   Data/Tables/          # CSV 配置表数据文件
 server/tools/           # xlsx2csv, xlsx2cs, proto2cs
 server/scripts/         # cmd 快捷脚本
@@ -98,26 +89,51 @@ server/scripts/         # cmd 快捷脚本
 ### 子系统模板
 
 ```
-game/Xxx/
-  XxxManager.cs       # 业务逻辑（静态 Instance 单例）
-  XxxHandlers.cs      # 消息处理（static + [MessageHandler(typeof(RpcMethodHandler))]）
-  RoleXxx.cs           # 数据模型（IEntity + [ProtoContract] + [BsonId] + [BsonIgnore]）
 Components/Xxx/
-  XxxComponent.cs     # Component（[ComponentOf(typeof(Module))]）
+  XxxComponent.cs     # Component（纯数据，[ComponentOf(typeof(Module))] 或 [ComponentOf(typeof(PlayerEntity))]）
+  XxxSystem.cs        # System（静态扩展方法，this XxxComponent self）
+  XxxHandlers.cs      # Handler（static + [MessageHandler(typeof(RpcMethodHandler))]）
+  RoleXxx.cs           # IEntity 数据模型（[ProtoContract] + [BsonId] + [BsonIgnore]）
 消息定义 → shared/Common/Protos/XxxProtos.cs（双端共享）
 MsgId → shared/Common/MsgIdConst.cs（双端共享）
+```
+
+### Component 分级
+
+| 级别 | 挂载目标 | 用途 | 示例 |
+|------|---------|------|------|
+| Module 级 | Context.Server | 全局数据集合 | PlayerComponent, FightComponent, MapComponent, MonsterComponent, ChatComponent |
+| PlayerEntity 级 | PlayerEntity | 玩家数据 | BagComponent, MailComponent, TaskComponent, RoleAttributeComponent, PlayerOnlineComponent, RoleDataComponent |
+
+### System 规则
+
+- System 是纯静态扩展方法类（`public static class XxxSystem`），只有方法和常量，不持有字段
+- 通过 `this XxxComponent self` 访问 Component 数据
+- Module 级：`Context.Fight.RegisterUnit(...)` — Context 提供便利属性
+- PlayerEntity 级：`player.Bag.AddItem(...)` — PlayerEntity 提供便利属性
+- 日志用 `LogManager.GetLogger(nameof(XxxSystem))`（静态类不能做泛型参数）
+
+### 登录加载策略
+
+选角入场时一次性挂载所有 PlayerEntity 级 Component 并从 MongoDB 加载全部数据：
+```csharp
+var player = PlayerEntity.Create(roleId, userId, role);
+var bagComp = player.AddComponent<BagComponent>();
+bagComp.RoleBag = await bagComp.LoadBagAsync(roleId);
+// ... Mail, Task, RoleAttribute 同理
+Context.Players.AddPlayer(player);
 ```
 
 ## 关键约定
 
 ### 服务端
 
-- **命名空间**: PascalCase `Game.Core`, `Game.Game.Player`，类名 PascalCase。共享代码 `Shared.*`
+- **命名空间**: PascalCase `Game.Core`, `Game.Components.Player`，类名 PascalCase。共享代码 `Shared.*`
 - **Handler**: 扩展方法 + `[MessageHandler(typeof(RpcMethodHandler/NtfMethodHandler))]` 标记
   - RPC 风格：`static async Task<IMessage> XxxHandler(TcpSession session, TReq req, TResp res)`
   - 通知风格：`static async Task XxxHandler(TcpSession session, TReq req)`
-- **ECS**: Entity 作为组件容器，Component 通过 `[ComponentOf]` 约束挂载目标
-- **模块初始化**: Component 挂载到 Context.Server，有实质逻辑的子系统在 Program.cs 中直接调用初始化
+- **ECS**: Entity 节点 / Component 放数据 / System 负责方法，Component 通过 `[ComponentOf]` 约束挂载目标
+- **模块初始化**: Component 挂载到 Context.Server（Module 级）或 PlayerEntity（PlayerEntity 级），初始化通过 System 扩展方法调用
 - **数据库**: MongoDB BSON 文档存储，集合名=类名蛇形（如 `role_bag`），`_id`=entity.Id
 - **实体**: 实现 IEntity + `[BsonId]` 标记 Id，运行时索引用 `[BsonIgnore]`，MongoEntityRepository 统一 CRUD
 - **日志**: `private static readonly ILog Log = LogManager.GetLogger<T>();`
@@ -162,16 +178,10 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
 详细方案见 `.claude/plans/architecture-migration.md`。
 
 - [x] Phase 1: IModule→Component + 去缓存层 + MongoDB
-  - [x] Step 1.1: Entity 基类增强（GetAllComponents, TryGetComponent, HasComponent）
-  - [x] Step 1.2: MongoDB 持久化基础设施（MongoEntityRepository, MongoPlayerRepository, MongoRoleRepository）
-  - [x] Step 1.3: 修改 DatabaseManager + AppConfig（去掉 MySql/Redis）
-  - [x] Step 1.4: 创建 8 个 Component 替代 IModule
-  - [x] Step 1.5: 修改 Manager 使用 MongoDB（替代 EntityFactory）
-  - [x] Step 1.6: 切换 Program.cs
-  - [x] Step 1.7: 清理旧代码（删除 IModule/ModuleRegistry/EntityFactory/MySQL/Redis 等）
 - [x] Phase 2: Handler 统一为扩展方法风格（Bag/Mail/Chat/Map/Task/Fight）
 - [x] Phase 3: Player 变 Entity（PlayerEntity + PlayerOnlineComponent + RoleDataComponent）
-- [ ] Phase 3 后续: MapEntity + MonsterEntity（改动面大，需逐步推进）
+- [x] Phase 4: Manager 拆解 + IEntity→Component + game/ 目录迁移
+- [ ] Phase 4 后续: MapEntity + MonsterEntity（改动面大，需逐步推进）
 
 ## 开发工作流
 

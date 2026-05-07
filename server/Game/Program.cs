@@ -2,23 +2,16 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Game.Components.Bag;
 using Game.Components.Chat;
 using Game.Components.Fight;
-using Game.Components.Mail;
 using Game.Components.Map;
 using Game.Components.Monster;
 using Game.Components.Player;
-using Game.Components.Task;
 using Game.Components.User;
 using Game.Config;
 using Game.Core;
 using Game.Core.Network;
 using Game.Database;
-using Game.Game.Fight;
-using Game.Game.Map;
-using Game.Game.Monster;
-using Game.Game.Player;
 using Shared.Core.Log;
 
 namespace Game;
@@ -69,18 +62,14 @@ public class Program
         var networkComponent = Context.Server.AddComponent<NetworkComponent>();
         Context.Server.AddComponent<UserComponent>();
         Context.Server.AddComponent<PlayerComponent>();
-        Context.Server.AddComponent<BagComponent>();
-        Context.Server.AddComponent<MailComponent>();
         Context.Server.AddComponent<FightComponent>();
         Context.Server.AddComponent<ChatComponent>();
         Context.Server.AddComponent<MapComponent>();
-        Context.Server.AddComponent<TaskComponent>();
         Context.Server.AddComponent<MonsterComponent>();
 
         // 初始化有实质逻辑的子系统
-        FightManager.Instance.SetConfigManager();
-        MapManager.Instance.InitDefaultMaps();
-        MonsterManager.Instance.Start();
+        Context.Map.InitDefaultMaps();
+        Context.Monster.Start();
 
         try
         {
@@ -93,10 +82,10 @@ public class Program
         finally
         {
             // 停服清理
-            await PlayerManager.Instance.SaveAllRolesAsync();
-            FightManager.Instance.RemoveAll();
-            MapManager.Instance.RemoveAll();
-            MonsterManager.Instance.Stop();
+            await Context.Players.SaveAllRolesAsync();
+            Context.Fight.RemoveAll();
+            Context.Map.RemoveAll();
+            Context.Monster.Stop();
             Log.Info("服务端已停止");
         }
     }

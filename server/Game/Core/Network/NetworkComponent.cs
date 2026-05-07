@@ -1,3 +1,4 @@
+using Game.Components.Player;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,7 +6,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Game.Components.User;
-using Game.Game.Player;
 using Game.Network;
 using Shared.Core.ECS;
 using Shared.Core.Log;
@@ -100,11 +100,11 @@ public class NetworkComponent : Component
         // 如果已选角，从在线列表移除并保存数据
         if (session.RoleId != 0)
         {
-            var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
+            var player = Context.Players.GetByRoleId(session.RoleId);
             if (player != null)
             {
-                _ = PlayerManager.Instance.SaveRoleAsync(player);
-                PlayerManager.Instance.RemovePlayer(session.RoleId);
+                _ = Context.Players.SaveRoleAsync(player);
+                Context.Players.RemovePlayer(session.RoleId);
             }
         }
 
