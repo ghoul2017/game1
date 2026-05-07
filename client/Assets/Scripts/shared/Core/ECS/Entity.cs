@@ -58,5 +58,26 @@ namespace Shared.Core.ECS
             component.SetParent(null);
             _components.Remove(component.GetType());
         }
+
+        public bool TryGetComponent<T>(out T? component) where T : Component
+        {
+            if (_components.TryGetValue(typeof(T), out var c))
+            {
+                component = (T)c;
+                return true;
+            }
+            component = null;
+            return false;
+        }
+
+        public bool HasComponent<T>() where T : Component
+        {
+            return _components.ContainsKey(typeof(T));
+        }
+
+        public IEnumerable<Component> GetAllComponents()
+        {
+            return _components.Values;
+        }
     }
 }

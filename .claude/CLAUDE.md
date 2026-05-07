@@ -24,8 +24,7 @@ scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 | 协议 | TCP `[MsgId:2B][Length:4B][Payload]`，小端序 |
 | 序列化 | protobuf-net (`[ProtoContract]`/`[ProtoMember]`) |
 | 读表 | CsvHelper + `[ConfigTable]` 自动扫描 |
-| 数据库 | MySQL(Dapper) + MongoDB |
-| 缓存 | Write-Behind（内存 + 60s 批量持久化） |
+| 数据库 | MongoDB（BSON 文档存储） |
 | 实体 | Entity + Component + ComponentOf（ECS 风格） |
 | 事件 | EventBus 发布订阅（类型安全） |
 | 日志 | 自研 ILog + Appender（参考 SLF4J） |
@@ -56,32 +55,39 @@ client/Assets/Scripts/
   Editor/               # SceneCreator
 
 server/Game/
-  Program.cs            # 入口：单线程调度 → 模块化启动
+  Program.cs            # 入口：单线程调度 → Component 挂载 + 子系统初始化
   Context.cs            # 静态上下文：Context.Server(Module 实体), Context.Config
   Entities/Module.cs    # 根实体（所有 Component 挂载于此）
-  Components/User/      # UserComponent + UserComponentSystem + UserHandler
+  Components/
+    User/               # UserComponent + UserComponentSystem + UserHandler
+    Player/             # PlayerComponent
+    Bag/                # BagComponent
+    Mail/               # MailComponent
+    Fight/              # FightComponent
+    Chat/               # ChatComponent
+    Map/                # MapComponent
+    Task/               # TaskComponent
+    Monster/            # MonsterComponent
   Core/
-    IModule.cs          # 模块接口（Order, InitAsync, StartAsync, StopAsync）
-    ModuleRegistry.cs   # 自动扫描 + 按 Order 管理生命周期
-    AppConfig.cs        # 配置根（Server, MySql, MongoDb, Redis, Tables, Log）
+    AppConfig.cs        # 配置根（Server, MongoDb, Tables, Log）
     Options.cs          # 各子配置 Options 类
     GameSynchronizationContext.cs  # 单线程调度器
     GameTimer.cs        # 定时器（回调自动回主线程）
     ShutdownToken.cs    # 统一关闭信号
-    TokenStore.cs       # 内存 Token 存储（替代 Redis）
-    Database/           # DatabaseManager, MySqlManager, MongoDbManager, RedisManager, Repositories
-    Entity/             # IEntity, EntityFactory, ProtobufPersistFactory, EntityCache, PersistTask
+    TokenStore.cs       # 内存 Token 存储
+    Database/           # DatabaseManager, MongoDbManager, MongoEntityRepository, MongoPlayerRepository, MongoRoleRepository
+    Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener
     Network/            # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler
   game/                 # 子系统
-    Player/             # PlayerManager, PlayerModel(IModule), Player, Role, RoleAttribute
-    Bag/                # BagManager, BagModel(IModule), BagHandlers, RoleBag, BagItem, ItemEffectManager
-    Mail/               # MailManager, MailModel(IModule), MailHandlers, RoleMail
-    Chat/               # ChatManager, ChatModel(IModule), ChatHandlers
-    GameTask/           # TaskManager, TaskModel(IModule), TaskHandlers, RoleTaskList
-    Map/                # MapManager, MapModel(IModule), MapHandlers, GameMap, MapPlayer, MapNpc, MapAoiNotifier
-    Fight/              # FightManager, FightModel(IModule), FightHandlers, FightCore, FightUnit, Skill
-    Monster/            # MonsterManager, MonsterModule(IModule)
+    Player/             # PlayerManager, PlayerEntity, PlayerOnlineComponent, RoleDataComponent, Role, RoleAttribute
+    Bag/                # BagManager, BagHandlers, RoleBag, BagItem, ItemEffectManager
+    Mail/               # MailManager, MailHandlers, RoleMail
+    Chat/               # ChatManager, ChatHandlers
+    GameTask/           # TaskManager, TaskHandlers, RoleTaskList
+    Map/                # MapManager, MapHandlers, GameMap, MapPlayer, MapNpc, MapAoiNotifier
+    Fight/              # FightManager, FightHandlers, FightCore, FightUnit, Skill
+    Monster/            # MonsterManager, MonsterUnit
     Aoi/                # TowerAoi, Tower, IAoiObject, AoiEventListener
     misc/               # HandshakeHandler, HeartbeatHandler
   Data/Tables/          # CSV 配置表数据文件
@@ -94,9 +100,10 @@ server/scripts/         # cmd 快捷脚本
 ```
 game/Xxx/
   XxxManager.cs       # 业务逻辑（静态 Instance 单例）
-  XxxModel.cs         # IModule 生命周期（注册 EntityFactory）
-  XxxHandlers.cs      # 消息处理（[MessageHandler] 扩展方法）
-  RoleXxx.cs           # 数据模型（IEntity + [ProtoContract]）
+  XxxHandlers.cs      # 消息处理（static + [MessageHandler(typeof(RpcMethodHandler))]）
+  RoleXxx.cs           # 数据模型（IEntity + [ProtoContract] + [BsonId] + [BsonIgnore]）
+Components/Xxx/
+  XxxComponent.cs     # Component（[ComponentOf(typeof(Module))]）
 消息定义 → shared/Common/Protos/XxxProtos.cs（双端共享）
 MsgId → shared/Common/MsgIdConst.cs（双端共享）
 ```
@@ -110,9 +117,9 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
   - RPC 风格：`static async Task<IMessage> XxxHandler(TcpSession session, TReq req, TResp res)`
   - 通知风格：`static async Task XxxHandler(TcpSession session, TReq req)`
 - **ECS**: Entity 作为组件容器，Component 通过 `[ComponentOf]` 约束挂载目标
-- **模块 Order**: Log=0, Database=10, Config=20, 业务=50~90
-- **数据库表**: `p_<类名蛇形>`，`(id BIGINT PK, data LONGBLOB)`
-- **配置表**: `[ConfigTable("Xxx.csv")]` 注解自动扫描，CSV 放 `Data/Tables/`
+- **模块初始化**: Component 挂载到 Context.Server，有实质逻辑的子系统在 Program.cs 中直接调用初始化
+- **数据库**: MongoDB BSON 文档存储，集合名=类名蛇形（如 `role_bag`），`_id`=entity.Id
+- **实体**: 实现 IEntity + `[BsonId]` 标记 Id，运行时索引用 `[BsonIgnore]`，MongoEntityRepository 统一 CRUD
 - **日志**: `private static readonly ILog Log = LogManager.GetLogger<T>();`
 - **单例**: `public static XxxManager Instance { get; } = new();`
 - **线程安全**: GameSynchronizationContext 保证所有逻辑在主线程执行，无需加锁
@@ -149,6 +156,22 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
 - 实现代码后自动 commit，无需额外确认
 - **核心约束必须写在 rules 和 CLAUDE.md 里，不要只写在 memory 里——memory 不自动加载，你不会主动查**
 - 记忆文件写在项目目录 `.claude/memory/` 下，便于 Git 管理
+
+## TODO：架构迁移
+
+详细方案见 `.claude/plans/architecture-migration.md`。
+
+- [x] Phase 1: IModule→Component + 去缓存层 + MongoDB
+  - [x] Step 1.1: Entity 基类增强（GetAllComponents, TryGetComponent, HasComponent）
+  - [x] Step 1.2: MongoDB 持久化基础设施（MongoEntityRepository, MongoPlayerRepository, MongoRoleRepository）
+  - [x] Step 1.3: 修改 DatabaseManager + AppConfig（去掉 MySql/Redis）
+  - [x] Step 1.4: 创建 8 个 Component 替代 IModule
+  - [x] Step 1.5: 修改 Manager 使用 MongoDB（替代 EntityFactory）
+  - [x] Step 1.6: 切换 Program.cs
+  - [x] Step 1.7: 清理旧代码（删除 IModule/ModuleRegistry/EntityFactory/MySQL/Redis 等）
+- [x] Phase 2: Handler 统一为扩展方法风格（Bag/Mail/Chat/Map/Task/Fight）
+- [x] Phase 3: Player 变 Entity（PlayerEntity + PlayerOnlineComponent + RoleDataComponent）
+- [ ] Phase 3 后续: MapEntity + MonsterEntity（改动面大，需逐步推进）
 
 ## 开发工作流
 

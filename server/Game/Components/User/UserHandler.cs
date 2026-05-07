@@ -3,13 +3,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Game.Core;
 using Game.Core.Network;
-using Game.Core.Entity;
 using Game.Database;
+using Game.Database.MongoDb.Repositories;
 using Game.Game.Player;
 using Game.Network;
 using Shared.Common.Protos;
 using Shared.Core.Log;
 using Shared.Core.Network;
+using PlayerAccount = Game.Database.MongoDb.Repositories.PlayerAccount;
 
 namespace Game.Components.User;
 
@@ -43,12 +44,12 @@ public static class UserHandler
         }
 
         // 查询账号
-        Database.MySql.Repositories.Player? account =
+        PlayerAccount? account =
             await DatabaseManager.Instance.PlayerRepo.GetByUsernameAsync(username);
         if (account == null)
         {
             // 自动注册
-            account = new Database.MySql.Repositories.Player
+            account = new PlayerAccount
             {
                 Username = username,
                 Password = req.Password,
@@ -163,7 +164,7 @@ public static class UserHandler
         // 生成角色ID（雪花算法）
         var roleId = IdGenerator.Instance.NextId();
 
-        // 创建 Role 实体（持久化到 p_role）
+        // 创建 Role 实体（持久化到 MongoDB role 集合）
         var role = new Role
         {
             Id = roleId,
@@ -173,10 +174,10 @@ public static class UserHandler
             Job = req.Job,
             CreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
-        await EntityFactory.Instance.InsertAsync(role, immediately: true);
+        await DatabaseManager.Instance.EntityRepo.InsertAsync(role);
 
         // 写入角色索引
-        await DatabaseManager.Instance.RoleRepo.AddAsync(new Database.MySql.Repositories.UserRole
+        await DatabaseManager.Instance.RoleRepo.AddAsync(new UserRole
         {
             RoleId = roleId,
             UserId = session.UserId,
@@ -235,16 +236,7 @@ public static class UserHandler
         }
 
         // 创建在线玩家
-        var player = new Player
-        {
-            UserId = session.UserId,
-            RoleId = role.Id,
-            RoleName = role.Name,
-            Level = role.Level,
-            LoginTime = DateTime.UtcNow,
-            LastActiveTime = DateTime.UtcNow,
-            RoleData = role
-        };
+        var player = PlayerEntity.Create(role.Id, session.UserId, role);
         PlayerManager.Instance.AddPlayer(player);
 
         res.Code = 0;
@@ -303,16 +295,7 @@ public static class UserHandler
             {
                 SessionManager.Instance.BindRole(session, role.Id);
 
-                var player = new Player
-                {
-                    UserId = userId,
-                    RoleId = role.Id,
-                    RoleName = role.Name,
-                    Level = role.Level,
-                    LoginTime = DateTime.UtcNow,
-                    LastActiveTime = DateTime.UtcNow,
-                    RoleData = role
-                };
+                var player = PlayerEntity.Create(role.Id, userId, role);
                 PlayerManager.Instance.AddPlayer(player);
 
                 res.RoleId = role.Id;

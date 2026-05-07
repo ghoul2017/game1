@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Game.Config;
 using Game.Core;
-using Game.Core.Entity;
+using Game.Database;
 using Game.Game.Fight;
 using Game.Game.Player;
 using Shared.Common.Config;
@@ -175,11 +175,11 @@ public class ItemEffectManager
     /// <summary>加载角色属性</summary>
     public async Task<RoleAttribute?> LoadRoleAttributeAsync(long roleId)
     {
-        var attr = await EntityFactory.Instance.GetAsync<RoleAttribute>(roleId);
+        var attr = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleAttribute>(roleId);
         if (attr == null)
         {
             attr = new RoleAttribute { Id = roleId };
-            await EntityFactory.Instance.InsertAsync(attr);
+            await DatabaseManager.Instance.EntityRepo.InsertAsync(attr);
             Log.Info($"创建新角色属性 RoleId:{roleId}");
         }
         return attr;
@@ -195,7 +195,7 @@ public class ItemEffectManager
     /// <summary>保存角色属性</summary>
     public async Task SaveRoleAttributeAsync(RoleAttribute attr)
     {
-        await EntityFactory.Instance.UpdateAsync(attr);
+        await DatabaseManager.Instance.EntityRepo.UpdateAsync(attr);
     }
 
     #endregion

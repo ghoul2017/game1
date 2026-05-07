@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Game.Config;
 using Game.Core;
-using Game.Core.Entity;
+using Game.Database;
 using Game.Game.Bag;
 using Game.Game.Player;
 using Shared.Common.Config;
@@ -33,21 +33,21 @@ public class TaskManager
     /// <summary>加载角色任务列表</summary>
     public async Task<RoleTaskList> LoadTasksAsync(long roleId)
     {
-        var taskList = await EntityFactory.Instance.GetAsync<RoleTaskList>(roleId);
+        var taskList = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleTaskList>(roleId);
         if (taskList == null)
         {
             taskList = new RoleTaskList { Id = roleId };
-            await EntityFactory.Instance.InsertAsync(taskList);
+            await DatabaseManager.Instance.EntityRepo.InsertAsync(taskList);
             Log.Info($"创建新任务列表 RoleId:{roleId}");
         }
 
         return taskList;
     }
 
-    /// <summary>保存任务列表（Write-Behind）</summary>
+    /// <summary>保存任务列表</summary>
     public async Task SaveTasksAsync(RoleTaskList taskList)
     {
-        await EntityFactory.Instance.UpdateAsync(taskList);
+        await DatabaseManager.Instance.EntityRepo.UpdateAsync(taskList);
     }
 
     /// <summary>接取任务</summary>

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Core.Entity;
+using MongoDB.Bson.Serialization.Attributes;
 using ProtoBuf;
 
 namespace Game.Game.Bag;
@@ -12,6 +13,7 @@ namespace Game.Game.Bag;
 public class RoleBag : IEntity
 {
     [ProtoMember(1)]
+    [BsonId]
     public long Id { get; set; }
 
     /// <summary>背包容量（最大格子数）</summary>
@@ -24,6 +26,7 @@ public class RoleBag : IEntity
 
     /// <summary>运行时索引：index → BagItem（不序列化）</summary>
     [ProtoIgnore]
+    [BsonIgnore]
     private Dictionary<int, BagItem>? _indexMap;
 
     [ProtoAfterDeserialization]

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Core.Entity;
+using MongoDB.Bson.Serialization.Attributes;
 using ProtoBuf;
 
 namespace Game.Game.Mail;
@@ -13,6 +14,7 @@ namespace Game.Game.Mail;
 public class RoleMailList : IEntity
 {
     [ProtoMember(1)]
+    [BsonId]
     public long Id { get; set; }
 
     /// <summary>邮件列表</summary>
@@ -21,6 +23,7 @@ public class RoleMailList : IEntity
 
     /// <summary>运行时索引：mailId → RoleMail（不序列化）</summary>
     [ProtoIgnore]
+    [BsonIgnore]
     private Dictionary<long, RoleMail>? _mailMap;
 
     [ProtoAfterDeserialization]

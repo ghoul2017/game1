@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Game.Core.Entity;
+using Game.Database;
 using Game.Game.Bag;
 using Game.Game.Player;
 using ProtoBuf;
@@ -36,11 +36,11 @@ public class MailManager
     /// <summary>加载角色邮件列表</summary>
     public async Task<RoleMailList> LoadMailsAsync(long roleId)
     {
-        var mailList = await EntityFactory.Instance.GetAsync<RoleMailList>(roleId);
+        var mailList = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleMailList>(roleId);
         if (mailList == null)
         {
             mailList = new RoleMailList { Id = roleId };
-            await EntityFactory.Instance.InsertAsync(mailList);
+            await DatabaseManager.Instance.EntityRepo.InsertAsync(mailList);
             Log.Info($"创建新邮件列表 RoleId:{roleId}");
         }
 
@@ -50,10 +50,10 @@ public class MailManager
         return mailList;
     }
 
-    /// <summary>保存邮件列表（Write-Behind）</summary>
+    /// <summary>保存邮件列表</summary>
     public async Task SaveMailsAsync(RoleMailList mailList)
     {
-        await EntityFactory.Instance.UpdateAsync(mailList);
+        await DatabaseManager.Instance.EntityRepo.UpdateAsync(mailList);
     }
 
     /// <summary>发送邮件给指定角色</summary>

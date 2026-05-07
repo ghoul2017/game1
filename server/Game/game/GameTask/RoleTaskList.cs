@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Core.Entity;
+using MongoDB.Bson.Serialization.Attributes;
 using ProtoBuf;
 
 namespace Game.Game.GameTask;
@@ -12,6 +13,7 @@ namespace Game.Game.GameTask;
 public class RoleTaskList : IEntity
 {
     [ProtoMember(1)]
+    [BsonId]
     public long Id { get; set; }
 
     /// <summary>当前任务列表</summary>
@@ -20,6 +22,7 @@ public class RoleTaskList : IEntity
 
     /// <summary>运行时索引：taskId → RoleTask（不序列化）</summary>
     [ProtoIgnore]
+    [BsonIgnore]
     private Dictionary<int, RoleTask>? _taskMap;
 
     [ProtoAfterDeserialization]

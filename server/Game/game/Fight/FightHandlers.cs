@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Game.Core.Network;
 using Game.Network;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -6,46 +7,36 @@ using Shared.Common.Protos;
 
 namespace Game.Game.Fight;
 
-/// <summary>
-/// 使用技能 Handler
-/// </summary>
-public class UseSkillHandler : MessageHandler<UseSkillReq>
+public static class FightHandlers
 {
-    private static readonly ILog Log = LogManager.GetLogger<UseSkillHandler>();
+    private static readonly ILog Log = LogManager.GetLogger(nameof(FightHandlers));
 
-    protected override Task<IMessage?> ExecuteAsync(TcpSession session, UseSkillReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static Task<IMessage> UseSkillHandler(TcpSession session, UseSkillReq req, UseSkillAck res)
     {
         if (session.RoleId == 0)
         {
-            return Task.FromResult<IMessage?>(new UseSkillAck { Code = FightErrorCode.NotInFight });
+            res.Code = FightErrorCode.NotInFight;
+            return Task.FromResult<IMessage>(res);
         }
 
         var result = FightManager.Instance.UseSkill(session.RoleId, req.SkillId, req.X, req.Y, req.TargetId);
+        res.Code = result.Code;
 
-        // UseSkillAck 已在 FightManager.UseSkill 中通过广播发送
-        // 这里返回空响应避免客户端超时（部分客户端框架需要 ack）
-        var ack = new UseSkillAck { Code = result.Code };
-        return Task.FromResult<IMessage?>(ack);
+        return Task.FromResult<IMessage>(res);
     }
-}
 
-/// <summary>
-/// 设置PK模式 Handler
-/// </summary>
-public class SetPkModeHandler : MessageHandler<SetPkModeReq>
-{
-    protected override Task<IMessage?> ExecuteAsync(TcpSession session, SetPkModeReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static Task<IMessage> SetPkModeHandler(TcpSession session, SetPkModeReq req, PkModeChangedNtf res)
     {
         if (session.RoleId == 0)
-            return Task.FromResult<IMessage?>(new PkModeChangedNtf());
+            return Task.FromResult<IMessage>(res);
 
-        // 简单验证PK模式范围
         if (req.PkMode < PkMode.Peace || req.PkMode > PkMode.All)
-            return Task.FromResult<IMessage?>(new PkModeChangedNtf());
+            return Task.FromResult<IMessage>(res);
 
-        // 通知玩家PK模式变化
-        var ntf = new PkModeChangedNtf { PkMode = req.PkMode };
+        res.PkMode = req.PkMode;
 
-        return Task.FromResult<IMessage?>(ntf);
+        return Task.FromResult<IMessage>(res);
     }
 }

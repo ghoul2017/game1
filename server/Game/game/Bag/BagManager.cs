@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Game.Core.Entity;
+using Game.Database;
 using Shared.Core.Log;
 
 namespace Game.Game.Bag;
@@ -22,23 +22,23 @@ public class BagManager
 
     private BagManager() { }
 
-    /// <summary>加载角色背包（从实体缓存或数据库）</summary>
+    /// <summary>加载角色背包（从数据库）</summary>
     public async Task<RoleBag> LoadBagAsync(long roleId)
     {
-        var bag = await EntityFactory.Instance.GetAsync<RoleBag>(roleId);
+        var bag = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleBag>(roleId);
         if (bag == null)
         {
             bag = new RoleBag { Id = roleId, Capacity = 100 };
-            await EntityFactory.Instance.InsertAsync(bag);
+            await DatabaseManager.Instance.EntityRepo.InsertAsync(bag);
             Log.Info($"创建新背包 RoleId:{roleId}");
         }
         return bag;
     }
 
-    /// <summary>保存背包（Write-Behind）</summary>
+    /// <summary>保存背包</summary>
     public async Task SaveBagAsync(RoleBag bag)
     {
-        await EntityFactory.Instance.UpdateAsync(bag);
+        await DatabaseManager.Instance.EntityRepo.UpdateAsync(bag);
     }
 
     /// <summary>添加物品（自动找空格或叠加）</summary>

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Game.Core.Entity;
 using Game.Core.Network;
+using Game.Database;
 using Game.Network;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -19,29 +19,32 @@ public class PlayerManager
 
     public static PlayerManager Instance { get; } = new();
 
-    private readonly Dictionary<long, Player> _players = new();           // roleId → Player
-    private readonly Dictionary<long, Player> _playersByUserId = new();   // userId → Player
-    private readonly Dictionary<string, Player> _playersByName = new();   // roleName → Player
+    private readonly Dictionary<long, PlayerEntity> _players = new();           // roleId → PlayerEntity
+    private readonly Dictionary<long, PlayerEntity> _playersByUserId = new();   // userId → PlayerEntity
+    private readonly Dictionary<string, PlayerEntity> _playersByName = new();   // roleName → PlayerEntity
 
     private PlayerManager() { }
 
     /// <summary>玩家上线（登录+选角完成后调用）</summary>
-    public void AddPlayer(Player player)
+    public void AddPlayer(PlayerEntity player)
     {
+        var online = player.Online;
+        var role = player.RoleData.Role;
+
         // 如果已在线，先移除旧的
-        if (_players.TryGetValue(player.RoleId, out var oldPlayer))
+        if (_players.TryGetValue(player.Id, out var oldPlayer))
         {
             RemovePlayerInternal(oldPlayer);
-            Log.Warn($"玩家重复上线，替换旧数据 RoleId:{player.RoleId}");
+            Log.Warn($"玩家重复上线，替换旧数据 RoleId:{player.Id}");
         }
 
-        _players[player.RoleId] = player;
-        _playersByUserId[player.UserId] = player;
-        if (!string.IsNullOrEmpty(player.RoleName))
+        _players[player.Id] = player;
+        _playersByUserId[online.UserId] = player;
+        if (role != null && !string.IsNullOrEmpty(role.Name))
         {
-            _playersByName[player.RoleName] = player;
+            _playersByName[role.Name] = player;
         }
-        Log.Info($"玩家上线 RoleId:{player.RoleId} Name:{player.RoleName}，在线人数: {OnlineCount}");
+        Log.Info($"玩家上线 RoleId:{player.Id}，在线人数: {OnlineCount}");
     }
 
     /// <summary>玩家下线（断线或主动退出时调用）</summary>
@@ -54,30 +57,33 @@ public class PlayerManager
         }
     }
 
-    private void RemovePlayerInternal(Player player)
+    private void RemovePlayerInternal(PlayerEntity player)
     {
-        _players.Remove(player.RoleId);
-        _playersByUserId.Remove(player.UserId);
-        if (!string.IsNullOrEmpty(player.RoleName))
+        var online = player.Online;
+        var role = player.RoleData.Role;
+
+        _players.Remove(player.Id);
+        _playersByUserId.Remove(online.UserId);
+        if (role != null && !string.IsNullOrEmpty(role.Name))
         {
-            _playersByName.Remove(player.RoleName);
+            _playersByName.Remove(role.Name);
         }
     }
 
     /// <summary>按角色ID获取在线玩家</summary>
-    public Player? GetByRoleId(long roleId)
+    public PlayerEntity? GetByRoleId(long roleId)
     {
         return _players.TryGetValue(roleId, out var p) ? p : null;
     }
 
     /// <summary>按用户ID获取在线玩家</summary>
-    public Player? GetByUserId(long userId)
+    public PlayerEntity? GetByUserId(long userId)
     {
         return _playersByUserId.TryGetValue(userId, out var p) ? p : null;
     }
 
     /// <summary>按角色名获取在线玩家</summary>
-    public Player? GetByRoleName(string name)
+    public PlayerEntity? GetByRoleName(string name)
     {
         return _playersByName.TryGetValue(name, out var p) ? p : null;
     }
@@ -92,7 +98,7 @@ public class PlayerManager
     public List<long> GetOnlineRoleIds() => new(_players.Keys);
 
     /// <summary>遍历所有在线玩家</summary>
-    public void ForEachPlayer(Action<Player> action)
+    public void ForEachPlayer(Action<PlayerEntity> action)
     {
         foreach (var player in _players.Values)
         {
@@ -103,9 +109,9 @@ public class PlayerManager
     /// <summary>广播消息给所有在线玩家</summary>
     public void Broadcast(IMessage msg)
     {
-        foreach (Player player in _players.Values)
+        foreach (var player in _players.Values)
         {
-            var session = SessionManager.Instance.GetByUserId(player.UserId);
+            var session = SessionManager.Instance.GetByUserId(player.Online.UserId);
             session?.Send(msg);
         }
     }
@@ -118,13 +124,13 @@ public class PlayerManager
     }
 
     /// <summary>
-    /// 加载角色数据（从实体缓存或数据库）。登录时调用。
+    /// 加载角色数据（从数据库）。登录时调用。
     /// </summary>
     public async Task<Role?> LoadRoleAsync(long roleId)
     {
         try
         {
-            return await EntityFactory.Instance.GetAsync<Role>(roleId);
+            return await DatabaseManager.Instance.EntityRepo.LoadAsync<Role>(roleId);
         }
         catch (Exception ex)
         {
@@ -134,35 +140,37 @@ public class PlayerManager
     }
 
     /// <summary>
-    /// 保存角色数据（Write-Behind）。下线或定时保存时调用。
+    /// 保存角色数据。下线或定时保存时调用。
     /// </summary>
-    public async Task SaveRoleAsync(Player player)
+    public async Task SaveRoleAsync(PlayerEntity player)
     {
-        if (player.RoleData == null) return;
+        var role = player.RoleData.Role;
+        if (role == null) return;
         try
         {
-            await EntityFactory.Instance.UpdateAsync(player.RoleData);
+            await DatabaseManager.Instance.EntityRepo.UpdateAsync(role);
         }
         catch (Exception ex)
         {
-            Log.Error($"保存角色数据失败 RoleId:{player.RoleId}: {ex.Message}");
+            Log.Error($"保存角色数据失败 RoleId:{player.Id}: {ex.Message}");
         }
     }
 
-    /// <summary>保存所有在线角色（Write-Behind，停服时用 immediately=true）</summary>
-    public async Task SaveAllRolesAsync(bool immediately = false)
+    /// <summary>保存所有在线角色</summary>
+    public async Task SaveAllRolesAsync()
     {
         foreach (var player in _players.Values)
         {
-            if (player.RoleData != null)
+            var role = player.RoleData.Role;
+            if (role != null)
             {
                 try
                 {
-                    await EntityFactory.Instance.UpdateAsync(player.RoleData, immediately);
+                    await DatabaseManager.Instance.EntityRepo.UpdateAsync(role);
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"保存角色数据失败 RoleId:{player.RoleId}: {ex.Message}");
+                    Log.Error($"保存角色数据失败 RoleId:{player.Id}: {ex.Message}");
                 }
             }
         }

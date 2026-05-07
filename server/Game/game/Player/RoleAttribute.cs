@@ -1,16 +1,18 @@
 using Game.Core.Entity;
+using MongoDB.Bson.Serialization.Attributes;
 using ProtoBuf;
 
 namespace Game.Game.Player;
 
 /// <summary>
 /// 角色战斗属性实体。存储角色的战斗相关属性（HP/MP/攻击/防御等）。
-/// 对应数据库表: p_role_attribute (id, data)
+/// 对应 MongoDB 集合: role_attribute
 /// </summary>
 [ProtoContract]
 public class RoleAttribute : IEntity
 {
     [ProtoMember(1)]
+    [BsonId]
     public long Id { get; set; }
 
     /// <summary>当前HP</summary>

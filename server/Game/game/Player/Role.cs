@@ -1,16 +1,18 @@
 using Game.Core.Entity;
+using MongoDB.Bson.Serialization.Attributes;
 using ProtoBuf;
 
 namespace Game.Game.Player;
 
 /// <summary>
 /// 角色持久化实体。存储角色的持久化数据。
-/// 对应数据库表: p_role (id, data)
+/// 对应 MongoDB 集合: role
 /// </summary>
 [ProtoContract]
 public class Role : IEntity
 {
     [ProtoMember(1)]
+    [BsonId]
     public long Id { get; set; }
 
     /// <summary>所属用户ID</summary>

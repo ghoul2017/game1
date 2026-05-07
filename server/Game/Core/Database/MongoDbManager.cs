@@ -36,4 +36,9 @@ public class MongoDbManager
         return _database.GetCollection<T>(name ?? typeof(T).Name);
     }
 
+    public IMongoDatabase GetDatabase()
+    {
+        if (_database == null) throw new InvalidOperationException("MongoDb 未初始化");
+        return _database;
+    }
 }

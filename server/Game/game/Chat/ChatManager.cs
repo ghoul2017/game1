@@ -81,7 +81,7 @@ public class ChatManager
                     Content = content,
                     SendTime = now,
                 };
-                return (ChatErrorCode.Ok, privateNtf, targetPlayer.RoleId);
+                return (ChatErrorCode.Ok, privateNtf, targetPlayer.Id);
 
             default:
                 return (ChatErrorCode.InvalidChannel, null, 0);

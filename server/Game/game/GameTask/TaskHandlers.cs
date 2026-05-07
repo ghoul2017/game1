@@ -1,22 +1,21 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Game.Core.Network;
 using Game.Game.Player;
 using Game.Network;
-using Shared.Common.Protos;
 using Shared.Core.Log;
 using Shared.Core.Network;
+using Shared.Common.Protos;
 
 namespace Game.Game.GameTask;
 
-/// <summary>
-/// 查询任务列表 Handler
-/// </summary>
-public class QueryTaskListHandler : MessageHandler<QueryTaskListReq>
+public static class TaskHandlers
 {
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, QueryTaskListReq req)
-    {
-        var res = new QueryTaskListAck();
+    private static readonly ILog Log = LogManager.GetLogger(nameof(TaskHandlers));
 
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> QueryTaskListHandler(TcpSession session, QueryTaskListReq req, QueryTaskListAck res)
+    {
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -24,7 +23,7 @@ public class QueryTaskListHandler : MessageHandler<QueryTaskListReq>
             return res;
         }
 
-        var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
+        var taskList = await TaskManager.Instance.LoadTasksAsync(player.Id);
         var tasks = TaskManager.Instance.GetTaskList(taskList);
 
         res.Code = TaskErrorCode.Ok;
@@ -32,19 +31,10 @@ public class QueryTaskListHandler : MessageHandler<QueryTaskListReq>
 
         return res;
     }
-}
 
-/// <summary>
-/// 接取任务 Handler
-/// </summary>
-public class TaskAcceptHandler : MessageHandler<TaskAcceptReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<TaskAcceptHandler>();
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, TaskAcceptReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> TaskAcceptHandler(TcpSession session, TaskAcceptReq req, TaskAcceptAck res)
     {
-        var res = new TaskAcceptAck();
-
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -52,7 +42,7 @@ public class TaskAcceptHandler : MessageHandler<TaskAcceptReq>
             return res;
         }
 
-        var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
+        var taskList = await TaskManager.Instance.LoadTasksAsync(player.Id);
         var result = TaskManager.Instance.AcceptTask(taskList, req.TaskId);
 
         if (result.Success)
@@ -67,19 +57,10 @@ public class TaskAcceptHandler : MessageHandler<TaskAcceptReq>
 
         return res;
     }
-}
 
-/// <summary>
-/// 提交任务（领奖）Handler
-/// </summary>
-public class TaskSubmitHandler : MessageHandler<TaskSubmitReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<TaskSubmitHandler>();
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, TaskSubmitReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> TaskSubmitHandler(TcpSession session, TaskSubmitReq req, TaskSubmitAck res)
     {
-        var res = new TaskSubmitAck();
-
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -87,7 +68,7 @@ public class TaskSubmitHandler : MessageHandler<TaskSubmitReq>
             return res;
         }
 
-        var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
+        var taskList = await TaskManager.Instance.LoadTasksAsync(player.Id);
         var result = await TaskManager.Instance.SubmitTaskAsync(taskList, session.RoleId, req.TaskId);
 
         if (result.Success)
@@ -101,19 +82,10 @@ public class TaskSubmitHandler : MessageHandler<TaskSubmitReq>
 
         return res;
     }
-}
 
-/// <summary>
-/// 放弃任务 Handler
-/// </summary>
-public class TaskGiveUpHandler : MessageHandler<TaskGiveUpReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<TaskGiveUpHandler>();
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, TaskGiveUpReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> TaskGiveUpHandler(TcpSession session, TaskGiveUpReq req, TaskGiveUpAck res)
     {
-        var res = new TaskGiveUpAck();
-
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -121,7 +93,7 @@ public class TaskGiveUpHandler : MessageHandler<TaskGiveUpReq>
             return res;
         }
 
-        var taskList = await TaskManager.Instance.LoadTasksAsync(player.RoleId);
+        var taskList = await TaskManager.Instance.LoadTasksAsync(player.Id);
         var result = TaskManager.Instance.GiveUpTask(taskList, req.TaskId);
 
         if (result.Success)

@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Game.Core.Network;
 using Game.Game.Player;
 using Game.Network;
 using Shared.Core.Log;
@@ -8,17 +9,13 @@ using Shared.Common.Protos;
 
 namespace Game.Game.Mail;
 
-/// <summary>
-/// 查询邮件列表 Handler
-/// </summary>
-public class QueryMailListHandler : MessageHandler<QueryMailListReq>
+public static class MailHandlers
 {
-    private static readonly ILog Log = LogManager.GetLogger<QueryMailListHandler>();
+    private static readonly ILog Log = LogManager.GetLogger(nameof(MailHandlers));
 
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, QueryMailListReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> QueryMailListHandler(TcpSession session, QueryMailListReq req, QueryMailListAck res)
     {
-        var res = new QueryMailListAck();
-
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -26,7 +23,7 @@ public class QueryMailListHandler : MessageHandler<QueryMailListReq>
             return res;
         }
 
-        var mailList = await MailManager.Instance.LoadMailsAsync(player.RoleId);
+        var mailList = await MailManager.Instance.LoadMailsAsync(player.Id);
         var mails = MailManager.Instance.GetMailList(mailList);
 
         res.Code = MailErrorCode.Ok;
@@ -34,17 +31,10 @@ public class QueryMailListHandler : MessageHandler<QueryMailListReq>
 
         return res;
     }
-}
 
-/// <summary>
-/// 标记邮件已读 Handler
-/// </summary>
-public class MailReadHandler : MessageHandler<MailReadReq>
-{
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, MailReadReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> MailReadHandler(TcpSession session, MailReadReq req, MailReadAck res)
     {
-        var res = new MailReadAck();
-
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -52,7 +42,7 @@ public class MailReadHandler : MessageHandler<MailReadReq>
             return res;
         }
 
-        var mailList = await MailManager.Instance.LoadMailsAsync(player.RoleId);
+        var mailList = await MailManager.Instance.LoadMailsAsync(player.Id);
         var result = MailManager.Instance.MarkRead(mailList, req.MailIds);
 
         if (result.Changed)
@@ -65,19 +55,10 @@ public class MailReadHandler : MessageHandler<MailReadReq>
 
         return res;
     }
-}
 
-/// <summary>
-/// 领取邮件附件 Handler
-/// </summary>
-public class MailGetItemHandler : MessageHandler<MailGetItemReq>
-{
-    private static readonly ILog Log = LogManager.GetLogger<MailGetItemHandler>();
-
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, MailGetItemReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> MailGetItemHandler(TcpSession session, MailGetItemReq req, MailGetItemAck res)
     {
-        var res = new MailGetItemAck();
-
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -85,7 +66,7 @@ public class MailGetItemHandler : MessageHandler<MailGetItemReq>
             return res;
         }
 
-        var mailList = await MailManager.Instance.LoadMailsAsync(player.RoleId);
+        var mailList = await MailManager.Instance.LoadMailsAsync(player.Id);
         var result = await MailManager.Instance.ClaimAttachmentsAsync(mailList, req.MailIds);
 
         res.Code = MailErrorCode.Ok;
@@ -103,17 +84,10 @@ public class MailGetItemHandler : MessageHandler<MailGetItemReq>
 
         return res;
     }
-}
 
-/// <summary>
-/// 删除邮件 Handler
-/// </summary>
-public class MailDeleteHandler : MessageHandler<MailDeleteReq>
-{
-    protected override async Task<IMessage?> ExecuteAsync(TcpSession session, MailDeleteReq req)
+    [MessageHandler(typeof(RpcMethodHandler))]
+    public static async Task<IMessage> MailDeleteHandler(TcpSession session, MailDeleteReq req, MailDeleteAck res)
     {
-        var res = new MailDeleteAck();
-
         var player = PlayerManager.Instance.GetByRoleId(session.RoleId);
         if (player == null)
         {
@@ -121,7 +95,7 @@ public class MailDeleteHandler : MessageHandler<MailDeleteReq>
             return res;
         }
 
-        var mailList = await MailManager.Instance.LoadMailsAsync(player.RoleId);
+        var mailList = await MailManager.Instance.LoadMailsAsync(player.Id);
         var result = MailManager.Instance.DeleteMails(mailList, req.MailIds);
 
         if (result.Changed)

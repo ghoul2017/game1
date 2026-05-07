@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Game.Core;
 
@@ -30,4 +31,10 @@ public sealed class ShutdownToken
 
     /// <summary>触发关闭信号</summary>
     public void Cancel() => _cts.Cancel();
+
+    /// <summary>等待关闭信号</summary>
+    public Task WaitForShutdownAsync()
+    {
+        return Task.Delay(Timeout.Infinite, _cts.Token).ContinueWith(_ => { });
+    }
 }
