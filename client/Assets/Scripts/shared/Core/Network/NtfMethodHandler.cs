@@ -38,12 +38,12 @@ namespace Client.Network
         public override async Task<IMessage?> HandleAsync(TcpSession session, byte[] payload)
         {
             // 反序列化请求
-            object req;
+            object ntf;
             using (var ms = new MemoryStream(payload))
-                req = Serializer.NonGeneric.Deserialize(_ntfType, ms);
+                ntf = Serializer.NonGeneric.Deserialize(_ntfType, ms);
 
             // 调用扩展方法
-            var task = (Task)_method.Invoke(null, new object[] { session, req })!;
+            var task = (Task)_method.Invoke(null, new object[] { session, ntf })!;
             await task;
 
             // 无响应
