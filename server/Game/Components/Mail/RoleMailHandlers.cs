@@ -13,16 +13,9 @@ public static class RoleMailHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(RoleMailHandlers));
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> QueryMailListHandler(TcpSession session, QueryMailListReq req, QueryMailListAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> QueryMailListHandler(PlayerEntity player, QueryMailListReq req, QueryMailListAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = MailErrorCode.InvalidParam;
-            return res;
-        }
-
         var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var mails = player.RoleMail.GetMailList();
 
@@ -32,16 +25,9 @@ public static class RoleMailHandlers
         return res;
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> MailReadHandler(TcpSession session, MailReadReq req, MailReadAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> MailReadHandler(PlayerEntity player, MailReadReq req, MailReadAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = MailErrorCode.InvalidParam;
-            return res;
-        }
-
         var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var result = player.RoleMail.MarkRead(req.MailIds);
 
@@ -56,16 +42,9 @@ public static class RoleMailHandlers
         return res;
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> MailGetItemHandler(TcpSession session, MailGetItemReq req, MailGetItemAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> MailGetItemHandler(PlayerEntity player, MailGetItemReq req, MailGetItemAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = MailErrorCode.InvalidParam;
-            return res;
-        }
-
         var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var result = await player.RoleMail.ClaimAttachmentsAsync(req.MailIds);
 
@@ -79,22 +58,15 @@ public static class RoleMailHandlers
 
         if (result.Success)
         {
-            Log.Info($"领取邮件附件 RoleId:{session.RoleId} Count:{result.Items.Count}");
+            Log.Info($"领取邮件附件 RoleId:{player.Id} Count:{result.Items.Count}");
         }
 
         return res;
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> MailDeleteHandler(TcpSession session, MailDeleteReq req, MailDeleteAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> MailDeleteHandler(PlayerEntity player, MailDeleteReq req, MailDeleteAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = MailErrorCode.InvalidParam;
-            return res;
-        }
-
         var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var result = player.RoleMail.DeleteMails(req.MailIds);
 

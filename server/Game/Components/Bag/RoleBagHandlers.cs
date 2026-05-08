@@ -13,16 +13,9 @@ public static class RoleBagHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(RoleBagHandlers));
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> QueryBagHandler(TcpSession session, QueryBagReq req, QueryBagAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> QueryBagHandler(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = ErrorCode.InvalidParam;
-            return res;
-        }
-
         var bag = await player.RoleBag.LoadBagAsync(player.Id);
         res.Code = ErrorCode.Ok;
         res.Capacity = bag.Capacity;
@@ -31,16 +24,9 @@ public static class RoleBagHandlers
         return res;
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> BagTidyHandler(TcpSession session, BagTidyReq req, BagTidyAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> BagTidyHandler(PlayerEntity player, BagTidyReq req, BagTidyAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = ErrorCode.InvalidParam;
-            return res;
-        }
-
         var bag = await player.RoleBag.LoadBagAsync(player.Id);
         player.RoleBag.Tidy();
         await player.RoleBag.SaveBagAsync();
@@ -51,16 +37,9 @@ public static class RoleBagHandlers
         return res;
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> BagSwapHandler(TcpSession session, BagSwapReq req, BagSwapAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> BagSwapHandler(PlayerEntity player, BagSwapReq req, BagSwapAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = ErrorCode.InvalidParam;
-            return res;
-        }
-
         var bag = await player.RoleBag.LoadBagAsync(player.Id);
         player.RoleBag.Swap(req.Index1, req.Index2);
         await player.RoleBag.SaveBagAsync();
@@ -69,16 +48,9 @@ public static class RoleBagHandlers
         return res;
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static async Task<IMessage> BagUseItemHandler(TcpSession session, BagUseItemReq req, BagUseItemAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static async Task<IMessage> BagUseItemHandler(PlayerEntity player, BagUseItemReq req, BagUseItemAck res)
     {
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = ErrorCode.InvalidParam;
-            return res;
-        }
-
         var bag = await player.RoleBag.LoadBagAsync(player.Id);
 
         var bagItem = bag.GetByIndex(req.Index);
@@ -98,7 +70,7 @@ public static class RoleBagHandlers
         if (configId < 2001 || configId > 2999)
         {
             res.Code = ErrorCode.ItemUseFail;
-            Log.Warn($"非消耗品不能直接使用 RoleId:{session.RoleId} ConfigId:{configId}");
+            Log.Warn($"非消耗品不能直接使用 RoleId:{player.Id} ConfigId:{configId}");
             return res;
         }
 
@@ -111,12 +83,12 @@ public static class RoleBagHandlers
 
         await player.RoleBag.SaveBagAsync();
 
-        var effectResult = await ItemEffectSystem.ApplyItemEffectAsync(session.RoleId, configId);
+        var effectResult = await ItemEffectSystem.ApplyItemEffectAsync(player.Id, configId);
 
         res.Code = ErrorCode.Ok;
         res.ConfigId = configId;
 
-        Log.Info($"使用物品 RoleId:{session.RoleId} ConfigId:{configId} Count:{req.Count} EffectType:{effectResult.EffectType}");
+        Log.Info($"使用物品 RoleId:{player.Id} ConfigId:{configId} Count:{req.Count} EffectType:{effectResult.EffectType}");
         return res;
     }
 

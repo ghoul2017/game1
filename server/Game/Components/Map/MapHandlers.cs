@@ -15,24 +15,11 @@ public static class MapHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(MapHandlers));
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static Task<IMessage> EnterMapHandler(TcpSession session, EnterMapReq req, EnterMapAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static Task<IMessage> EnterMapHandler(PlayerEntity player, EnterMapReq req, EnterMapAck res)
     {
-        if (session.RoleId == 0)
-        {
-            res.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage>(res);
-        }
-
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage>(res);
-        }
-
         // 检查是否已在地图中（重进：返回当前位置）
-        var currentPos = Context.Map.GetPlayerPosition(session.RoleId);
+        var currentPos = Context.Map.GetPlayerPosition(player.Id);
         if (currentPos != null)
         {
             var (mapId, line, px, py) = currentPos.Value;
@@ -41,12 +28,12 @@ public static class MapHandlers
             res.Line = line;
             res.X = px;
             res.Y = py;
-            session.Send(res);
+            player.Online.Session.Send(res);
             // 重新发送视野内对象
             var currentMap = Context.Map.GetMap(mapId, line);
             if (currentMap != null)
-                SendVisibleObjects(session.RoleId, currentMap, px, py);
-            Log.Info($"玩家重进地图 RoleId:{session.RoleId} MapId:{mapId}");
+                SendVisibleObjects(player.Id, currentMap, px, py);
+            Log.Info($"玩家重进地图 RoleId:{player.Id} MapId:{mapId}");
             return Task.FromResult<IMessage>(null!);
         }
 
@@ -61,7 +48,7 @@ public static class MapHandlers
         int x = map.BirthX;
         int y = map.BirthY;
 
-        if (!Context.Map.EnterMap(session.RoleId, player.RoleData.Role?.Name ?? "", req.MapCfgId, req.Line, x, y))
+        if (!Context.Map.EnterMap(player.Id, player.RoleData.Role?.Name ?? "", req.MapCfgId, req.Line, x, y))
         {
             res.Code = MapErrorCode.MapNotFound;
             return Task.FromResult<IMessage>(res);
@@ -73,30 +60,24 @@ public static class MapHandlers
         res.X = x;
         res.Y = y;
 
-        session.Send(res);
-        SendVisibleObjects(session.RoleId, map, x, y);
+        player.Online.Session.Send(res);
+        SendVisibleObjects(player.Id, map, x, y);
 
         EventBus.Instance.Publish(new EventType.PlayerEnterMapEvent
         {
-            RoleId = session.RoleId,
+            RoleId = player.Id,
             MapCfgId = req.MapCfgId,
             Line = req.Line,
         });
 
-        Log.Info($"玩家进入地图 RoleId:{session.RoleId} MapId:{req.MapCfgId}");
+        Log.Info($"玩家进入地图 RoleId:{player.Id} MapId:{req.MapCfgId}");
         return Task.FromResult<IMessage>(null!);
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static Task<IMessage> LeaveMapHandler(TcpSession session, LeaveMapReq req, LeaveMapAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static Task<IMessage> LeaveMapHandler(PlayerEntity player, LeaveMapReq req, LeaveMapAck res)
     {
-        if (session.RoleId == 0)
-        {
-            res.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage>(res);
-        }
-
-        if (!Context.Map.QuitMap(session.RoleId))
+        if (!Context.Map.QuitMap(player.Id))
         {
             res.Code = MapErrorCode.NotInMap;
             return Task.FromResult<IMessage>(res);
@@ -106,22 +87,9 @@ public static class MapHandlers
         return Task.FromResult<IMessage>(res);
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static Task<IMessage> ChangeMapHandler(TcpSession session, ChangeMapReq req, ChangeMapAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static Task<IMessage> ChangeMapHandler(PlayerEntity player, ChangeMapReq req, ChangeMapAck res)
     {
-        if (session.RoleId == 0)
-        {
-            res.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage>(res);
-        }
-
-        var player = Context.Players.GetByRoleId(session.RoleId);
-        if (player == null)
-        {
-            res.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage>(res);
-        }
-
         var targetMap = Context.Map.GetMap(req.TargetMapCfgId, req.TargetLine);
         if (targetMap == null)
         {
@@ -132,7 +100,7 @@ public static class MapHandlers
         int x = req.X > 0 ? req.X : targetMap.BirthX;
         int y = req.Y > 0 ? req.Y : targetMap.BirthY;
 
-        if (!Context.Map.ChangeMap(session.RoleId, player.RoleData.Role?.Name ?? "", req.TargetMapCfgId, req.TargetLine, x, y))
+        if (!Context.Map.ChangeMap(player.Id, player.RoleData.Role?.Name ?? "", req.TargetMapCfgId, req.TargetLine, x, y))
         {
             res.Code = MapErrorCode.MapNotFound;
             return Task.FromResult<IMessage>(res);
@@ -144,13 +112,13 @@ public static class MapHandlers
         res.X = x;
         res.Y = y;
 
-        session.Send(res);
+        player.Online.Session.Send(res);
 
         var objects = targetMap.GetObjectsInRange(x, y, 4);
         var ntf = new MapObjectsNtf
         {
             Objects = objects
-                .Where(o => o.ObjectId != session.RoleId)
+                .Where(o => o.ObjectId != player.Id)
                 .Select(o => new MapObjectInfo
                 {
                     ObjectId = o.ObjectId,
@@ -163,23 +131,17 @@ public static class MapHandlers
 
         if (ntf.Objects.Count > 0)
         {
-            session.Send(ntf);
+            player.Online.Session.Send(ntf);
         }
 
-        Log.Info($"玩家切图 RoleId:{session.RoleId} → MapId:{req.TargetMapCfgId}");
+        Log.Info($"玩家切图 RoleId:{player.Id} → MapId:{req.TargetMapCfgId}");
         return Task.FromResult<IMessage>(null!);
     }
 
-    [MessageHandler(typeof(RpcMethodHandler))]
-    public static Task<IMessage> MapMoveHandler(TcpSession session, MapMoveReq req, MapMoveAck res)
+    [MessageHandler(typeof(PlayerRpcMethodHandler))]
+    public static Task<IMessage> MapMoveHandler(PlayerEntity player, MapMoveReq req, MapMoveAck res)
     {
-        if (session.RoleId == 0)
-        {
-            res.Code = MapErrorCode.NotLoggedIn;
-            return Task.FromResult<IMessage>(res);
-        }
-
-        if (!Context.Map.Move(session.RoleId, req.X, req.Y))
+        if (!Context.Map.Move(player.Id, req.X, req.Y))
         {
             res.Code = MapErrorCode.NotInMap;
             return Task.FromResult<IMessage>(res);
