@@ -6,7 +6,6 @@ using Game.Core;
 using Game.Core.Network;
 using Game.Database;
 using Game.Database.MongoDb.Repositories;
-using Game.Network;
 using Shared.Common.Protos;
 using Shared.Core.Event;
 using Shared.Core.Log;
@@ -83,7 +82,7 @@ public static class UserHandler
         userComponent.Users.Add(user.Id, user);
         userComponent.Usernames.Add(user.Username, user);
         // 绑定会话
-        session.UserId = user.Id;
+        Context.Network.BindUser(session, user.Id);
         user.SessionId = session.SessionId;
 
         // 生成重连 Token
@@ -231,7 +230,7 @@ public static class UserHandler
         }
 
         // 绑定角色到会话
-        SessionManager.Instance.BindRole(session, role.Id);
+        Context.Network.BindRole(session, role.Id);
 
         // 更新重连Token（包含roleId）
         if (!string.IsNullOrEmpty(session.ReconnectToken))
@@ -293,7 +292,7 @@ public static class UserHandler
         if (req.RoleId > 0) roleId = req.RoleId;
 
         // 绑定会话
-        session.UserId = userId;
+        Context.Network.BindUser(session, userId);
 
         res.Code = 0;
         res.Message = "OK";
@@ -304,7 +303,7 @@ public static class UserHandler
             var role = await Context.Players.LoadRoleAsync(roleId);
             if (role != null && role.UserId == userId)
             {
-                SessionManager.Instance.BindRole(session, role.Id);
+                Context.Network.BindRole(session, role.Id);
 
                 var player = PlayerEntity.Create(role.Id, userId, role);
 

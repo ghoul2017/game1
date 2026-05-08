@@ -5,7 +5,6 @@ using Game.Components.Map;
 using Game.Components.Player;
 using Game.Core;
 using Game.Entities;
-using Game.Network;
 using Shared.Common.Config;
 using Shared.Common.Protos;
 using Shared.Core.Event;

@@ -1,6 +1,5 @@
 using Game.Components.Player;
 using Game.Components.Chat;
-using Game.Network;
 using Shared.Common.Protos;
 using Shared.Core.Log;
 using System;

@@ -50,6 +50,16 @@ public static class AppStart
 
         // 添加所有 Component 到根实体
         var networkComponent = Context.Server.AddComponent<NetworkComponent>();
+        networkComponent.SessionDisconnected = session =>
+        {
+            var player = Context.Players.GetByRoleId(session.RoleId);
+            if (player != null)
+            {
+                _ = Context.Players.SaveRoleAsync(player);
+                Context.Players.RemovePlayer(session.RoleId);
+                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId });
+            }
+        };
         EventBus.Instance.Publish(new EventType.ServerInitEvent());
         Context.Server.AddComponent<PlayerComponent>();
         Context.Server.AddComponent<FightComponent>();

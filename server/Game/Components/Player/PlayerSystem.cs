@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Game.Core.Network;
 using Game.Database;
-using Game.Network;
 using Shared.Core.Log;
 using Shared.Core.Network;
 
@@ -94,14 +93,14 @@ public static class PlayerSystem
     {
         foreach (var player in self.Players.Values)
         {
-            var session = SessionManager.Instance.GetByUserId(player.Online.UserId);
+            var session = Context.Network.GetByUserId(player.Online.UserId);
             session?.Send(msg);
         }
     }
 
     public static void SendToPlayer(this PlayerComponent self, long roleId, IMessage msg)
     {
-        var session = SessionManager.Instance.GetByRoleId(roleId);
+        var session = Context.Network.GetByRoleId(roleId);
         session?.Send(msg);
     }
 

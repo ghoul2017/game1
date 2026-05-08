@@ -8,7 +8,6 @@ using Game.Components.Map;
 using Game.Components.Player;
 using Game.Config;
 using Game.Core;
-using Game.Network;
 using Shared.Common.Config;
 using Shared.Common.Protos;
 using Shared.Core.Event;

@@ -4,6 +4,7 @@ using Game.Components.Map;
 using Game.Components.Monster;
 using Game.Components.Player;
 using Game.Core;
+using Game.Core.Network;
 using Game.Entities;
 
 namespace Game;
@@ -13,6 +14,7 @@ public static class Context
     public static Module Server = new();
     public static AppConfig Config = null!;
 
+    public static NetworkComponent Network => Server.GetComponent<NetworkComponent>();
     public static PlayerComponent Players => Server.GetComponent<PlayerComponent>();
     public static FightComponent Fight => Server.GetComponent<FightComponent>();
     public static ChatComponent Chat => Server.GetComponent<ChatComponent>();

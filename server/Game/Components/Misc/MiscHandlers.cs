@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Game.Core.Network;
-using Game.Network;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Shared.Common.Protos;
