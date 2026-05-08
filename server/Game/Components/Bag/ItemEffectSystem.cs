@@ -31,6 +31,7 @@ public static class ItemEffectSystem
     /// </summary>
     public static async Task<ItemUseResult> ApplyItemEffectAsync(long roleId, int configId)
     {
+        await Task.CompletedTask;
         var result = new ItemUseResult();
 
         var player = Context.Players.GetByRoleId(roleId);

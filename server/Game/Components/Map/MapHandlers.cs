@@ -28,7 +28,7 @@ public static class MapHandlers
             res.Line = line;
             res.X = px;
             res.Y = py;
-            player.Online.Session.Send(res);
+            player.Online.Session?.Send(res);
             // 重新发送视野内对象
             var currentMap = Context.Map.GetMap(mapId, line);
             if (currentMap != null)
@@ -60,7 +60,7 @@ public static class MapHandlers
         res.X = x;
         res.Y = y;
 
-        player.Online.Session.Send(res);
+        player.Online.Session?.Send(res);
         SendVisibleObjects(player.Id, map, x, y);
 
         EventBus.Instance.Publish(new EventType.PlayerEnterMapEvent
@@ -112,7 +112,7 @@ public static class MapHandlers
         res.X = x;
         res.Y = y;
 
-        player.Online.Session.Send(res);
+        player.Online.Session?.Send(res);
 
         var objects = targetMap.GetObjectsInRange(x, y, 4);
         var ntf = new MapObjectsNtf
@@ -131,7 +131,7 @@ public static class MapHandlers
 
         if (ntf.Objects.Count > 0)
         {
-            player.Online.Session.Send(ntf);
+            player.Online.Session?.Send(ntf);
         }
 
         Log.Info($"玩家切图 RoleId:{player.Id} → MapId:{req.TargetMapCfgId}");
