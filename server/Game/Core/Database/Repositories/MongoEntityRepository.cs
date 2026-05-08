@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Game.Core.Entity;
+using Game.Core.Database;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;

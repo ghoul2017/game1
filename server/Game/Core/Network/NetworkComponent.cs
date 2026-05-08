@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Game.Components.User;
+using Shared.Common.Enums;
 using Shared.Core.ECS;
 using Shared.Core.Log;
 using Shared.Common.Protos;

@@ -1,4 +1,4 @@
-using Game.Core.Entity;
+using Game.Core.Database;
 using MongoDB.Bson.Serialization.Attributes;
 using ProtoBuf;
 

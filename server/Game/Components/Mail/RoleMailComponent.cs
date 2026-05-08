@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Game.Components.Player;
-using Game.Core.Entity;
+using Game.Core.Database;
 using MongoDB.Bson.Serialization.Attributes;
 using Shared.Core.ECS;
 

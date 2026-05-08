@@ -26,6 +26,9 @@
 
     <ItemGroup>
         <Compile Include="..\..\client\Assets\Scripts\Shared\**\*.cs" />
+        <Compile Update="..\..\client\Assets\Scripts\Shared\Common\Enums\LogoutReason.cs">
+          <Link>Common\Enums\LogoutReason.cs</Link>
+        </Compile>
     </ItemGroup>
 
 </Project>
