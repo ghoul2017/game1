@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Game.Components.User;
 using Game.Core;
 using Game.Core.Database;
 using MongoDB.Bson;
@@ -35,7 +36,6 @@ public class MongoDb
         await _client.ListDatabaseNamesAsync();
 
         // 创建索引
-        await EnsureIndexAsync<PlayerAccount>(p => p.Username, unique: true);
         await EnsureIndexAsync<UserRole>(r => r.UserId);
         await EnsureIndexAsync<UserRole>(r => r.Name, unique: true);
 
@@ -84,43 +84,43 @@ public class MongoDb
 
     #region 条件查询（非 IEntity 也可用）
 
-    public async Task<List<T>> QueryAsync<T>(Expression<Func<T, bool>> filter, string? collectionName = null)
+    public async Task<List<T>> QueryAsync<T>(Expression<Func<T, bool>> filter)
     {
-        var collection = GetCollection<T>(collectionName);
+        var collection = GetTypedCollection<T>();
         return await collection.Find(filter).ToListAsync();
     }
 
-    public async Task<T?> QueryFirstOrDefaultAsync<T>(Expression<Func<T, bool>> filter, string? collectionName = null)
+    public async Task<T?> QueryFirstOrDefaultAsync<T>(Expression<Func<T, bool>> filter)
     {
-        var collection = GetCollection<T>(collectionName);
+        var collection = GetTypedCollection<T>();
         return await collection.Find(filter).FirstOrDefaultAsync();
     }
 
-    public async Task<bool> AnyAsync<T>(Expression<Func<T, bool>> filter, string? collectionName = null)
+    public async Task<bool> AnyAsync<T>(Expression<Func<T, bool>> filter)
     {
-        var collection = GetCollection<T>(collectionName);
+        var collection = GetTypedCollection<T>();
         return await collection.Find(filter).AnyAsync();
     }
 
     #endregion
 
-    #region 直接操作指定集合
+    #region 非 IEntity 直接操作
 
-    public async Task InsertDirectAsync<T>(string collectionName, T document)
+    public async Task SaveAsync<T>(T document) where T : notnull
     {
-        var collection = GetCollection<T>(collectionName);
+        var collection = GetTypedCollection<T>();
         await collection.InsertOneAsync(document);
     }
 
-    public async Task UpdateDirectAsync<T>(string collectionName, Expression<Func<T, bool>> filter, T document)
+    public async Task ReplaceAsync<T>(Expression<Func<T, bool>> filter, T document) where T : notnull
     {
-        var collection = GetCollection<T>(collectionName);
+        var collection = GetTypedCollection<T>();
         await collection.ReplaceOneAsync(filter, document);
     }
 
-    public async Task DeleteDirectAsync<T>(string collectionName, Expression<Func<T, bool>> filter)
+    public async Task RemoveAsync<T>(Expression<Func<T, bool>> filter) where T : notnull
     {
-        var collection = GetCollection<T>(collectionName);
+        var collection = GetTypedCollection<T>();
         await collection.DeleteOneAsync(filter);
     }
 
@@ -128,9 +128,9 @@ public class MongoDb
 
     #region 索引
 
-    public async Task EnsureIndexAsync<T>(Expression<Func<T, object>> field, bool unique = false, string? collectionName = null)
+    public async Task EnsureIndexAsync<T>(Expression<Func<T, object>> field, bool unique = false)
     {
-        var collection = GetCollection<T>(collectionName);
+        var collection = GetTypedCollection<T>();
         await collection.Indexes.CreateOneAsync(
             new CreateIndexModel<T>(Builders<T>.IndexKeys.Ascending(field),
                 new CreateIndexOptions { Unique = unique }));
@@ -150,6 +150,12 @@ public class MongoDb
     {
         if (_database == null) throw new InvalidOperationException("MongoDb 未初始化");
         return _database.GetCollection<T>(name ?? typeof(T).Name);
+    }
+
+    private IMongoCollection<T> GetTypedCollection<T>()
+    {
+        if (_database == null) throw new InvalidOperationException("MongoDb 未初始化");
+        return _database.GetCollection<T>(ConvertToUnderscore(typeof(T).Name));
     }
 
     private static void InvokeAfterDeserialize<T>(T entity) where T : class, IEntity

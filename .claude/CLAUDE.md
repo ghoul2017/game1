@@ -105,7 +105,7 @@ server/Game/
     ShutdownToken.cs    # 统一关闭信号
     TokenStore.cs       # 内存 Token 存储
     Aoi/                # TowerAoi, Tower, IAoiObject, IAoiEventListener
-    Database/           # MongoDb (统一入口), IEntity, PlayerAccount, UserRole
+    Database/           # MongoDb (统一入口), IEntity
     Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener
     Network/            # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler

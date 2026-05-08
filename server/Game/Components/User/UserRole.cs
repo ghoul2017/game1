@@ -1,6 +1,6 @@
-namespace Game.Database;
+namespace Game.Components.User;
 
-/// <summary>角色索引记录（MongoDB 文档映射）</summary>
+/// <summary>角色索引记录（MongoDB 文档映射，集合名 user_role）</summary>
 public class UserRole
 {
     /// <summary>_id = roleId</summary>
