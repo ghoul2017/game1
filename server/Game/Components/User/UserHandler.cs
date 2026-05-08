@@ -11,6 +11,7 @@ using Game.Database;
 using Game.Database.MongoDb.Repositories;
 using Game.Network;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using PlayerAccount = Game.Database.MongoDb.Repositories.PlayerAccount;
@@ -21,13 +22,19 @@ public static class UserHandler
 {
     private static readonly ILog Log = LogManager.GetLogger<UserComponent>();
 
+    [EventSubscriber]
+    public static void ServerInitEvent(EventType.ServerInitEvent e)
+    {
+        Context.Server.AddComponent<UserComponent>();
+    }
+
     /// <summary>
     /// 登录处理。验证账号 → 自动注册 → BindUser → 生成重连Token。
     /// </summary>
     [MessageHandler(typeof(RpcMethodHandler))]
     public static async Task<IMessage> LoginHandler(TcpSession session, LoginReq req, LoginRes res)
     {
-        UserComponent userComponent =Context.Server.GetComponent<UserComponent>();
+        UserComponent userComponent = Context.Server.GetComponent<UserComponent>();
         var username = req.Username;
         Log.Info($"登录请求 Session:{session.SessionId} User:{username}");
 
@@ -256,6 +263,8 @@ public static class UserHandler
 
         Context.Players.AddPlayer(player);
 
+        EventBus.Instance.Publish(new EventType.PlayerOnlineEvent { RoleId = role.Id });
+
         res.Code = 0;
         res.Message = "OK";
         res.RoleId = role.Id;
@@ -328,6 +337,8 @@ public static class UserHandler
                 await attrComp.LoadAttributeAsync(role.Id);
 
                 Context.Players.AddPlayer(player);
+
+                EventBus.Instance.Publish(new EventType.PlayerOnlineEvent { RoleId = role.Id });
 
                 res.RoleId = role.Id;
                 res.Name = role.Name;

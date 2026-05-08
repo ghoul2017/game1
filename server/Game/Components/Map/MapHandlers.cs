@@ -1,11 +1,11 @@
 using Game.Core.Aoi;
 using Game.Components.Map;
-using Game.Components.Monster;
 using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
 using Game.Core.Network;
 using Game.Network;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Shared.Common.Protos;
@@ -77,7 +77,12 @@ public static class MapHandlers
         session.Send(res);
         SendVisibleObjects(session.RoleId, map, x, y);
 
-        Context.Monster.InitMapMonsters(req.MapCfgId, req.Line);
+        EventBus.Instance.Publish(new EventType.PlayerEnterMapEvent
+        {
+            RoleId = session.RoleId,
+            MapCfgId = req.MapCfgId,
+            Line = req.Line,
+        });
 
         Log.Info($"玩家进入地图 RoleId:{session.RoleId} MapId:{req.MapCfgId}");
         return Task.FromResult<IMessage>(null!);
@@ -218,4 +223,21 @@ public static class MapHandlers
             return npc.CfgId;
         return 0;
     }
+
+    #region 事件订阅
+
+    [EventSubscriber]
+    public static void OnPlayerOffline(EventType.PlayerOfflineEvent e)
+    {
+        var map = Context.Map.GetPlayerMap(e.RoleId);
+        if (map == null)
+        {
+            return;
+        }
+
+        Context.Map.QuitMap(e.RoleId);
+        Log.Info($"玩家下线退出地图 RoleId:{e.RoleId} MapId:{map.CfgId}");
+    }
+
+    #endregion
 }

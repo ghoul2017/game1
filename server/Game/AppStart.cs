@@ -34,7 +34,7 @@ public static class AppStart
             GameSynchronizationContext.Instance.Stop();
         }
     }
-    
+
 
     /// <summary>服务端主逻辑（在游戏主线程上执行）</summary>
     private static async Task RunServerAsync()
@@ -50,7 +50,7 @@ public static class AppStart
 
         // 添加所有 Component 到根实体
         var networkComponent = Context.Server.AddComponent<NetworkComponent>();
-        Context.Server.AddComponent<UserComponent>();
+        EventBus.Instance.Publish(new EventType.ServerInitEvent());
         Context.Server.AddComponent<PlayerComponent>();
         Context.Server.AddComponent<FightComponent>();
         Context.Server.AddComponent<ChatComponent>();

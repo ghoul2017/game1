@@ -11,6 +11,7 @@ using Game.Core;
 using Game.Network;
 using Shared.Common.Config;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Task = System.Threading.Tasks.Task;
@@ -149,6 +150,15 @@ public static class MonsterSystem
         // 广播给附近玩家
         BroadcastMonsterAppear(mapId, line, monster);
 
+        // 发布怪物生成事件
+        EventBus.Instance.Publish(new EventType.MonsterSpawnedEvent
+        {
+            MonsterId = monsterId,
+            CfgId = cfg.Id,
+            MapId = mapId,
+            Line = line,
+        });
+
         Log.Debug($"生成怪物 MonsterId:{monsterId} CfgId:{cfg.Id} Pos:({x},{y})");
         return monster;
     }
@@ -264,6 +274,10 @@ public static class MonsterSystem
 
             // 发送升级通知
             Context.Players.SendToPlayer(roleId, new LevelUpNtf { Level = newLevel });
+
+            // 发布升级事件
+            EventBus.Instance.Publish(new EventType.PlayerLevelUpEvent { RoleId = roleId, NewLevel = newLevel });
+
             Log.Info($"玩家升级 RoleId:{roleId} Level:{newLevel}");
         }
 
@@ -271,6 +285,9 @@ public static class MonsterSystem
 
         // 发送经验变化通知
         Context.Players.SendToPlayer(roleId, new ExpChangedNtf { Exp = roleAttr.Exp, Level = roleAttr.Level });
+
+        // 发布经验变化事件
+        EventBus.Instance.Publish(new EventType.PlayerExpChangedEvent { RoleId = roleId, Exp = roleAttr.Exp, Level = roleAttr.Level });
     }
 
     /// <summary>
@@ -289,6 +306,9 @@ public static class MonsterSystem
 
         // 发送金币变化通知
         Context.Players.SendToPlayer(roleId, new GoldChangedNtf { Gold = roleAttr.Gold });
+
+        // 发布金币变化事件
+        EventBus.Instance.Publish(new EventType.PlayerGoldChangedEvent { RoleId = roleId, Gold = roleAttr.Gold });
     }
 
     /// <summary>
@@ -311,6 +331,10 @@ public static class MonsterSystem
                 ConfigId = configId,
                 Count = result.AddedCount,
             });
+
+            // 发布物品获得事件
+            EventBus.Instance.Publish(new EventType.PlayerItemGainedEvent { RoleId = roleId, ConfigId = configId, Count = result.AddedCount });
+
             Log.Info($"发放物品 RoleId:{roleId} ConfigId:{configId} Count:{result.AddedCount}");
         }
         else

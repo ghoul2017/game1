@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Game.Components.User;
 using Game.Network;
 using Shared.Core.ECS;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Common.Protos;
 using Shared.Core.Network;
@@ -105,6 +106,8 @@ public class NetworkComponent : Component
             {
                 _ = Context.Players.SaveRoleAsync(player);
                 Context.Players.RemovePlayer(session.RoleId);
+
+                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId });
             }
         }
 

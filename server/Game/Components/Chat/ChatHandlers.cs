@@ -3,6 +3,7 @@ using Game.Components.Player;
 using System.Threading.Tasks;
 using Game.Core.Network;
 using Game.Network;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Shared.Common.Protos;
@@ -51,4 +52,14 @@ public static class ChatHandlers
 
         return Task.FromResult<IMessage>(res);
     }
+
+    #region 事件订阅
+
+    [EventSubscriber]
+    public static void OnPlayerOffline(EventType.PlayerOfflineEvent e)
+    {
+        Context.Chat.CleanCooldown(e.RoleId);
+    }
+
+    #endregion
 }

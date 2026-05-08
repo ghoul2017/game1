@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using Game.Config;
 using Game.Components.Map;
-using Game.Components.Monster;
 using Game.Components.Player;
 using Game.Core;
 using Game.Entities;
 using Game.Network;
 using Shared.Common.Config;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 
@@ -193,10 +193,36 @@ public static class FightSystem
             Reason = HpChangeReason.Killed,
         });
 
-        // 如果是怪物，处理掉落
-        if (isMonster && Context.Monster != null)
+        // 如果是怪物，发布击杀事件
+        if (isMonster)
         {
-            Context.Monster.OnMonsterKilled(victimId, killerId);
+            var map = Context.Map.GetPlayerMap(victimId);
+            var monsterMap = map ?? Context.Map.GetPlayerMap(killerId);
+            int mapCfgId = 0;
+            int line = 0;
+            if (monsterMap != null)
+            {
+                mapCfgId = monsterMap.CfgId;
+                line = monsterMap.Line;
+            }
+
+            EventBus.Instance.Publish(new EventType.MonsterKilledEvent
+            {
+                MonsterId = victimId,
+                KillerId = killerId,
+                MonsterCfgId = victim.CfgId,
+                MapId = mapCfgId,
+                Line = line,
+            });
+        }
+        else
+        {
+            // 玩家死亡事件
+            EventBus.Instance.Publish(new EventType.PlayerDeathEvent
+            {
+                RoleId = victimId,
+                KillerId = killerId,
+            });
         }
     }
 

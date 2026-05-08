@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Game.Components.Fight;
 using Game.Core.Network;
 using Game.Network;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Shared.Common.Protos;
@@ -40,4 +41,22 @@ public static class FightHandlers
 
         return Task.FromResult<IMessage>(res);
     }
+
+    #region 事件订阅
+
+    [EventSubscriber]
+    public static void OnPlayerOffline(EventType.PlayerOfflineEvent e)
+    {
+        Context.Fight.UnregisterUnit(e.RoleId);
+        Log.Debug($"玩家下线注销战斗单元 RoleId:{e.RoleId}");
+    }
+
+    [EventSubscriber]
+    public static void OnPlayerLeaveMap(EventType.PlayerLeaveMapEvent e)
+    {
+        Context.Fight.UnregisterUnit(e.RoleId);
+        Log.Debug($"玩家离开地图注销战斗单元 RoleId:{e.RoleId}");
+    }
+
+    #endregion
 }
