@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # Entity 迁移模式：普通类 → Entity + Component
 
 将普通数据类（如 Player）迁移为 Entity + Component 的标准模式：

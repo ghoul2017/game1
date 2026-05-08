@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # MongoDB BSON 序列化与 Component 持久化
 
 Component 实现 `IEntity` 后通过 MongoEntityRepository 持久化：

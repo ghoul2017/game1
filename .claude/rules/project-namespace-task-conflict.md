@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # Task 命名空间冲突：避免 Game.Components.Task
 
 `Game.Components.Task` 与 `System.Threading.Tasks.Task` 冲突，导致编译歧义。即使 `using System.Threading.Tasks;` 存在，编译器仍无法区分同名类型。

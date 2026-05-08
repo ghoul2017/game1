@@ -1,7 +1,5 @@
 ---
-name: synchronizationcontext-await
-description: SynchronizationContext 安装后 await 自动回主线程，无需手动 Post
-type: reference
+paths: ["server/**/*.cs"]
 ---
 
 # SynchronizationContext 安装后 await 自动回主线程

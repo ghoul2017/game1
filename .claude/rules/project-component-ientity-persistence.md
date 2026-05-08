@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # Component + IEntity 持久化模式
 
 将 IEntity 数据类（如 RoleBag）合并到 Component 时，Component 实现 IEntity 以保持 MongoEntityRepository 兼容。

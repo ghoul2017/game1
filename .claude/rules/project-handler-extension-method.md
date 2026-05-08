@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # Handler 约定
 
 Handler 使用 `[MessageHandler]` 标记的静态方法，通过 MessageRouter 自动扫描注册。

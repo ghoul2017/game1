@@ -1,3 +1,7 @@
+---
+paths: ["client/**/*.cs"]
+---
+
 # Unity 客户端 csproj 是自动生成的
 
 `client/Assembly-CSharp.csproj` 由 Unity Editor 自动生成，包含所有 `Assets/Scripts/` 下的 `.cs` 文件引用。

@@ -1,3 +1,7 @@
+---
+paths: ["**/*.cs"]
+---
+
 # 静态类不能作为泛型类型参数
 
 `static class` 不能用作泛型参数，包括 `LogManager.GetLogger<T>()` 等。

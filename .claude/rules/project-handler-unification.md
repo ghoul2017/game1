@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # Handler 统一迁移：继承式 → 扩展方法式
 
 从 `MessageHandler<TReq>` 继承式迁移为 static + `[MessageHandler(typeof(RpcMethodHandler))]` 扩展方法式：

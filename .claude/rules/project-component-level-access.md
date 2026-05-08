@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # Component 分级决定访问路径
 
 Component 的挂载目标（Module 级 vs PlayerEntity 级）决定了访问方式，搞错会导致运行时空引用。

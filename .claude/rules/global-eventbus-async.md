@@ -1,3 +1,7 @@
+---
+paths: ["server/**/*.cs"]
+---
+
 # EventBus 异步陷阱：async void handler 不会等待完成
 
 `EventBus.Publish` 是同步方法。如果 handler 是 `async void`，执行到第一个 `await` 就返回调用者，后续异步操作变成 fire-and-forget。

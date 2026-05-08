@@ -1,7 +1,5 @@
 ---
-name: thread-sleep-windows
-description: Windows 下 Thread.Sleep(1) 实际休眠 ~15.6ms，轮询场景用 AutoResetEvent 替代
-type: reference
+paths: ["server/**/*.cs"]
 ---
 
 # Windows 下 Thread.Sleep(1) 实际休眠 ~15.6ms
