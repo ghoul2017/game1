@@ -1,22 +1,30 @@
-# MongoDB BSON 序列化与 Protobuf 属性共存
+# MongoDB BSON 序列化与 Component 持久化
 
-实体类同时标记 `[ProtoContract]`/`[ProtoMember]`（网络序列化）和 MongoDB BSON 文档存储时：
+Component 实现 `IEntity` 后通过 MongoEntityRepository 持久化：
 
 1. **`[BsonId]`** — 必须在 `Id` 属性上标记，否则 MongoDB 无法将 `Id` 映射为 `_id`
-2. **`[BsonIgnore]`** — 运行时索引字段（如 `_indexMap`、`_mailMap`、`_taskMap`）必须标记，否则 MongoDB 序列化时包含无意义字段
-3. **`[ProtoAfterDeserialization]` 不生效** — MongoDB 反序列化不会调用此回调，需要在 Repository 的 LoadAsync 中手动调用 `AfterDeserialize`/`RebuildIndex` 重建运行时索引
+2. **`[BsonIgnore]`** — 运行时索引字段（如 `_indexMap`、`_mailMap`、`_taskMap`）和运行时状态（如 `_nextItemUid`、`NextMailId`）必须标记，否则 MongoDB 序列化时包含无意义字段
+3. **`AfterDeserialize`** — MongoDB 反序列化不会自动调用，MongoEntityRepository.InvokeAfterDeserialize 通过反射在 LoadAsync 后调用
+4. **Proto 属性** — 仅通过网络 Protobuf 序列化的类才需要 `[ProtoContract]`/`[ProtoMember]`。纯 MongoDB 持久化的 Component 和嵌套数据类不需要
 
 ```csharp
-// 示例
-[ProtoContract]
-public class RoleBag : IEntity
+// 示例：Component 实现 IEntity 持久化
+[ComponentOf(typeof(PlayerEntity))]
+public class RoleBagComponent : Component, IEntity
 {
-    [ProtoMember(1)]
     [BsonId]
     public long Id { get; set; }
 
-    [ProtoIgnore]
+    public int Capacity { get; set; } = 100;
+    public List<BagItem> Items { get; set; } = [];
+
+    [BsonIgnore]
+    internal long _nextItemUid;
+
     [BsonIgnore]
     private Dictionary<int, BagItem>? _indexMap;
+
+    internal void AfterDeserialize() { RebuildIndex(); }
+    internal void RebuildIndex() { ... }
 }
 ```
