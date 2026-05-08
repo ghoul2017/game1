@@ -105,7 +105,7 @@ server/Game/
     ShutdownToken.cs    # 统一关闭信号
     TokenStore.cs       # 内存 Token 存储
     Aoi/                # TowerAoi, Tower, IAoiObject, IAoiEventListener
-    Database/           # DatabaseManager, MongoDbManager, MongoEntityRepository, MongoPlayerRepository, MongoRoleRepository
+    Database/           # MongoDb (统一入口), IEntity, PlayerAccount, UserRole
     Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener
     Network/            # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler
@@ -163,7 +163,7 @@ Context.Players.AddPlayer(player);
 - **ECS**: Entity 节点 / Component 放数据 / System 负责方法，Component 通过 `[ComponentOf]` 约束挂载目标
 - **模块初始化**: Component 挂载到 Context.Server（Module 级）或 PlayerEntity（PlayerEntity 级），初始化通过 System 扩展方法调用
 - **数据库**: MongoDB BSON 文档存储，集合名=类名蛇形（如 `role_bag`），`_id`=entity.Id
-- **实体**: 实现 IEntity + `[BsonId]` 标记 Id，运行时索引用 `[BsonIgnore]`，MongoEntityRepository 统一 CRUD
+- **实体**: 实现 IEntity + `[BsonId]` 标记 Id，运行时索引用 `[BsonIgnore]`，MongoDb.Instance 统一 CRUD
 - **日志**: `private static readonly ILog Log = LogManager.GetLogger<T>();`
 - **单例**: `public static XxxManager Instance { get; } = new();`
 - **线程安全**: GameSynchronizationContext 保证所有逻辑在主线程执行，无需加锁

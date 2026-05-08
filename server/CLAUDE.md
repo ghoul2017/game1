@@ -28,7 +28,7 @@ server/Game/
 │   ├── ShutdownToken.cs  # 统一关闭信号
 │   ├── TokenStore.cs     # 内存 Token 存储
 │   ├── Aoi/              # TowerAoi, Tower, IAoiObject, IAoiEventListener
-│   ├── Database/         # DatabaseManager, MongoDbManager, MongoEntityRepository, MongoPlayerRepository, MongoRoleRepository
+│   ├── Database/         # MongoDb (统一入口), IEntity, PlayerAccount, UserRole
 │   ├── Entity/           # IEntity
 │   ├── Event/            # EventBus, IEvent, IEventListener
 │   └── Network/          # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler
@@ -86,7 +86,7 @@ Context.Players.AddPlayer(player);
 - **添加新工具**: 在 `tools/` 下创建实现 `ITool` 接口的类（自动注册），在 `scripts/` 加对应 cmd 脚本
 - **添加新 Module 级组件**: 创建继承 `Component` 的类 + `[ComponentOf(typeof(Module))]` → 在 Program.cs 中 `Context.Server.AddComponent<T>()` → 在 Context.cs 加便利属性
 - **添加新 PlayerEntity 级组件**: 创建继承 `Component` 的类 + `[ComponentOf(typeof(PlayerEntity))]` → 在 UserHandler.SelectRoleHandler 中 AddComponent + 加载数据 → 在 PlayerEntity 加便利属性
-- **添加新实体**: 实现 `IEntity` + `[ProtoContract]` + `[BsonId]` → 通过 `DatabaseManager.Instance.EntityRepo` 进行 CRUD
+- **添加新实体**: 实现 `IEntity` + `[ProtoContract]` + `[BsonId]` → 通过 `MongoDb.Instance` 进行 CRUD
 - **事件总线**: 定义事件类实现 `IEvent` → `EventBus.Instance.Subscribe<T>()` → `EventBus.Instance.PublishAsync()`
 - **Handler 规范**: static 类 + `[MessageHandler(typeof(RpcMethodHandler/NtfMethodHandler))]`，无状态
 - **会话管理**: SessionManager 单例管理 userId/roleId → TcpSession 映射，BindRole，顶号踢旧连接，Kick/Broadcast
