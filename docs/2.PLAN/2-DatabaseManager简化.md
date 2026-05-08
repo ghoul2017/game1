@@ -1,4 +1,6 @@
-# DatabaseManager 简化
+# DatabaseManager 简化（补充：User/UserRole 实现 IEntity）
+
+> 原计划已执行完毕。本节为遗留补充项。
 
 ## 概述
 将 DatabaseManager 简化为单一入口，业务代码通过 `MongoDb.LoadAsync<T>(id)` / `MongoDb.UpdateAsync<T>(entity)` 等泛型方法直接操作，去掉中间 Repository 层。
@@ -115,3 +117,42 @@ var account = await MongoDb.QueryFirstOrDefaultAsync<PlayerAccount>(p => p.Usern
 - [ ] `dotnet build server/Game` 编译通过
 - [ ] 所有旧调用方式已替换
 - [ ] PlayerAccount、UserRole 独立文件存在
+
+---
+
+## 补充：User / UserRole 实现 IEntity
+
+### 概述
+User 和 UserRole 当前是普通类，用 `MongoDb.SaveAsync` 持久化。改为实现 `IEntity`，使用 `InsertAsync`/`UpdateAsync`，保持与其他 IEntity 实体一致的持久化方式。
+
+### 修改文件
+
+#### `server/Game/Components/User/User.cs`: User
+- 变更类型：修改
+- 实现 `IEntity` 接口
+- `Id` 属性加 `[BsonId]` 标记
+- `Session` 属性加 `[BsonIgnore]`（运行时会话引用，不持久化）
+
+#### `server/Game/Components/User/UserRole.cs`: UserRole
+- 变更类型：修改
+- 实现 `IEntity` 接口
+- `Id` 属性映射到 `RoleId`（`Id => RoleId`），加 `[BsonId]` 标记
+
+#### `server/Game/Components/User/UserHandler.cs`: UserHandler
+- 变更类型：修改
+- `MongoDb.Instance.SaveAsync(account)` → `MongoDb.Instance.InsertAsync(account)`（新注册时）
+- `MongoDb.Instance.SaveAsync(new UserRole {...})` → `MongoDb.Instance.InsertAsync(new UserRole {...})`（创建角色索引时）
+
+### 执行顺序
+
+1. 修改 `User.cs` — 实现 IEntity，加 `[BsonId]`、`[BsonIgnore]`
+2. 修改 `UserRole.cs` — 实现 IEntity，`Id` 映射到 `RoleId`，加 `[BsonId]`
+3. 修改 `UserHandler.cs` — `SaveAsync` → `InsertAsync`
+4. 编译验证
+
+### 验证
+
+- [ ] `dotnet build server/Game` 编译通过
+- [ ] User 实现 IEntity，`Id` 有 `[BsonId]`，`Session` 有 `[BsonIgnore]`
+- [ ] UserRole 实现 IEntity，`Id`/`RoleId` 有 `[BsonId]`
+- [ ] UserHandler 中新注册用 `InsertAsync`，创建角色索引用 `InsertAsync`

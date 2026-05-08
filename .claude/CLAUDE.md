@@ -220,6 +220,7 @@ Context.Players.AddPlayer(player);
 1. 读 `docs/1.需求.md` — 检查是否有未规划条目，有则按 docs-workflow 规则拆解
 2. 读 `docs/3.TODO.md` — 按 TODO 优先级推进工作，不要重复已完成的事
 3. 读 `docs/2.PLAN/` — 了解当前需求的设计方案
+4. 读 `docs/4.发现需求.md` — 自行发现的问题和待办，按优先级自行解决
 
 ## 自定义命令
 

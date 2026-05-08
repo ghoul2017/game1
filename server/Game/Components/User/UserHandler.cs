@@ -61,7 +61,7 @@ public static class UserHandler
                 Nickname = username,
                 CreateTime = DateTime.UtcNow
             };
-            await MongoDb.Instance.SaveAsync(account);
+            await MongoDb.Instance.InsertAsync(account);
             Log.Info($"自动注册账号 User:{username} Id:{account.Id}");
         }
         else if (account.Password != req.Password)
@@ -181,7 +181,7 @@ public static class UserHandler
         await MongoDb.Instance.InsertAsync(role);
 
         // 写入角色索引
-        await MongoDb.Instance.SaveAsync(new UserRole
+        await MongoDb.Instance.InsertAsync(new UserRole
         {
             RoleId = roleId,
             UserId = session.UserId,
