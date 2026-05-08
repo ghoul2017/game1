@@ -112,6 +112,19 @@ public static class RoleTaskHandlers
     #region 事件订阅
 
     [EventSubscriber]
+    public static async void OnPlayerOnline(EventType.PlayerOnlineEvent e)
+    {
+        var player = Context.Players.GetByRoleId(e.RoleId);
+        if (player == null)
+        {
+            return;
+        }
+
+        var taskComp = player.AddComponent<RoleTaskComponent>();
+        await taskComp.LoadTasksAsync(e.RoleId);
+    }
+
+    [EventSubscriber]
     public static void OnPlayerLevelUp(EventType.PlayerLevelUpEvent e)
     {
         var player = Context.Players.GetByRoleId(e.RoleId);

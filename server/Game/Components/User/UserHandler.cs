@@ -1,9 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Game.Components.Bag;
-using Game.Components.GameTask;
-using Game.Components.Mail;
 using Game.Components.Player;
 using Game.Core;
 using Game.Core.Network;
@@ -248,21 +245,9 @@ public static class UserHandler
         // 创建在线玩家
         var player = PlayerEntity.Create(role.Id, session.UserId, role);
 
-        // 一次性挂载全部数据组件并加载数据
-        var bagComp = player.AddComponent<RoleBagComponent>();
-        await bagComp.LoadBagAsync(role.Id);
-
-        var mailComp = player.AddComponent<RoleMailComponent>();
-        await mailComp.LoadMailsAsync(role.Id);
-
-        var taskComp = player.AddComponent<RoleTaskComponent>();
-        await taskComp.LoadTasksAsync(role.Id);
-
-        var attrComp = player.AddComponent<RoleAttributeComponent>();
-        await attrComp.LoadAttributeAsync(role.Id);
-
         Context.Players.AddPlayer(player);
 
+        // 发布上线事件，各模块自行挂载 Component 并加载数据
         EventBus.Instance.Publish(new EventType.PlayerOnlineEvent { RoleId = role.Id });
 
         res.Code = 0;
@@ -323,21 +308,9 @@ public static class UserHandler
 
                 var player = PlayerEntity.Create(role.Id, userId, role);
 
-                // 一次性挂载全部数据组件并加载数据
-                var bagComp = player.AddComponent<RoleBagComponent>();
-                await bagComp.LoadBagAsync(role.Id);
-
-                var mailComp = player.AddComponent<RoleMailComponent>();
-                await mailComp.LoadMailsAsync(role.Id);
-
-                var taskComp = player.AddComponent<RoleTaskComponent>();
-                await taskComp.LoadTasksAsync(role.Id);
-
-                var attrComp = player.AddComponent<RoleAttributeComponent>();
-                await attrComp.LoadAttributeAsync(role.Id);
-
                 Context.Players.AddPlayer(player);
 
+                // 发布上线事件，各模块自行挂载 Component 并加载数据
                 EventBus.Instance.Publish(new EventType.PlayerOnlineEvent { RoleId = role.Id });
 
                 res.RoleId = role.Id;

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Game.Core.Network;
 using Game.Network;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Shared.Common.Protos;
@@ -128,4 +129,21 @@ public static class RoleBagHandlers
         Index = item.Index,
         Bind = item.Bind,
     };
+
+    #region 事件订阅
+
+    [EventSubscriber]
+    public static async void OnPlayerOnline(EventType.PlayerOnlineEvent e)
+    {
+        var player = Context.Players.GetByRoleId(e.RoleId);
+        if (player == null)
+        {
+            return;
+        }
+
+        var bagComp = player.AddComponent<RoleBagComponent>();
+        await bagComp.LoadBagAsync(e.RoleId);
+    }
+
+    #endregion
 }

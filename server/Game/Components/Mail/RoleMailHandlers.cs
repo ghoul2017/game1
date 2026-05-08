@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Game.Core.Network;
 using Game.Network;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Shared.Common.Protos;
@@ -108,4 +109,21 @@ public static class RoleMailHandlers
 
         return res;
     }
+
+    #region 事件订阅
+
+    [EventSubscriber]
+    public static async void OnPlayerOnline(EventType.PlayerOnlineEvent e)
+    {
+        var player = Context.Players.GetByRoleId(e.RoleId);
+        if (player == null)
+        {
+            return;
+        }
+
+        var mailComp = player.AddComponent<RoleMailComponent>();
+        await mailComp.LoadMailsAsync(e.RoleId);
+    }
+
+    #endregion
 }
