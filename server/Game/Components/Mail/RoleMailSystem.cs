@@ -143,7 +143,6 @@ public static class RoleMailSystem
         var player = Context.Players.GetByRoleId(self.Id);
         if (player == null) return ClaimResult.None();
 
-        var bag = await player.RoleBag.LoadBagAsync(self.Id);
         foreach (var att in allItems)
         {
             player.RoleBag.AddItem(att.ConfigId, att.Count);

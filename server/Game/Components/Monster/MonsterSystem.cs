@@ -318,7 +318,6 @@ public static class MonsterSystem
         var player = Context.Players.GetByRoleId(roleId);
         if (player == null) return;
 
-        var bag = await player.RoleBag.LoadBagAsync(roleId);
         var result = player.RoleBag.AddItem(configId, count);
         if (result.Success)
         {

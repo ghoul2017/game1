@@ -133,8 +133,6 @@ public static class RoleTaskSystem
         var player = Context.Players.GetByRoleId(roleId);
         if (player == null) return TaskSubmitResult.Fail(TaskErrorCode.TaskNotFound);
 
-        var bag = await player.RoleBag.LoadBagAsync(roleId);
-
         // 发放物品奖励
         if (!string.IsNullOrEmpty(taskCfg.RewardItems))
         {

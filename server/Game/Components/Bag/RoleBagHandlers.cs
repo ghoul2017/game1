@@ -2,6 +2,7 @@ using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
 using Game.Core.Network;
+using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -16,10 +17,9 @@ public static class RoleBagHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> QueryBagHandler(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
-        var bag = await player.RoleBag.LoadBagAsync(player.Id);
         res.Code = ErrorCode.Ok;
-        res.Capacity = bag.Capacity;
-        res.Items = bag.Items.Select(ToInfo).ToList();
+        res.Capacity = player.RoleBag.Capacity;
+        res.Items = player.RoleBag.Items.Select(ToInfo).ToList();
 
         return res;
     }
@@ -27,12 +27,11 @@ public static class RoleBagHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> BagTidyHandler(PlayerEntity player, BagTidyReq req, BagTidyAck res)
     {
-        var bag = await player.RoleBag.LoadBagAsync(player.Id);
         player.RoleBag.Tidy();
         await player.RoleBag.SaveBagAsync();
 
         res.Code = ErrorCode.Ok;
-        res.Items = bag.Items.Select(ToInfo).ToList();
+        res.Items = player.RoleBag.Items.Select(ToInfo).ToList();
 
         return res;
     }
@@ -40,7 +39,6 @@ public static class RoleBagHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> BagSwapHandler(PlayerEntity player, BagSwapReq req, BagSwapAck res)
     {
-        var bag = await player.RoleBag.LoadBagAsync(player.Id);
         player.RoleBag.Swap(req.Index1, req.Index2);
         await player.RoleBag.SaveBagAsync();
 
@@ -51,9 +49,7 @@ public static class RoleBagHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> BagUseItemHandler(PlayerEntity player, BagUseItemReq req, BagUseItemAck res)
     {
-        var bag = await player.RoleBag.LoadBagAsync(player.Id);
-
-        var bagItem = bag.GetByIndex(req.Index);
+        var bagItem = player.RoleBag.GetByIndex(req.Index);
         if (bagItem == null)
         {
             res.Code = ErrorCode.ItemNotFound;
@@ -113,7 +109,17 @@ public static class RoleBagHandlers
         }
 
         var bagComp = player.AddComponent<RoleBagComponent>();
-        await bagComp.LoadBagAsync(e.RoleId);
+        var bag = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleBagComponent>(e.RoleId);
+        if (bag == null)
+        {
+            bag = new RoleBagComponent { Id = e.RoleId, Capacity = 100 };
+            await DatabaseManager.Instance.EntityRepo.InsertAsync(bag);
+            Log.Info($"创建新背包 RoleId:{e.RoleId}");
+        }
+        bagComp.Id = bag.Id;
+        bagComp.Capacity = bag.Capacity;
+        bagComp.Items = bag.Items;
+        bagComp.RebuildIndex();
     }
 
     #endregion

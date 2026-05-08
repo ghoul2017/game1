@@ -25,24 +25,6 @@ public static class RoleBagSystem
 
     #endregion
 
-    /// <summary>加载角色背包（从数据库）</summary>
-    public static async Task<RoleBagComponent> LoadBagAsync(this RoleBagComponent self, long roleId)
-    {
-        var bag = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleBagComponent>(roleId);
-        if (bag == null)
-        {
-            bag = new RoleBagComponent { Id = roleId, Capacity = 100 };
-            await DatabaseManager.Instance.EntityRepo.InsertAsync(bag);
-            Log.Info($"创建新背包 RoleId:{roleId}");
-        }
-        // 把数据库加载的数据拷贝到当前 Component
-        self.Id = bag.Id;
-        self.Capacity = bag.Capacity;
-        self.Items = bag.Items;
-        self.RebuildIndex();
-        return self;
-    }
-
     /// <summary>保存背包</summary>
     public static async Task SaveBagAsync(this RoleBagComponent self)
     {
