@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Game.Entities;
-using Game.Components.Player;
 using Shared.Core.ECS;
 
 namespace Game.Components.Player;

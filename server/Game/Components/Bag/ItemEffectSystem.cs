@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Game.Components.Fight;
 using Game.Components.Player;
 using Game.Config;
+using Shared.Common.Config;
 using Shared.Common.Protos;
 using Shared.Core.Log;
 
