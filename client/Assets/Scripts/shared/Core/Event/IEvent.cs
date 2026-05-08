@@ -1,4 +1,6 @@
 namespace Shared.Core.Event
 {
-    public interface IEvent { }
+    public interface IEvent
+    {
+    }
 }

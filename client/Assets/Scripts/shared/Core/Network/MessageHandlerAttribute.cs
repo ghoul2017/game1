@@ -2,7 +2,6 @@ using System;
 
 namespace Shared.Core.Network
 {
-
     /// <summary>
     /// 标记扩展方法为消息处理器。
     /// 使用方式：

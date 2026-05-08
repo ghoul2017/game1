@@ -11,12 +11,13 @@ namespace Shared.Core.Event
     {
         private static readonly ILog Log = LogManager.GetLogger<EventBus>();
 
-        public static EventBus Instance { get; } = new EventBus();
+        public static EventBus Instance { get; } = new();
 
-        private readonly ConcurrentDictionary<Type, List<Action<IEvent>>> _handlers =
-            new ConcurrentDictionary<Type, List<Action<IEvent>>>();
+        private readonly ConcurrentDictionary<Type, List<Action<IEvent>>> _handlers = new();
 
-        private EventBus() { }
+        private EventBus()
+        {
+        }
 
         public void AutoRegister()
         {
@@ -58,7 +59,10 @@ namespace Shared.Core.Event
                 Action<IEvent> wrapper = e => del.DynamicInvoke(e);
 
                 var list = _handlers.GetOrAdd(eventType, _ => new List<Action<IEvent>>());
-                lock (list) { list.Add(wrapper); }
+                lock (list)
+                {
+                    list.Add(wrapper);
+                }
 
                 Log.Info($"注册 EventSubscriber: {method.DeclaringType?.Name}.{method.Name} -> {eventType.Name}");
                 count++;
@@ -72,15 +76,27 @@ namespace Shared.Core.Event
             if (!_handlers.TryGetValue(typeof(TEvent), out var list)) return;
 
             List<Action<IEvent>> snapshot;
-            lock (list) { snapshot = new List<Action<IEvent>>(list); }
+            lock (list)
+            {
+                snapshot = new List<Action<IEvent>>(list);
+            }
 
             foreach (var handler in snapshot)
             {
-                try { handler(e); }
-                catch (Exception ex) { Log.Error($"事件处理异常 [{typeof(TEvent).Name}]: {ex.Message}"); }
+                try
+                {
+                    handler(e);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"事件处理异常 [{typeof(TEvent).Name}]: {ex.Message}");
+                }
             }
         }
 
-        public void Clear() { _handlers.Clear(); }
+        public void Clear()
+        {
+            _handlers.Clear();
+        }
     }
 }
