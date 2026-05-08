@@ -8,6 +8,7 @@ using Game.Components.Player;
 using Game.Components.User;
 using Game.Config;
 using Game.Core;
+using Game.Database;
 using Game.Core.Network;
 using Shared.Core.Event;
 using Shared.Core.Log;
