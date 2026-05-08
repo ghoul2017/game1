@@ -1,4 +1,5 @@
 using Shared.Core.ECS;
+using Shared.Core.Network;
 
 namespace Game.Components.Player;
 
@@ -9,6 +10,7 @@ namespace Game.Components.Player;
 public class PlayerOnlineComponent : Component
 {
     public long UserId { get; set; }
+    public TcpSession? Session { get; set; }
     public DateTime LoginTime { get; set; }
     public DateTime LastActiveTime { get; set; }
     public string LoginIp { get; set; } = "";

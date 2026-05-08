@@ -1,4 +1,5 @@
 using System;
+using Shared.Core.Network;
 
 namespace Game.Components.User;
 
@@ -10,6 +11,5 @@ public class User
     public string Nickname { get; set; } = "";
     public int Level { get; set; }
     public DateTime CreateTime { get; set; }
-    public long SessionId { get; set; }
-    
+    public TcpSession? Session { get; set; }
 }

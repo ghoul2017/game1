@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Game.Core.Network;
 using Game.Database;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -93,15 +92,14 @@ public static class PlayerSystem
     {
         foreach (var player in self.Players.Values)
         {
-            var session = Context.Network.GetByUserId(player.Online.UserId);
-            session?.Send(msg);
+            player.Online.Session?.Send(msg);
         }
     }
 
     public static void SendToPlayer(this PlayerComponent self, long roleId, IMessage msg)
     {
-        var session = Context.Network.GetByRoleId(roleId);
-        session?.Send(msg);
+        var player = self.GetByRoleId(roleId);
+        player?.Online.Session?.Send(msg);
     }
 
     public static async Task<Role?> LoadRoleAsync(this PlayerComponent self, long roleId)

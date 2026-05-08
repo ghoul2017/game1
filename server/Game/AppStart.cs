@@ -12,6 +12,7 @@ using Game.Core.Network;
 using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
+using Shared.Core.Network;
 
 namespace Game;
 
@@ -50,16 +51,7 @@ public static class AppStart
 
         // 添加所有 Component 到根实体
         var networkComponent = Context.Server.AddComponent<NetworkComponent>();
-        networkComponent.SessionDisconnected = session =>
-        {
-            var player = Context.Players.GetByRoleId(session.RoleId);
-            if (player != null)
-            {
-                _ = Context.Players.SaveRoleAsync(player);
-                Context.Players.RemovePlayer(session.RoleId);
-                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId });
-            }
-        };
+        networkComponent.SessionDisconnected = OnSessionDisconnected;
         EventBus.Instance.Publish(new EventType.ServerInitEvent());
         Context.Server.AddComponent<PlayerComponent>();
         Context.Server.AddComponent<FightComponent>();
@@ -86,6 +78,32 @@ public static class AppStart
             Context.Fight.RemoveAll();
             Context.Map.RemoveAll();
             Context.Monster.Stop();
+        }
+    }
+
+    private static void OnSessionDisconnected(TcpSession session)
+    {
+        // 清理 User 级 session 引用
+        if (session.UserId != 0)
+        {
+            var userComponent = Context.Server.GetComponent<UserComponent>();
+            if (userComponent.Users.TryGetValue(session.UserId, out var user))
+            {
+                user.Session = null;
+            }
+        }
+
+        // 清理 Player 级 session 引用 + 保存数据 + 发布下线事件
+        if (session.RoleId != 0)
+        {
+            var player = Context.Players.GetByRoleId(session.RoleId);
+            if (player != null)
+            {
+                player.Online.Session = null;
+                _ = Context.Players.SaveRoleAsync(player);
+                Context.Players.RemovePlayer(session.RoleId);
+                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId });
+            }
         }
     }
 }

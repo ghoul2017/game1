@@ -13,8 +13,9 @@ using Shared.Core.Network;
 namespace Game.Core.Network;
 
 /// <summary>
-/// 网络组件。管理 TCP 连接、会话索引（sessionId/userId/roleId）、心跳检测。
-/// 通过 SessionDisconnected 回调通知上层处理玩家下线逻辑，不直接依赖业务模块。
+/// 网络组件。管理 TCP 连接和心跳检测，不持有业务级会话映射。
+/// session 引用由各业务对象（User、PlayerOnlineComponent）自行持有。
+/// 通过 SessionDisconnected 回调通知上层清理 session 引用。
 /// </summary>
 [ComponentOf(typeof(Entities.Module))]
 public class NetworkComponent : Component
@@ -27,16 +28,14 @@ public class NetworkComponent : Component
     public int MaxConnections { get; set; } = 5000;
 
     private Socket? _listenSocket;
-    private readonly Dictionary<long, TcpSession> _sessionMap = new();       // sessionId -> session
-    private readonly Dictionary<long, TcpSession> _userSessionMap = new();   // userId -> session
-    private readonly Dictionary<long, TcpSession> _roleSessionMap = new();   // roleId -> session
+    private readonly Dictionary<long, TcpSession> _sessionMap = new(); // sessionId -> session
 
     private const int HeartbeatTimeoutSeconds = 60;
     private const int CheckIntervalSeconds = 20;
 
     private GameTimerHandle _heartbeatTimer;
 
-    /// <summary>会话断开回调。上层注册此回调处理玩家下线逻辑（保存数据、发布事件等）。</summary>
+    /// <summary>会话断开回调。上层注册此回调清理业务对象上的 session 引用。</summary>
     public Action<TcpSession>? SessionDisconnected { get; set; }
 
     public NetworkComponent()
@@ -98,66 +97,21 @@ public class NetworkComponent : Component
 
     private void OnSessionDisconnected(TcpSession session)
     {
-        // 通知上层处理玩家下线逻辑（保存数据、发布事件等）
-        if (session.RoleId != 0)
-        {
-            SessionDisconnected?.Invoke(session);
-        }
+        // 通知上层清理业务对象上的 session 引用
+        SessionDisconnected?.Invoke(session);
 
-        // 清理所有映射
         _sessionMap.Remove(session.SessionId);
-        if (session.UserId != 0) _userSessionMap.Remove(session.UserId);
-        if (session.RoleId != 0) _roleSessionMap.Remove(session.RoleId);
-
         session.OnDisconnected -= OnSessionDisconnected;
         session.Dispose();
 
         Log.Info($"会话断开 SessionId:{session.SessionId}，当前连接数: {_sessionMap.Count}");
     }
 
-    // ==================== 会话查询 ====================
-
+    /// <summary>按 sessionId 获取</summary>
     public TcpSession? Get(long sessionId)
     {
         return _sessionMap.GetValueOrDefault(sessionId);
     }
-
-    /// <summary>绑定用户ID（登录时调用）</summary>
-    public void BindUser(TcpSession session, long userId)
-    {
-        session.UserId = userId;
-        _userSessionMap[userId] = session;
-    }
-
-    /// <summary>绑定角色ID（选角完成后调用）</summary>
-    public void BindRole(TcpSession session, long roleId)
-    {
-        session.RoleId = roleId;
-        _roleSessionMap[roleId] = session;
-    }
-
-    /// <summary>按用户ID获取</summary>
-    public TcpSession? GetByUserId(long userId)
-    {
-        return _userSessionMap.TryGetValue(userId, out var s) ? s : null;
-    }
-
-    /// <summary>按角色ID获取</summary>
-    public TcpSession? GetByRoleId(long roleId)
-    {
-        return _roleSessionMap.TryGetValue(roleId, out var s) ? s : null;
-    }
-
-    /// <summary>角色是否在线</summary>
-    public bool IsOnline(long roleId)
-    {
-        return _roleSessionMap.ContainsKey(roleId);
-    }
-
-    /// <summary>当前在线角色数</summary>
-    public int OnlineCount => _roleSessionMap.Count;
-
-    // ==================== 踢人 / 广播 ====================
 
     /// <summary>踢人</summary>
     public void Kick(TcpSession session, LogoutReason reason)
@@ -174,25 +128,6 @@ public class NetworkComponent : Component
         session.Disconnect();
     }
 
-    /// <summary>按角色ID踢人</summary>
-    public void KickByRoleId(long roleId, LogoutReason reason)
-    {
-        var session = GetByRoleId(roleId);
-        if (session != null)
-        {
-            Kick(session, reason);
-        }
-    }
-
-    /// <summary>广播消息给所有在线角色</summary>
-    public void Broadcast(IMessage msg)
-    {
-        foreach (var session in _roleSessionMap.Values)
-        {
-            session.Send(msg);
-        }
-    }
-
     /// <summary>服务器关闭时踢出所有连接</summary>
     public void KickAll(LogoutReason reason)
     {
@@ -203,8 +138,6 @@ public class NetworkComponent : Component
         }
         Log.Info($"全部断开，共 {sessions.Count} 个连接");
     }
-
-    // ==================== 心跳检测 ====================
 
     private void DoHeartbeatCheck()
     {

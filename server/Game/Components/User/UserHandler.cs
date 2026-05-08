@@ -82,8 +82,8 @@ public static class UserHandler
         userComponent.Users.Add(user.Id, user);
         userComponent.Usernames.Add(user.Username, user);
         // 绑定会话
-        Context.Network.BindUser(session, user.Id);
-        user.SessionId = session.SessionId;
+        session.UserId = user.Id;
+        user.Session = session;
 
         // 生成重连 Token
         var token = Guid.NewGuid().ToString("N");
@@ -230,7 +230,7 @@ public static class UserHandler
         }
 
         // 绑定角色到会话
-        Context.Network.BindRole(session, role.Id);
+        session.RoleId = role.Id;
 
         // 更新重连Token（包含roleId）
         if (!string.IsNullOrEmpty(session.ReconnectToken))
@@ -243,6 +243,7 @@ public static class UserHandler
 
         // 创建在线玩家
         var player = PlayerEntity.Create(role.Id, session.UserId, role);
+        player.Online.Session = session;
 
         Context.Players.AddPlayer(player);
 
@@ -292,7 +293,7 @@ public static class UserHandler
         if (req.RoleId > 0) roleId = req.RoleId;
 
         // 绑定会话
-        Context.Network.BindUser(session, userId);
+        session.UserId = userId;
 
         res.Code = 0;
         res.Message = "OK";
@@ -303,9 +304,10 @@ public static class UserHandler
             var role = await Context.Players.LoadRoleAsync(roleId);
             if (role != null && role.UserId == userId)
             {
-                Context.Network.BindRole(session, role.Id);
+                session.RoleId = role.Id;
 
                 var player = PlayerEntity.Create(role.Id, userId, role);
+                player.Online.Session = session;
 
                 Context.Players.AddPlayer(player);
 
