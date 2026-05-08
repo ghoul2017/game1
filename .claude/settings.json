@@ -1,9 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Read(//e/work/server/**)",
-      "Read(//e/work/sgserver/**)",
-      "Read(//e/worku/game1/**)"
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebSearch(*)",
+      "WebFetch(*)",
+      "Agent(*)",
+      "mcp__*"
     ],
     "deny": [
       "Bash(git push:*)",
