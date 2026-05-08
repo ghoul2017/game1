@@ -33,10 +33,10 @@
 ## 构建与运行
 
 ```bash
-# 服务端
-cd server && dotnet build
-dotnet run --project server/Game           # 监听 0.0.0.0:9000
-dotnet run --project server/tools -- --list  # 辅助工具
+# 服务端（本机 .NET 8 SDK 在 ~/.dotnet/，需用完整路径）
+~/.dotnet/dotnet build server/Game
+~/.dotnet/dotnet run --project server/Game           # 监听 0.0.0.0:9000
+~/.dotnet/dotnet run --project server/tools -- --list  # 辅助工具
 scripts\xlsx2csv.cmd [args]               # xlsx 转 csv
 scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 
