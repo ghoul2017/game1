@@ -10,6 +10,7 @@ using Game.Config;
 using Game.Core;
 using Game.Core.Network;
 using Game.Database;
+using Shared.Core.Event;
 using Shared.Core.Log;
 
 namespace Game;
@@ -40,6 +41,9 @@ public static class AppStart
     {
         // 初始化配置管理器
         ConfigManager.Instance.Init(Context.Config.Tables.Directory);
+
+        // 扫描注册事件处理器
+        EventBus.Instance.AutoRegister();
 
         // 初始化数据库（MongoDB）
         await DatabaseManager.Instance.Init();

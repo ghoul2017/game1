@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using Client.Game;
 using Shared.Common;
+using Shared.Core.Event;
 using Shared.Core.Network;
 using Shared.Common.Protos;
 using UnityEngine;
@@ -111,6 +112,7 @@ namespace Client.Network
             DontDestroyOnLoad(gameObject);
             _router = new MessageRouter();
             _router.AutoRegister();
+            EventBus.Instance.AutoRegister();
         }
 
         void Update()
