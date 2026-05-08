@@ -25,11 +25,11 @@ public static class RoleTaskSystem
     /// <summary>加载角色任务列表</summary>
     public static async Task<RoleTaskComponent> LoadTasksAsync(this RoleTaskComponent self, long roleId)
     {
-        var taskList = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleTaskComponent>(roleId);
+        var taskList = await MongoDb.Instance.LoadAsync<RoleTaskComponent>(roleId);
         if (taskList == null)
         {
             taskList = new RoleTaskComponent { Id = roleId };
-            await DatabaseManager.Instance.EntityRepo.InsertAsync(taskList);
+            await MongoDb.Instance.InsertAsync(taskList);
             Log.Info($"创建新任务列表 RoleId:{roleId}");
         }
 
@@ -44,7 +44,7 @@ public static class RoleTaskSystem
     /// <summary>保存任务列表</summary>
     public static async Task SaveTasksAsync(this RoleTaskComponent self)
     {
-        await DatabaseManager.Instance.EntityRepo.UpdateAsync(self);
+        await MongoDb.Instance.UpdateAsync(self);
     }
 
     /// <summary>接取任务</summary>

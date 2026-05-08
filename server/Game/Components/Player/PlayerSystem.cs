@@ -106,7 +106,7 @@ public static class PlayerSystem
     {
         try
         {
-            return await DatabaseManager.Instance.EntityRepo.LoadAsync<Role>(roleId);
+            return await MongoDb.Instance.LoadAsync<Role>(roleId);
         }
         catch (Exception ex)
         {
@@ -121,7 +121,7 @@ public static class PlayerSystem
         if (role == null) return;
         try
         {
-            await DatabaseManager.Instance.EntityRepo.UpdateAsync(role);
+            await MongoDb.Instance.UpdateAsync(role);
         }
         catch (Exception ex)
         {
@@ -138,7 +138,7 @@ public static class PlayerSystem
             {
                 try
                 {
-                    await DatabaseManager.Instance.EntityRepo.UpdateAsync(role);
+                    await MongoDb.Instance.UpdateAsync(role);
                 }
                 catch (Exception ex)
                 {

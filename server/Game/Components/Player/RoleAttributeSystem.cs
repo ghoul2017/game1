@@ -14,6 +14,6 @@ public static class RoleAttributeSystem
     /// <summary>保存角色属性</summary>
     public static async Task SaveAttributeAsync(this RoleAttributeComponent self)
     {
-        await DatabaseManager.Instance.EntityRepo.UpdateAsync(self);
+        await MongoDb.Instance.UpdateAsync(self);
     }
 }

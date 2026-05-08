@@ -19,11 +19,11 @@ public static class PlayerHandlers
         }
 
         var attrComp = player.AddComponent<RoleAttributeComponent>();
-        var attr = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleAttributeComponent>(e.RoleId);
+        var attr = await MongoDb.Instance.LoadAsync<RoleAttributeComponent>(e.RoleId);
         if (attr == null)
         {
             attr = new RoleAttributeComponent { Id = e.RoleId };
-            await DatabaseManager.Instance.EntityRepo.InsertAsync(attr);
+            await MongoDb.Instance.InsertAsync(attr);
             Log.Info($"创建新角色属性 RoleId:{e.RoleId}");
         }
         attrComp.Id = attr.Id;

@@ -9,7 +9,6 @@ using Game.Components.User;
 using Game.Config;
 using Game.Core;
 using Game.Core.Network;
-using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -47,7 +46,7 @@ public static class AppStart
         EventBus.Instance.AutoRegister();
 
         // 初始化数据库（MongoDB）
-        await DatabaseManager.Instance.Init();
+        await MongoDb.Instance.Init(Context.Config.MongoDb);
 
         // 添加所有 Component 到根实体
         var networkComponent = Context.Server.AddComponent<NetworkComponent>();

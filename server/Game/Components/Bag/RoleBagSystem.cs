@@ -28,7 +28,7 @@ public static class RoleBagSystem
     /// <summary>保存背包</summary>
     public static async Task SaveBagAsync(this RoleBagComponent self)
     {
-        await DatabaseManager.Instance.EntityRepo.UpdateAsync(self);
+        await MongoDb.Instance.UpdateAsync(self);
     }
 
     /// <summary>添加物品（自动找空格或叠加）</summary>

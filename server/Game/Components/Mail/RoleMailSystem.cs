@@ -23,11 +23,11 @@ public static class RoleMailSystem
     /// <summary>加载角色邮件列表</summary>
     public static async Task<RoleMailComponent> LoadMailsAsync(this RoleMailComponent self, long roleId)
     {
-        var mailList = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleMailComponent>(roleId);
+        var mailList = await MongoDb.Instance.LoadAsync<RoleMailComponent>(roleId);
         if (mailList == null)
         {
             mailList = new RoleMailComponent { Id = roleId };
-            await DatabaseManager.Instance.EntityRepo.InsertAsync(mailList);
+            await MongoDb.Instance.InsertAsync(mailList);
             Log.Info($"创建新邮件列表 RoleId:{roleId}");
         }
 
@@ -46,7 +46,7 @@ public static class RoleMailSystem
     /// <summary>保存邮件列表</summary>
     public static async Task SaveMailsAsync(this RoleMailComponent self)
     {
-        await DatabaseManager.Instance.EntityRepo.UpdateAsync(self);
+        await MongoDb.Instance.UpdateAsync(self);
     }
 
     /// <summary>发送邮件给指定角色</summary>

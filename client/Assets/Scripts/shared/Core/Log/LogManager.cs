@@ -51,6 +51,12 @@ namespace Shared.Core.Log
 
         public static ILog GetLogger<T>() => GetLogger(typeof(T).Name);
 
+        /// <summary>追加自定义 Appender。Init 后调用，已有 logger 自动感知。</summary>
+        public static void AddAppender(ILogAppender appender)
+        {
+            _appenders.Add(appender);
+        }
+
         public static ILog GetLogger(string name)
         {
             return _loggers.GetOrAdd(name, CreateLogger);

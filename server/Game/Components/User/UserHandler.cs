@@ -5,12 +5,10 @@ using Game.Components.Player;
 using Game.Core;
 using Game.Core.Network;
 using Game.Database;
-using Game.Database.MongoDb.Repositories;
 using Shared.Common.Protos;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
-using PlayerAccount = Game.Database.MongoDb.Repositories.PlayerAccount;
 
 namespace Game.Components.User;
 
@@ -51,20 +49,20 @@ public static class UserHandler
 
         // 查询账号
         PlayerAccount? account =
-            await DatabaseManager.Instance.PlayerRepo.GetByUsernameAsync(username);
+            await MongoDb.Instance.QueryFirstOrDefaultAsync<PlayerAccount>(p => p.Username == username);
         if (account == null)
         {
             // 自动注册
             account = new PlayerAccount
             {
+                Id = IdGenerator.Instance.NextId(),
                 Username = username,
                 Password = req.Password,
                 Nickname = username,
                 CreateTime = DateTime.UtcNow
             };
-            var id = await DatabaseManager.Instance.PlayerRepo.CreateAsync(account);
-            account.Id = id;
-            Log.Info($"自动注册账号 User:{username} Id:{id}");
+            await MongoDb.Instance.InsertDirectAsync("player", account);
+            Log.Info($"自动注册账号 User:{username} Id:{account.Id}");
         }
         else if (account.Password != req.Password)
         {
@@ -112,7 +110,7 @@ public static class UserHandler
             return res;
         }
 
-        var roles = await DatabaseManager.Instance.RoleRepo.GetByUserIdAsync(session.UserId);
+        var roles = await MongoDb.Instance.QueryAsync<UserRole>(r => r.UserId == session.UserId, "user_role");
         res.Code = 0;
         res.Message = "OK";
         res.Roles = roles.Select(r => new RoleInfo
@@ -151,7 +149,7 @@ public static class UserHandler
         }
 
         // 角色数量限制
-        var existing = await DatabaseManager.Instance.RoleRepo.GetByUserIdAsync(session.UserId);
+        var existing = await MongoDb.Instance.QueryAsync<UserRole>(r => r.UserId == session.UserId, "user_role");
         if (existing.Count >= UserComponent.MaxRolesPerUser)
         {
             res.Code = 1003;
@@ -160,7 +158,7 @@ public static class UserHandler
         }
 
         // 名称唯一性
-        if (await DatabaseManager.Instance.RoleRepo.NameExistsAsync(name))
+        if (await MongoDb.Instance.AnyAsync<UserRole>(r => r.Name == name, "user_role"))
         {
             res.Code = 1004;
             res.Message = "角色名已存在";
@@ -180,10 +178,10 @@ public static class UserHandler
             Job = req.Job,
             CreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
-        await DatabaseManager.Instance.EntityRepo.InsertAsync(role);
+        await MongoDb.Instance.InsertAsync(role);
 
         // 写入角色索引
-        await DatabaseManager.Instance.RoleRepo.AddAsync(new UserRole
+        await MongoDb.Instance.InsertDirectAsync("user_role", new UserRole
         {
             RoleId = roleId,
             UserId = session.UserId,

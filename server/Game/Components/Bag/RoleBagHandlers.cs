@@ -109,11 +109,11 @@ public static class RoleBagHandlers
         }
 
         var bagComp = player.AddComponent<RoleBagComponent>();
-        var bag = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleBagComponent>(e.RoleId);
+        var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(e.RoleId);
         if (bag == null)
         {
             bag = new RoleBagComponent { Id = e.RoleId, Capacity = 100 };
-            await DatabaseManager.Instance.EntityRepo.InsertAsync(bag);
+            await MongoDb.Instance.InsertAsync(bag);
             Log.Info($"创建新背包 RoleId:{e.RoleId}");
         }
         bagComp.Id = bag.Id;

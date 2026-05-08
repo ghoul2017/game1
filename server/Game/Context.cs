@@ -5,6 +5,7 @@ using Game.Components.Monster;
 using Game.Components.Player;
 using Game.Core;
 using Game.Core.Network;
+using Game.Database;
 using Game.Entities;
 
 namespace Game;
@@ -13,6 +14,7 @@ public static class Context
 {
     public static Module Server = new();
     public static AppConfig Config = null!;
+    public static MongoDb Db => MongoDb.Instance;
 
     public static NetworkComponent Network => Server.GetComponent<NetworkComponent>();
     public static PlayerComponent Players => Server.GetComponent<PlayerComponent>();

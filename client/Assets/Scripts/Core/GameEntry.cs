@@ -8,6 +8,7 @@ namespace Client.Core
     {
         private void Start()
         {
+            LogClientInitializer.Init();
             Debug.Log("[GameEntry] 游戏启动");
 
             NetClient.EnsureCreated();
