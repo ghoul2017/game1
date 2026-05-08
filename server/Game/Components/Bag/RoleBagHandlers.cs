@@ -133,7 +133,7 @@ public static class RoleBagHandlers
     #region 事件订阅
 
     [EventSubscriber]
-    public static async void OnPlayerOnline(EventType.PlayerOnlineEvent e)
+    public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
     {
         var player = Context.Players.GetByRoleId(e.RoleId);
         if (player == null)

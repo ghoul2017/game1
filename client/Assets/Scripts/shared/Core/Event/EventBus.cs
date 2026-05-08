@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Shared.Core.Log;
 
 namespace Shared.Core.Event
@@ -13,7 +14,8 @@ namespace Shared.Core.Event
 
         public static EventBus Instance { get; } = new();
 
-        private readonly ConcurrentDictionary<Type, List<Action<IEvent>>> _handlers = new();
+        private readonly ConcurrentDictionary<Type, List<Action<IEvent>>> _syncHandlers = new();
+        private readonly ConcurrentDictionary<Type, List<Func<IEvent, Task>>> _asyncHandlers = new();
 
         private EventBus()
         {
@@ -27,7 +29,8 @@ namespace Shared.Core.Event
         public void AutoRegister(Assembly assembly)
         {
             var attrType = typeof(EventSubscriberAttribute);
-            int count = 0;
+            int syncCount = 0;
+            int asyncCount = 0;
 
             foreach (var method in assembly.GetTypes()
                          .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public))
@@ -47,56 +50,101 @@ namespace Shared.Core.Event
                     continue;
                 }
 
-                if (method.ReturnType != typeof(void))
+                if (method.ReturnType == typeof(void))
                 {
-                    Log.Warn($"[EventSubscriber] 返回类型必须是 void: {method.DeclaringType?.Name}.{method.Name}");
+                    var actionType = typeof(Action<>).MakeGenericType(eventType);
+                    var del = Delegate.CreateDelegate(actionType, method);
+
+                    Action<IEvent> wrapper = e => del.DynamicInvoke(e);
+
+                    var list = _syncHandlers.GetOrAdd(eventType, _ => new List<Action<IEvent>>());
+                    lock (list)
+                    {
+                        list.Add(wrapper);
+                    }
+
+                    syncCount++;
+                }
+                else if (method.ReturnType == typeof(Task))
+                {
+                    var funcType = typeof(Func<,>).MakeGenericType(eventType, typeof(Task));
+                    var del = Delegate.CreateDelegate(funcType, method);
+
+                    Func<IEvent, Task> wrapper = e => (Task)del.DynamicInvoke(e)!;
+
+                    var list = _asyncHandlers.GetOrAdd(eventType, _ => new List<Func<IEvent, Task>>());
+                    lock (list)
+                    {
+                        list.Add(wrapper);
+                    }
+
+                    asyncCount++;
+                }
+                else
+                {
+                    Log.Warn($"[EventSubscriber] 返回类型必须是 void 或 Task: {method.DeclaringType?.Name}.{method.Name}");
                     continue;
                 }
 
-                var actionType = typeof(Action<>).MakeGenericType(eventType);
-                var del = Delegate.CreateDelegate(actionType, method);
-
-                Action<IEvent> wrapper = e => del.DynamicInvoke(e);
-
-                var list = _handlers.GetOrAdd(eventType, _ => new List<Action<IEvent>>());
-                lock (list)
-                {
-                    list.Add(wrapper);
-                }
-
                 Log.Info($"注册 EventSubscriber: {method.DeclaringType?.Name}.{method.Name} -> {eventType.Name}");
-                count++;
             }
 
-            Log.Info($"EventSubscriber 自动注册完成，共 {count} 个");
+            Log.Info($"EventSubscriber 自动注册完成，同步 {syncCount} 个，异步 {asyncCount} 个");
         }
 
         public void Publish<TEvent>(TEvent e) where TEvent : IEvent
         {
-            if (!_handlers.TryGetValue(typeof(TEvent), out var list)) return;
-
-            List<Action<IEvent>> snapshot;
-            lock (list)
+            if (_syncHandlers.TryGetValue(typeof(TEvent), out var syncList))
             {
-                snapshot = new List<Action<IEvent>>(list);
+                List<Action<IEvent>> snapshot;
+                lock (syncList)
+                {
+                    snapshot = new List<Action<IEvent>>(syncList);
+                }
+
+                foreach (var handler in snapshot)
+                {
+                    try
+                    {
+                        handler(e);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"事件处理异常 [{typeof(TEvent).Name}]: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        public async Task PublishAsync<TEvent>(TEvent e) where TEvent : IEvent
+        {
+            Publish(e);
+
+            if (!_asyncHandlers.TryGetValue(typeof(TEvent), out var asyncList)) return;
+
+            List<Func<IEvent, Task>> snapshot;
+            lock (asyncList)
+            {
+                snapshot = new List<Func<IEvent, Task>>(asyncList);
             }
 
             foreach (var handler in snapshot)
             {
                 try
                 {
-                    handler(e);
+                    await handler(e);
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"事件处理异常 [{typeof(TEvent).Name}]: {ex.Message}");
+                    Log.Error($"异步事件处理异常 [{typeof(TEvent).Name}]: {ex.Message}");
                 }
             }
         }
 
         public void Clear()
         {
-            _handlers.Clear();
+            _syncHandlers.Clear();
+            _asyncHandlers.Clear();
         }
     }
 }

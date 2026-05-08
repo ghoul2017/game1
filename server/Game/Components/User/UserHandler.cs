@@ -248,7 +248,7 @@ public static class UserHandler
         Context.Players.AddPlayer(player);
 
         // 发布上线事件，各模块自行挂载 Component 并加载数据
-        EventBus.Instance.Publish(new EventType.PlayerOnlineEvent { RoleId = role.Id });
+        await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { RoleId = role.Id });
 
         res.Code = 0;
         res.Message = "OK";
@@ -311,7 +311,7 @@ public static class UserHandler
                 Context.Players.AddPlayer(player);
 
                 // 发布上线事件，各模块自行挂载 Component 并加载数据
-                EventBus.Instance.Publish(new EventType.PlayerOnlineEvent { RoleId = role.Id });
+                await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { RoleId = role.Id });
 
                 res.RoleId = role.Id;
                 res.Name = role.Name;
