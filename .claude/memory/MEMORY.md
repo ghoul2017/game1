@@ -9,3 +9,5 @@ This file is the index for project memory. Each entry is a one-line hook to a me
 - [进化历史](project-evolution.md) — 自我进化规则 + 当前工具链清单
 - [protobuf-net Unity 依赖](ref-protobuf-net-unity.md) — Unity 2021.3 下 protobuf-net v3 需要的 DLL
 - [Redis 降级](project-redis-bypass.md) — RedisManager 自动降级为内存模式
+- [Event 重构记录](event-refactor.md) — Event 系统解耦成果、事件清单、踩坑
+- [NetworkComponent 解耦](arch-network-decoupling.md) — SessionManager 合并 + session 引用跟随所属对象
