@@ -52,3 +52,20 @@ Handler 签名：
 - 异步：`public static async Task OnXxx(XxxEvent e)`
 
 **绝对不要用 `async void`**——`Publish` 不会等 `async void` 的 `await` 完成。
+
+```csharp
+// 错误：Publish 返回时数据根本没加载完
+EventBus.Instance.Publish(new PlayerOnlineEvent { RoleId = roleId });
+// handler 内部：
+//   async void OnPlayerOnline(...) {
+//       var bag = player.AddComponent<RoleBagComponent>();
+//       await bag.LoadBagAsync(roleId);  // ← 到这里就返回 Publish 了
+//   }
+
+// 正确：用 PublishAsync + Task 返回类型
+await EventBus.Instance.PublishAsync(new PlayerOnlineEvent { RoleId = roleId });
+// handler 内部：
+//   async Task OnPlayerOnline(...) {
+//       await bag.LoadBagAsync(roleId);  // ← PublishAsync 会等这个完成
+//   }
+```

@@ -2,34 +2,6 @@
 
 2.5D RPG 游戏项目。Unity 客户端（`client/`）+ .NET 8 服务端（`server/`）。TCP 二进制 Protobuf 通信，服务端权威。
 
-## 核心哲学
-
-- **上下文是命门**：灵感想法先记下来，完成后再整理。上下文丢失=经验丢失
-- **学习第一**：先武装自己（调研文档、学习工具、掌握框架），再写代码
-- **能力优先级**：规则 > 工具 > 代码
-- **资产目录化**：.claude/ 下的配置、rules、hooks 都是持久资产，主动建设和维护
-
-## 持久化分层
-
-信息能否跨对话保留，取决于写在哪里。写错位置等于没写。
-
-| 内容类型 | 写入位置 | 是否自动加载 |
-|---------|---------|------------|
-| 行为准则、工作方法、原则 | `.claude/rules/mindset.md` | 每次都加载 |
-| 技术约束、踩坑经验、API陷阱 | `.claude/rules/project-*.md` / `global-*.md` | paths 匹配时加载 |
-| 项目配置、命令、待办 | `CLAUDE.md` | 每次都加载 |
-| 决策记录、调研结论 | `docs/` | 不自动加载，需主动读 |
-| 用户画像、项目历史 | memory/ | **不自动加载**，仅作参考 |
-
-**禁止**：把必须执行的规则只写进 memory——memory 不自动加载，下次对话等于没有。
-
-**写入检查**：写完任何内容后问自己——"这个下次启动能自动加载吗？"如果不能，换个位置写。
-
-## 成长规则
-
-1. **遇到局限→调研解决**：说"做不到"之前，先搜索别人怎么解决的，找到方案立刻实施并记录
-2. **踩坑→写入规则**：每次遇到工具问题/语法陷阱/框架约定，当场写入 `.claude/rules/`，不等"下次记得"
-
 ## 构建与运行
 
 ```bash
@@ -199,21 +171,6 @@ Context.Players.AddPlayer(player);
 - 允许在分析阶段提问，实现阶段全自动
 - 实现代码后自动 commit，无需额外确认
 - 记忆文件写在项目目录 `.claude/memory/` 下，便于 Git 管理
-
-## TODO：架构迁移
-
-详细方案见 `.claude/plans/architecture-migration.md`。
-
-- [x] Phase 1: IModule→Component + 去缓存层 + MongoDB
-- [x] Phase 2: Handler 统一为扩展方法风格（Bag/Mail/Chat/Map/Task/Fight）
-- [x] Phase 3: Player 变 Entity（PlayerEntity + PlayerOnlineComponent + RoleDataComponent）
-- [x] Phase 4: Manager 拆解 + IEntity→Component + game/ 目录迁移
-- [ ] Phase 4 后续: MapEntity + MonsterEntity（改动面大，需逐步推进）
-
-## 开发工作流
-
-执行准则见 `.claude/rules/dev-workflow.md` — 自主判断、底线规则、子 agent 分工、需求拆解、进度记录。
-详细规则见 `.claude/rules/mindset.md` — 核心哲学、踩坑归档、执行前重新评估、持久化分层。
 
 ## 新对话启动指南
 

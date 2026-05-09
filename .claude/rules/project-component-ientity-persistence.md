@@ -6,6 +6,13 @@ paths: ["server/**/*.cs"]
 
 将 IEntity 数据类（如 RoleBag）合并到 Component 时，Component 实现 IEntity 以保持 MongoEntityRepository 兼容。
 
+## BSON 序列化标记
+
+1. **`[BsonId]`** — 必须在 `Id` 属性上标记，否则 MongoDB 无法将 `Id` 映射为 `_id`
+2. **`[BsonIgnore]`** — 运行时索引字段（如 `_indexMap`、`_mailMap`）和运行时状态（如 `_nextItemUid`、`NextMailId`）必须标记
+3. **`AfterDeserialize`** — MongoDB 反序列化不会自动调用，通过 MongoEntityRepository 反射在 LoadAsync 后调用
+4. **Proto 属性** — 仅通过网络 Protobuf 序列化的类才需要 `[ProtoContract]`/`[ProtoMember]`。纯 MongoDB 持久化的 Component 和嵌套数据类不需要
+
 ## 步骤
 
 1. Component 实现 `IEntity`，添加 `[BsonId] public long Id { get; set; }`

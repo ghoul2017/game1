@@ -18,9 +18,8 @@ always_apply: true
 1. **改完必须编译** — 服务端 `dotnet build server/Game`，客户端 `dotnet build client/Assembly-CSharp.csproj`。编译不过就修，修不了就回退
 2. **验证不是摆设** — 代码变更后用 verify-feature + verify-quality 并行验证。验证失败就修，修不好就回退，最多 3 轮
 3. **回退机制** — 修复循环耗尽后 `git checkout -- <files>` 回退，向用户说明原因。不硬撑
-4. **功能清单只追加** — 不删除不修改已有条目，只改 `passes` 字段。新条目 ID 从最大值续编
-5. **知识归档** — 实现中发现有价值经验，委托 mem-writer 归档。没发现就跳过
-6. **不 git push**
+4. **知识归档** — 实现中发现有价值经验，委托 mem-writer 归档。没发现就跳过
+5. **不 git push**
 
 ## 子 Agent
 
@@ -37,18 +36,4 @@ always_apply: true
 
 ## 需求拆解
 
-当用户给出大需求，自主拆解为原子功能写入 `features.json`：
-
-- 涉及通信：消息定义 → 服务端 Handler → 客户端 UI
-- 涉及配置表：配置条目 → 实现条目
-- 涉及实体持久化：实体类 → 工厂注册 → Handler 逻辑
-- 每个条目独立可完成，description 充分到 dev-worker 无需猜测
-- 按依赖排序，被依赖的优先级更高
-
-## 进度记录
-
-`progress.txt` 追加一行：
-```
-YYYY-MM-DD [功能ID] COMPLETED - 描述
-YYYY-MM-DD [功能ID] FAILED - 失败原因
-```
+按 `docs/` 工作流（`project-docs-workflow.md`）执行，不使用 features.json。
