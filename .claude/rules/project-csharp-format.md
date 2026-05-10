@@ -51,3 +51,27 @@ var snapshot = new List<Action<IEvent>>(list);
 lock (list) { ... }
 catch (Exception ex) { ... }
 ```
+
+## 接口默认方法 → 扩展方法
+
+接口的默认实现（`default interface method`）在类实例上直接调用会编译报 CS1061。必须通过接口类型变量调用，且 Unity Mono 运行时不支持。需要共享逻辑时用扩展方法替代。
+
+```csharp
+// 错误：默认接口实现
+public interface IEntity
+{
+    long Id { get; set; }
+    public async Task SaveAsync() { await MongoDb.Instance.UpdateAsync(this); }
+}
+// roleAttr.SaveAsync() → CS1061 编译错误
+
+// 正确：扩展方法
+public static class IEntityExtensions
+{
+    public static async Task SaveAsync(this IEntity entity)
+    {
+        await MongoDb.Instance.UpdateAsync(entity);
+    }
+}
+// roleAttr.SaveAsync() → OK
+```

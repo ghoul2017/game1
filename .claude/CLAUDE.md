@@ -30,7 +30,7 @@ scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 | 日志 | 自研 ILog + Appender（参考 SLF4J） |
 | 线程模型 | GameSynchronizationContext 单线程调度，await 自动回主线程 |
 | 定时器 | GameTimer，回调自动 Post 到主线程 |
-| Token | TokenStore（内存实现，替代 Redis 做重连 Token） |
+| Token | TokenSigner（HMAC-SHA256 签名，无状态验证，Role.LastToken 单次有效） |
 
 ## 目录结构
 
@@ -75,9 +75,9 @@ server/Game/
     GameSynchronizationContext.cs  # 单线程调度器
     GameTimer.cs        # 定时器（回调自动回主线程）
     ShutdownToken.cs    # 统一关闭信号
-    TokenStore.cs       # 内存 Token 存储
+    TokenSigner.cs      # HMAC-SHA256 Token 签名器
     Aoi/                # TowerAoi, Tower, IAoiObject, IAoiEventListener
-    Database/           # MongoDb (统一入口), IEntity
+    Database/           # MongoDb (统一入口), IEntity, IEntityExtensions
     Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener
     Network/            # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler
