@@ -8,6 +8,7 @@ using Game.Components.Map;
 using Game.Components.Player;
 using Game.Config;
 using Game.Core;
+using Game.Database;
 using Shared.Common.Config;
 using Shared.Common.Protos;
 using Shared.Core.Event;
@@ -280,7 +281,7 @@ public static class MonsterSystem
             Log.Info($"玩家升级 RoleId:{roleId} Level:{newLevel}");
         }
 
-        await roleAttr.SaveAttributeAsync();
+        await roleAttr.SaveAsync();
 
         // 发送经验变化通知
         Context.Players.SendToPlayer(roleId, new ExpChangedNtf { Exp = roleAttr.Exp, Level = roleAttr.Level });
@@ -301,7 +302,7 @@ public static class MonsterSystem
 
         var roleAttr = player.RoleAttribute;
         roleAttr.Gold += gold;
-        await roleAttr.SaveAttributeAsync();
+        await roleAttr.SaveAsync();
 
         // 发送金币变化通知
         Context.Players.SendToPlayer(roleId, new GoldChangedNtf { Gold = roleAttr.Gold });
