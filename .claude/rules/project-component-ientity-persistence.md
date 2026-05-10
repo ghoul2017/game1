@@ -21,29 +21,44 @@ paths: ["server/**/*.cs"]
 4. `AfterDeserialize` / `RebuildIndex` 保留在 Component 上
 5. 删除原 IEntity 类
 
-## LoadAsync 拷贝模式
+## AddComponent(instance) 加载模式（推荐）
 
-`MongoEntityRepository.LoadAsync<T>` 返回新实例，但数据需要写到已挂载的 Component（`self`）上：
+`Entity.AddComponent<T>(T component)` 可直接挂载外部创建的实例，自动设置 `_parent`。优先使用此模式替代先 `AddComponent()` 再逐字段拷贝：
 
 ```csharp
-public static async Task<RoleBagComponent> LoadBagAsync(this RoleBagComponent self, long roleId)
+[EventSubscriber]
+public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
 {
-    var bag = await DatabaseManager.Instance.EntityRepo.LoadAsync<RoleBagComponent>(roleId);
+    var player = e.Player;
+
+    var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(player.Id);
     if (bag == null)
     {
-        bag = new RoleBagComponent { Id = roleId, Capacity = 100 };
-        await DatabaseManager.Instance.EntityRepo.InsertAsync(bag);
+        bag = new RoleBagComponent { Id = player.Id, Capacity = 100 };
+        await MongoDb.Instance.InsertAsync(bag);
     }
-    // 拷贝到 self，保留 self 的 _parent 引用
-    self.Id = bag.Id;
-    self.Capacity = bag.Capacity;
-    self.Items = bag.Items;
-    self.RebuildIndex();
-    return self;
+    bag.RebuildIndex();
+    player.AddComponent(bag);
 }
 ```
 
-**Why:** `LoadAsync` 返回的实例 `_parent` 为 null，不能直接替代已挂载的 Component。拷贝字段 + 手动 RebuildIndex 确保 self 数据正确且保持 Entity 树关系。
+**Why:** `AddComponent(instance)` 内部调用 `component.SetParent(this)`，DB 加载实例的 `_parent` 引用正确，不需要先创建空 Component 再逐字段拷贝。代码更简洁，不易遗漏字段。
+
+**注意**：`RebuildIndex()` 等运行时初始化必须在 `AddComponent` 之前调用，因为 `AddComponent` 不会自动触发 `AfterDeserialize`。
+
+## 旧模式：LoadAsync 拷贝（已淘汰）
+
+```csharp
+// 已淘汰：先 AddComponent() 再逐字段拷贝
+var bagComp = player.AddComponent<RoleBagComponent>();
+var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(roleId);
+bagComp.Id = bag.Id;
+bagComp.Capacity = bag.Capacity;
+bagComp.Items = bag.Items;
+bagComp.RebuildIndex();
+```
+
+新代码不要再使用此模式。
 
 ## 安全性
 

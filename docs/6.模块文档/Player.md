@@ -9,39 +9,43 @@ Player 模块管理在线玩家的核心实体 PlayerEntity 及其生命周期�
 | 文件 | 行数 | 职责 |
 |------|------|------|
 | `server/Game/Components/Player/PlayerComponent.cs` | 17 | Module 级 Component，全局在线玩家集合 |
-| `server/Game/Components/Player/PlayerEntity.cs` | 46 | 玩家实体，Id=RoleId，挂载所有 PlayerEntity 级 Component |
-| `server/Game/Components/Player/PlayerSystem.cs` | 161 | 玩家管理扩展方法 |
-| `server/Game/Components/Player/PlayerHandlers.cs` | 49 | 事件订阅（PlayerOnline → 加载属性） |
+| `server/Game/Components/Player/PlayerEntity.cs` | 40 | 玩家实体，Id=RoleId，挂载所有 PlayerEntity 级 Component |
+| `server/Game/Components/Player/PlayerSystem.cs` | ~200 | 玩家管理扩展方法 + EnterGame 逻辑 |
+| `server/Game/Components/Player/PlayerHandlers.cs` | ~30 | 事件订阅（PlayerOnline → 加载属性） |
 | `server/Game/Components/Player/PlayerOnlineComponent.cs` | 18 | PlayerEntity 级，在线状态和会话 |
-| `server/Game/Components/Player/RoleDataComponent.cs` | 13 | PlayerEntity 级，持久化 Role 引用 |
+| `server/Game/Components/Player/RoleDataComponent.cs` | ~45 | PlayerEntity 级，角色持久化数据（IEntity） |
 | `server/Game/Components/Player/RoleAttributeComponent.cs` | 88 | PlayerEntity 级，战斗属性（IEntity 持久化） |
 | `server/Game/Components/Player/RoleAttributeSystem.cs` | 20 | 属性保存扩展方法 |
-| `server/Game/Components/Player/Role.cs` | 50 | 角色数据实体（IEntity，MongoDB 持久化） |
 
 ## 数据模型
 
-### Role（角色实体）
+### RoleDataComponent（角色持久化组件）
 
 ```csharp
 namespace Game.Components.Player;
 
-public class Role : IEntity
+[ComponentOf(typeof(PlayerEntity))]
+public class RoleDataComponent : Component, IEntity
 {
-    [ProtoMember(1)] [BsonId]
+    [BsonId]
     public long Id { get; set; }              // 角色ID（雪花算法）
-    [ProtoMember(2)] public long UserId { get; set; }
-    [ProtoMember(3)] public string Name { get; set; } = string.Empty;
-    [ProtoMember(4)] public int Level { get; set; } = 1;
-    [ProtoMember(5)] public int Job { get; set; }
-    [ProtoMember(6)] public long Exp { get; set; }
-    [ProtoMember(7)] public int VipLevel { get; set; }
-    [ProtoMember(8)] public long LastLogoutTime { get; set; }
-    [ProtoMember(9)] public long CreateTime { get; set; }
+    public long UserId { get; set; }           // 所属用户ID
+    public string Name { get; set; } = string.Empty;
+    public int Level { get; set; } = 1;
+    public int Job { get; set; }
+    public long Exp { get; set; }
+    public int VipLevel { get; set; }
+    public long LastLogoutTime { get; set; }
+    public long CreateTime { get; set; }
+
+    [BsonIgnore]
+    public string LastToken { get; set; } = "";  // 重连Token（运行时）
 }
 ```
 
-- MongoDB 集合名：`role`
-- 同时具有 `[ProtoMember]` 和 `[BsonId]`，支持 Protobuf 网络传输 + BSON 持久化
+- MongoDB 集合名：`role`（与旧 Role 实体 BSON 兼容）
+- 实现 IEntity，直接持久化，不再包装 Role 实体
+- RoleDataComponent 在 EnterGame 时用 `AddComponent(instance)` 直接挂载 DB 加载实例
 
 ## Component
 
@@ -77,18 +81,6 @@ public class PlayerOnlineComponent : Component
 
 - 不持久化，运行时维护会话引用
 - 遵循数据所有者模式：PlayerOnlineComponent 自己持有 Session
-
-### RoleDataComponent（PlayerEntity 级）
-
-```csharp
-[ComponentOf(typeof(PlayerEntity))]
-public class RoleDataComponent : Component
-{
-    public Role? Role { get; set; }
-}
-```
-
-- 持有持久化 Role 实体的引用
 
 ### RoleAttributeComponent（PlayerEntity 级）
 
@@ -136,7 +128,7 @@ public class PlayerEntity : Entity
     public RoleTaskComponent RoleTask { get; }
 
     // 工厂方法
-    public static PlayerEntity Create(long roleId, long userId, Role role);
+    public static PlayerEntity Create(long roleId, long userId);
 }
 ```
 
@@ -160,10 +152,32 @@ public class PlayerEntity : Entity
 | ForEachPlayer | `ForEachPlayer(this PlayerComponent, Action<PlayerEntity>)` | 遍历在线玩家 |
 | Broadcast | `Broadcast(this PlayerComponent, IMessage)` | 全服广播 |
 | SendToPlayer | `SendToPlayer(this PlayerComponent, long roleId, IMessage)` | 发送给指定玩家 |
-| LoadRoleAsync | `LoadRoleAsync(this PlayerComponent, long roleId) → Task<Role?>` | 从 MongoDB 加载角色 |
+| EnterGame | `EnterGame(this PlayerComponent, roleId, userId, session, name, level, job) → Task<(player, token)?>` | 进入游戏全流程 |
+| LoadRoleDataAsync | `LoadRoleDataAsync(this PlayerComponent, long roleId) → Task<RoleDataComponent?>` | 从 MongoDB 加载角色数据 |
 | SaveRoleAsync | `SaveRoleAsync(this PlayerComponent, PlayerEntity)` | 保存角色数据 |
 | SaveAllRolesAsync | `SaveAllRolesAsync(this PlayerComponent)` | 批量保存所有在线角色 |
 | RemoveAll | `RemoveAll(this PlayerComponent)` | 清除所有在线玩家 |
+
+### EnterGame 流程
+
+```
+PlayerSystem.EnterGame(roleId, userId, session, name, level, job)
+  │
+  ├── 1. PlayerEntity.Create(roleId, userId)  — 创建空 PlayerEntity
+  ├── 2. LoadRoleDataAsync(roleId)            — 从 MongoDB 加载
+  │     └── 不存在 → 用 UserRole 数据创建并 InsertAsync（首次进入游戏）
+  ├── 3. player.AddComponent(roleData)        — 直接挂载 DB 实例
+  ├── 4. session.RoleId = roleId              — 绑定会话
+  ├── 5. player.Online.Session = session
+  ├── 6. TokenSigner.Generate → roleData.LastToken
+  ├── 7. AddPlayer(player)                    — 加入在线列表
+  ├── 8. session.Send(EnterGameNtf)           — 通知客户端准备就绪
+  └── 9. PublishAsync(PlayerOnlineEvent)      — 各模块挂载 Component + 加载数据
+        ├── PlayerHandlers → RoleAttributeComponent
+        ├── RoleBagHandlers → RoleBagComponent
+        ├── RoleMailHandlers → RoleMailComponent
+        └── RoleTaskHandlers → RoleTaskComponent
+```
 
 ### RoleAttributeSystem
 
@@ -180,21 +194,40 @@ public class PlayerEntity : Entity
 | PlayerOnlineEvent | `OnPlayerOnline` | 加载/创建 RoleAttributeComponent |
 
 PlayerOnlineEvent 处理流程：
-1. 从 Context.Players 获取 PlayerEntity
-2. LoadAsync<RoleAttributeComponent>(roleId) 从 MongoDB 加载
+1. 从 `e.Player` 直接获取 PlayerEntity（事件携带，不再查 Context）
+2. LoadAsync<RoleAttributeComponent>(player.Id) 从 MongoDB 加载
 3. 不存在则创建默认值并 InsertAsync
-4. 拷贝字段到已挂载的 Component，调用 RebuildIndex
+4. `player.AddComponent(attr)` 直接挂载 DB 实例
+
+## AddComponent(instance) 加载模式
+
+所有 PlayerEntity 级 Component 的上线加载统一使用 `AddComponent<T>(T component)` 挂载 DB 加载实例，不再 `AddComponent<T>()` + 逐字段拷贝：
+
+```csharp
+// 统一模式
+var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(player.Id);
+if (bag == null)
+{
+    bag = new RoleBagComponent { Id = player.Id, Capacity = 100 };
+    await MongoDb.Instance.InsertAsync(bag);
+}
+bag.RebuildIndex();
+player.AddComponent(bag);
+```
+
+适用于：RoleDataComponent、RoleAttributeComponent、RoleBagComponent、RoleMailComponent、RoleTaskComponent
 
 ## 模块依赖
 
 ```
 Player 模块
-  ├── 依赖 → MongoDB（Role、RoleAttributeComponent 持久化）
-  ├── 依赖 → EventBus（PlayerOnlineEvent 订阅）
+  ├── 依赖 → MongoDB（RoleDataComponent、RoleAttributeComponent 持久化）
+  ├── 依赖 → EventBus（PlayerOnlineEvent 订阅/发布）
+  ├── 依赖 → TokenSigner（EnterGame 生成重连Token）
   ├── 依赖 → Network（PlayerOnlineComponent.Session）
   │
   └── 被依赖 ← 所有其他模块
-       ├── User（SelectRoleHandler 创建 PlayerEntity）
+       ├── User（EnterGameHandler 调用 PlayerSystem.EnterGame）
        ├── Bag（player.RoleBag 访问背包）
        ├── Mail（player.RoleMail 访问邮件）
        ├── Task（player.RoleTask 访问任务）
@@ -208,8 +241,9 @@ Player 模块
 
 | 操作 | 集合 | 方法 | 场景 |
 |------|------|------|------|
-| 加载角色 | `role` | `LoadAsync<Role>(roleId)` | 选角入场 |
-| 保存角色 | `role` | `UpdateAsync(role)` | 下线/定时保存 |
+| 加载角色数据 | `role` | `LoadAsync<RoleDataComponent>(roleId)` | 进入游戏 |
+| 创建角色数据 | `role` | `InsertAsync(component)` | 首次进入游戏 |
+| 保存角色数据 | `role` | `UpdateAsync(component)` | 下线/定时保存 |
 | 加载属性 | `role_attribute` | `LoadAsync<RoleAttributeComponent>(roleId)` | 上线加载 |
 | 创建属性 | `role_attribute` | `InsertAsync(component)` | 首次上线 |
 | 保存属性 | `role_attribute` | `UpdateAsync(component)` | 属性变更 |

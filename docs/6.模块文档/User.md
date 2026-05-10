@@ -11,9 +11,9 @@ User 模块是游戏的入口模块，负责账号认证、角色管理和断线
 | `server/Game/Components/User/User.cs` | 21 | 账号实体，MongoDB 持久化 |
 | `server/Game/Components/User/UserComponent.cs` | 15 | Module 级 Component，全局用户索引 |
 | `server/Game/Components/User/UserRole.cs` | 23 | 角色索引实体，MongoDB 持久化 |
-| `server/Game/Components/User/UserHandler.cs` | ~300 | 消息处理 + 事件订阅 |
+| `server/Game/Components/User/UserHandler.cs` | ~260 | 消息处理 + 事件订阅 |
 | `server/Game/Core/TokenSigner.cs` | ~80 | HMAC-SHA256 Token 签名器 |
-| `client/Assets/Scripts/shared/Common/Protos/UserProtos.cs` | ~90 | 消息定义（双端共享） |
+| `client/Assets/Scripts/shared/Common/Protos/UserProtos.cs` | ~100 | 消息定义（双端共享） |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10101-10200 段 |
 
 ## 数据模型
@@ -38,7 +38,7 @@ public class User : IEntity
 
 - MongoDB 集合名：`user`
 - `[BsonIgnore]` 标记的 `Session` 不持久化，运行时由 Handler 维护
-- 遵循数据所有者模式：User 自己持有 Session 引用，而非由 SessionManager 集中管理
+- 遵循数据所有者模式：User 自己持有 Session 引用
 
 ### UserRole（角色索引）
 
@@ -59,7 +59,8 @@ public class UserRole : IEntity
 
 - MongoDB 集合名：`user_role`
 - `_id` 与 `RoleId` 相同，保证按角色ID可直接查询
-- 是 `Role`（Player 模块）的轻量索引，用于角色列表展示，避免加载完整 Role 数据
+- 是 RoleDataComponent（Player 模块）的轻量索引，用于角色列表展示和进入游戏验证
+- CreateRole 只写 UserRole，RoleDataComponent 在首次 EnterGame 时按需创建
 
 ## Component
 
@@ -120,8 +121,7 @@ public class UserComponent : Component
 特点：
 - **自动注册**：账号不存在时自动创建，无需单独注册接口
 - **合并角色列表**：LoginRes 直接返回 Roles，不再需要单独请求 RoleListReq
-- **Token 签名**：使用 HMAC-SHA256 签名，无状态验证，无需 TokenStore
-- **同名踢出**：检测到同名用户时，调用 NetworkComponent.Kick() 踢旧连接 + 清理 PlayerEntity
+- **Token 签名**：使用 HMAC-SHA256 签名，无状态验证
 
 ### 创建角色（CreateRole）
 
@@ -137,8 +137,7 @@ public class UserComponent : Component
   |                             | 3. 角色数量校验（≤4）
   |                             | 4. 名称唯一性校验
   |                             | 5. 雪花算法生成 roleId
-  |                             | 6. 创建 Role 实体 → MongoDB role 集合
-  |                             | 7. 创建 UserRole 索引 → MongoDB user_role 集合
+  |                             | 6. 创建 UserRole 索引 → MongoDB user_role 集合
   |  CreateRoleRes(role)       |
   |<---------------------------|
 ```
@@ -153,30 +152,30 @@ public class UserComponent : Component
 | 1003 | 角色数量已达上限（4个） |
 | 1004 | 角色名已存在 |
 
-写入两个集合：
-- `role`：完整角色数据（Player 模块维护）
-- `user_role`：轻量索引（本模块维护，用于列表查询）
+只写入 `user_role` 集合。`role` 集合（RoleDataComponent）在首次 EnterGame 时按需创建。
 
 ### 进入游戏（EnterGame）
 
-**MsgId**: 10107 → 10108
-**消息**: `EnterGameReq(roleId)` → `EnterGameRes(roleId,name,level,job,token)`
+**MsgId**: 10107 → 10108 + 10112(NTF)
+**消息**: `EnterGameReq(roleId)` → `EnterGameRes(code,message,token)` + `EnterGameNtf(roleId,name,level,job)`
 
 ```
 客户端                         服务端
   |  EnterGameReq(roleId)        |
   |------------------------------>|
   |                               | 1. 校验登录状态
-  |                               | 2. 加载 Role 数据
-  |                               | 3. 校验角色归属
-  |                               | 4. 绑定 session.RoleId
-  |                               | 5. 生成 Token（含roleId），写入 Role.LastToken
-  |                               | 6. 创建 PlayerEntity
-  |                               | 7. 设置 player.Online.Session
-  |                               | 8. 加入在线列表
-  |                               | 9. 发布 PlayerOnlineEvent
-  |  EnterGameRes(roleId,...,token)|
+  |                               | 2. 用 UserRole 验证角色归属
+  |                               | 3. 调用 PlayerSystem.EnterGame
+  |                               |    ├── 加载/创建 RoleDataComponent
+  |                               |    ├── 绑定会话 + 生成Token
+  |                               |    ├── AddPlayer
+  |                               |    ├── 发送 EnterGameNtf（角色数据）
+  |                               |    └── PublishAsync(PlayerOnlineEvent)
+  |  EnterGameRes(code,token)     |
   |<------------------------------|
+  |  EnterGameNtf(roleId,name,..) |
+  |<------------------------------|
+  |                               | ← 之后各模块的 Ntf 消息陆续到达
 ```
 
 错误码：
@@ -185,16 +184,13 @@ public class UserComponent : Component
 |------|------|
 | 0 | 成功 |
 | 1001 | 未登录 |
-| 1002 | 角色不存在 |
-| 1003 | 不是你的角色 |
+| 1002 | 角色不存在或不属于该账号 |
+| 1003 | 进入游戏失败 |
 
-关键流程：
-1. `PlayerEntity.Create(roleId, userId, role)` — 创建玩家实体
-2. `player.Online.Session = session` — 绑定会话（数据所有者模式）
-3. `Context.Players.AddPlayer(player)` — 加入全局在线列表
-4. `await EventBus.Instance.PublishAsync(PlayerOnlineEvent)` — 异步发布上线事件
-5. 各模块（Bag/Mail/Task/RoleAttribute）在 PlayerOnlineEvent 订阅中 AddComponent + LoadAsync
-6. `res.Token = token` — 返回新 Token，客户端更新缓存
+关键设计：
+- **UserRole 验证**：用轻量索引验证归属，不加载完整 RoleDataComponent
+- **EnterGameNtf 先于 PlayerOnlineEvent**：让客户端做好准备接收后续模块消息
+- **EnterGameRes 精简**：只含 Code/Message/Token，角色数据在 Ntf 中
 
 ### 断线重连（Reconnect）
 
@@ -207,9 +203,9 @@ public class UserComponent : Component
   |----------------------------->|
   |                              | 1. TokenSigner 验证签名 + 检查过期
   |                              | 2. 解析 userId, roleId
-  |                              | 3. 若有 roleId，检查 Role.LastToken 匹配（单次有效）
+  |                              | 3. 若有 roleId，检查 RoleDataComponent.LastToken 匹配
   |                              | 4. 绑定 session.UserId
-  |                              | 5. 生成新 Token，更新 Role.LastToken
+  |                              | 5. 生成新 Token，更新 LastToken
   |  ReconnectRes(token)        |
   |<-----------------------------|
   |                              |
@@ -226,12 +222,6 @@ public class UserComponent : Component
 | 1001 | Token无效或已过期 |
 | 1002 | Token已失效（LastToken不匹配） |
 
-Token 机制：
-- 使用 HMAC-SHA256 签名，无状态验证（不依赖 TokenStore）
-- Token 内容：`Base64(userId:roleId:timestamp):Base64(signature)`
-- 进入游戏后 Token 写入 `Role.LastToken`，重连验证时比对实现单次有效
-- 重连成功后客户端自动走 EnterGameReq 流程创建 PlayerEntity
-
 ### 踢人通知（KickNtf）
 
 **MsgId**: 10111
@@ -239,8 +229,6 @@ Token 机制：
 
 触发场景：
 - 同名用户登录（`LogoutReason.AnotherSession`）
-- 心跳超时（`LogoutReason.HeartbeatTimeout`）
-- 服务器关闭（`LogoutReason.ServerClose`）
 
 客户端收到 KickNtf 后：清除 Token/CurrentRole/CurrentMap → 断开连接 → 显示提示
 
@@ -258,7 +246,7 @@ public class TokenSigner
 ```
 
 - 启动时随机生成 32 字节 HMAC 密钥，进程内唯一
-- `Generate`：对 `userId:roleId:timestamp` 做 HMAC-SHA256 签名，返回 `Base64(payload):Base64(signature)`
+- `Generate`：对 `userId:roleId:timestamp` 做 HMAC-SHA256 签名
 - `Validate`：验证签名 + 检查过期，返回解析结果或 null
 - 使用 `CryptographicOperations.FixedTimeEquals` 防时序攻击
 
@@ -271,10 +259,11 @@ public class TokenSigner
 | 10105 | CreateRoleReq | C→S | Name, Job |
 | 10106 | CreateRoleRes | S→C | Code, Message, Role |
 | 10107 | EnterGameReq | C→S | RoleId |
-| 10108 | EnterGameRes | S→C | Code, Message, RoleId, Name, Level, Job, Token |
+| 10108 | EnterGameRes | S→C | Code, Message, Token |
 | 10109 | ReconnectReq | C→S | Token, RoleId |
 | 10110 | ReconnectRes | S→C | Code, Message, Token |
 | 10111 | KickNtf | S→C | Reason |
+| 10112 | EnterGameNtf | S→C | RoleId, Name, Level, Job |
 
 共享结构 `RoleInfo`：RoleId, Name, Level, Job — 在登录响应、创建角色响应中复用。
 
@@ -284,10 +273,10 @@ public class TokenSigner
 |------|------|------|------|
 | 按用户名查询账号 | `user` | `QueryFirstOrDefaultAsync<User>(p => p.Username == username)` | 登录 |
 | 插入新账号 | `user` | `InsertAsync(account)` | 自动注册 |
-| 查询用户角色列表 | `user_role` | `QueryAsync<UserRole>(r => r.UserId == userId)` | 登录（合并角色列表） |
+| 查询用户角色列表 | `user_role` | `QueryAsync<UserRole>(r => r.UserId == userId)` | 登录 |
 | 校验角色名唯一 | `user_role` | `AnyAsync<UserRole>(r => r.Name == name)` | 创建角色 |
 | 插入角色索引 | `user_role` | `InsertAsync(new UserRole {...})` | 创建角色 |
-| 插入角色实体 | `role` | `InsertAsync(role)` | 创建角色 |
+| 验证角色归属 | `user_role` | `QueryFirstOrDefaultAsync<UserRole>(r => r.RoleId == roleId && r.UserId == userId)` | 进入游戏 |
 
 ## 模块依赖
 
@@ -296,9 +285,8 @@ User 模块
   ├── 依赖 → MongoDB（User、UserRole 持久化）
   ├── 依赖 → TokenSigner（重连 Token 签名验证）
   ├── 依赖 → IdGenerator（雪花算法 ID）
-  ├── 依赖 → EventBus（ServerInitEvent 订阅、PlayerOnlineEvent 发布）
-  ├── 依赖 → Player 模块（PlayerEntity.Create、Context.Players）
-  ├── 依赖 → NetworkComponent（踢人下线 Kick）
+  ├── 依赖 → EventBus（ServerInitEvent 订阅）
+  ├── 依赖 → Player 模块（PlayerSystem.EnterGame）
   │
   └── 被依赖 ← 所有 PlayerEntity 级模块
        ├── Bag（PlayerOnlineEvent 订阅 → 挂载 + 加载）
@@ -308,7 +296,7 @@ User 模块
        └── Map（进入游戏后进入地图）
 ```
 
-核心依赖链：**User 登录（含角色列表）→ 进入游戏 → PlayerOnlineEvent → 各模块挂载 Component + 加载数据**
+核心依赖链：**User 登录 → 进入游戏（UserRole 验证）→ PlayerSystem.EnterGame → EnterGameNtf → PlayerOnlineEvent → 各模块挂载 Component + 加载数据**
 
 ## 完整流程
 
@@ -324,23 +312,25 @@ LoginHandler ──── 自动注册 / 验证密码 / 踢同名 ──── �
     │
     │  LoginRes(playerId, token, roles)
     ▼
-RoleSelectPanel（角色列表从 LoginRes 缓存读取，无需二次请求）
+RoleSelectPanel（角色列表从 LoginRes 缓存读取）
     │
-    │ [创建角色] CreateRoleReq(name, job)
+    │ [创建角色] CreateRoleReq(name, job)  →  只写 UserRole
     │                       │
     │  CreateRoleRes(role)  │  或选择已有角色
     ▼                       ▼
 EnterGameReq(roleId)
     │
     ▼
-EnterGameHandler ──── 加载Role → 创建PlayerEntity → 发布PlayerOnlineEvent
-    │                                         │
-    │                                         ├── BagComponent 挂载 + LoadAsync
-    │                                         ├── MailComponent 挂载 + LoadAsync
-    │                                         ├── TaskComponent 挂载 + LoadAsync
-    │                                         └── RoleAttributeComponent 挂载 + LoadAsync
+UserHandler: UserRole 验证 → PlayerSystem.EnterGame
     │
-    │  EnterGameRes(roleId, name, level, job, token)
+    │  EnterGameRes(code, token)        ← 精简，只有状态+Token
+    │  EnterGameNtf(roleId, name, ...)  ← 角色数据，客户端据此初始化
+    │
+    │  [服务端内部] PlayerOnlineEvent(player)
+    │   ├── PlayerHandlers → RoleAttributeComponent
+    │   ├── RoleBagHandlers → RoleBagComponent
+    │   ├── RoleMailHandlers → RoleMailComponent
+    │   └── RoleTaskHandlers → RoleTaskComponent
     ▼
 GameScene → MainPanel
 ```

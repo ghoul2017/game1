@@ -60,7 +60,7 @@ server/Game/
   Entities/Module.cs    # 根实体（所有 Module 级 Component 挂载于此）
   Components/
     User/               # UserComponent + UserComponentSystem + UserHandler
-    Player/             # PlayerComponent + PlayerSystem + PlayerEntity + PlayerOnlineComponent + RoleDataComponent + RoleAttributeComponent + Role + RoleAttribute
+    Player/             # PlayerComponent + PlayerSystem + PlayerEntity + PlayerOnlineComponent + RoleDataComponent + RoleAttributeComponent + RoleAttribute
     Bag/                # BagComponent + BagSystem + ItemEffectSystem + BagHandlers + RoleBag + BagItem
     Mail/               # MailComponent + MailSystem + MailHandlers + RoleMail
     Chat/               # ChatComponent + ChatSystem + ChatHandlers
