@@ -46,4 +46,8 @@ public class Role : IEntity
     /// <summary>创建时间（Unix时间戳毫秒）</summary>
     [ProtoMember(9)]
     public long CreateTime { get; set; }
+
+    /// <summary>最近一次重连Token，用于单次有效验证</summary>
+    [BsonIgnore]
+    public string LastToken { get; set; } = "";
 }

@@ -22,6 +22,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public string Message { get; set; } = "";
         [ProtoMember(3)] public long PlayerId { get; set; }
         [ProtoMember(4)] public string Token { get; set; } = "";
+        [ProtoMember(5)] public List<RoleInfo> Roles { get; set; } = new List<RoleInfo>();
     }
 
     // --- 角色信息（复用于列表/创建/选角） ---
@@ -33,23 +34,6 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public string Name { get; set; } = "";
         [ProtoMember(3)] public int Level { get; set; }
         [ProtoMember(4)] public int Job { get; set; }
-    }
-
-    // --- 角色列表 ---
-
-    [ProtoContract]
-    public class RoleListReq : IMessage
-    {
-        public ushort MsgId => MsgIdConst.RoleListReq;
-    }
-
-    [ProtoContract]
-    public class RoleListRes : IMessage
-    {
-        public ushort MsgId => MsgIdConst.RoleListRes;
-        [ProtoMember(1)] public int Code { get; set; }
-        [ProtoMember(2)] public string Message { get; set; } = "";
-        [ProtoMember(3)] public List<RoleInfo> Roles { get; set; } = new List<RoleInfo>();
     }
 
     // --- 创建角色 ---
@@ -71,25 +55,26 @@ namespace Shared.Common.Protos
         [ProtoMember(3)] public RoleInfo Role { get; set; } = new RoleInfo();
     }
 
-    // --- 选角入场 ---
+    // --- 进入游戏 ---
 
     [ProtoContract]
-    public class SelectRoleReq : IMessage
+    public class EnterGameReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.SelectRoleReq;
+        public ushort MsgId => MsgIdConst.EnterGameReq;
         [ProtoMember(1)] public long RoleId { get; set; }
     }
 
     [ProtoContract]
-    public class SelectRoleRes : IMessage
+    public class EnterGameRes : IMessage
     {
-        public ushort MsgId => MsgIdConst.SelectRoleRes;
+        public ushort MsgId => MsgIdConst.EnterGameRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
         [ProtoMember(3)] public long RoleId { get; set; }
         [ProtoMember(4)] public string Name { get; set; } = "";
         [ProtoMember(5)] public int Level { get; set; }
         [ProtoMember(6)] public int Job { get; set; }
+        [ProtoMember(7)] public string Token { get; set; } = "";
     }
 
     // --- 断线重连 ---
@@ -108,9 +93,7 @@ namespace Shared.Common.Protos
         public ushort MsgId => MsgIdConst.ReconnectRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
-        [ProtoMember(3)] public long RoleId { get; set; }
-        [ProtoMember(4)] public string Name { get; set; } = "";
-        [ProtoMember(5)] public int Level { get; set; }
+        [ProtoMember(3)] public string Token { get; set; } = "";
     }
 
     // --- 踢人通知 ---

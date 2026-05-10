@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 using Client.Core;
 using Client.Network;
 using Client.Game;
@@ -272,7 +273,14 @@ namespace Client.Login
             {
                 GameData.PlayerId = res.PlayerId;
                 GameData.Token = res.Token;
-                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + res.PlayerId);
+                GameData.Roles = res.Roles.Select(r => new RoleData
+                {
+                    RoleId = r.RoleId,
+                    Name = r.Name,
+                    Level = r.Level,
+                    Job = GameData.GetJobName(r.Job)
+                }).ToList();
+                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + res.PlayerId + " 角色数=" + GameData.Roles.Count);
                 UIManager.Instance.ReplacePanel<RoleSelectPanel>();
             }
             else

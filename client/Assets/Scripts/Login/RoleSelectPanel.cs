@@ -112,7 +112,7 @@ namespace Client.Login
         public override void OnShow()
         {
             RegisterHandlers();
-            RequestRoleList();
+            LoadRolesFromCache();
         }
 
         public override void OnHide()
@@ -126,9 +126,8 @@ namespace Client.Login
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
             {
-                nc.Dispatcher.Register<RoleListRes>(MsgIdConst.RoleListRes, HandleRoleListRes);
                 nc.Dispatcher.Register<CreateRoleRes>(MsgIdConst.CreateRoleRes, HandleCreateRoleRes);
-                nc.Dispatcher.Register<SelectRoleRes>(MsgIdConst.SelectRoleRes, HandleSelectRoleRes);
+                nc.Dispatcher.Register<EnterGameRes>(MsgIdConst.EnterGameRes, HandleEnterGameRes);
                 nc.Dispatcher.Register<EnterMapAck>(MsgIdConst.EnterMapAck, HandleEnterMapAck);
             }
         }
@@ -138,54 +137,23 @@ namespace Client.Login
             var nc = NetClient.Instance;
             if (nc != null && nc.Dispatcher != null)
             {
-                nc.Dispatcher.Unregister(MsgIdConst.RoleListRes);
                 nc.Dispatcher.Unregister(MsgIdConst.CreateRoleRes);
-                nc.Dispatcher.Unregister(MsgIdConst.SelectRoleRes);
+                nc.Dispatcher.Unregister(MsgIdConst.EnterGameRes);
                 nc.Dispatcher.Unregister(MsgIdConst.EnterMapAck);
             }
         }
 
-        private void RequestRoleList()
+        private void LoadRolesFromCache()
         {
-            selectTip.text = "正在获取角色列表...";
-            selectTip.color = UIBuilder.TextDim;
+            roles = new List<RoleData>(GameData.Roles);
+            selectedRoleIndex = -1;
             enterBtn.interactable = false;
-            var nc = NetClient.Instance;
-            if (nc != null && nc.IsConnected)
-                nc.Send(new RoleListReq());
-            else
-                selectTip.text = "网络未连接，请返回重试";
+            selectTip.text = roles.Count > 0 ? "请选择一个角色进入游戏" : "没有角色，请创建新角色";
+            selectTip.color = UIBuilder.TextDim;
+            RefreshSlots();
         }
 
         // --- Network Handlers ---
-
-        private void HandleRoleListRes(RoleListRes res)
-        {
-            if (res.Code == 0)
-            {
-                roles.Clear();
-                foreach (var info in res.Roles)
-                {
-                    roles.Add(new RoleData
-                    {
-                        RoleId = info.RoleId,
-                        Name = info.Name,
-                        Level = info.Level,
-                        Job = GameData.GetJobName(info.Job)
-                    });
-                }
-                selectedRoleIndex = -1;
-                enterBtn.interactable = false;
-                selectTip.text = roles.Count > 0 ? "请选择一个角色进入游戏" : "没有角色，请创建新角色";
-                selectTip.color = UIBuilder.TextDim;
-                RefreshSlots();
-            }
-            else
-            {
-                selectTip.text = res.Message;
-                selectTip.color = Color.red;
-            }
-        }
 
         private void HandleCreateRoleRes(CreateRoleRes res)
         {
@@ -213,7 +181,7 @@ namespace Client.Login
             }
         }
 
-        private void HandleSelectRoleRes(SelectRoleRes res)
+        private void HandleEnterGameRes(EnterGameRes res)
         {
             if (res.Code == 0)
             {
@@ -224,7 +192,8 @@ namespace Client.Login
                     Level = res.Level,
                     Job = GameData.GetJobName(res.Job)
                 };
-                Debug.Log(string.Format("[RoleSelectPanel] 选角成功: {0} Lv.{1}，正在进入地图...", res.Name, res.Level));
+                GameData.Token = res.Token;
+                Debug.Log(string.Format("[RoleSelectPanel] 进入游戏成功: {0} Lv.{1}，正在进入地图...", res.Name, res.Level));
                 selectTip.text = "正在进入地图...";
                 selectTip.color = UIBuilder.TextDim;
 
@@ -494,7 +463,7 @@ namespace Client.Login
             Debug.Log(string.Format("[RoleSelectPanel] 请求进入游戏: {0} (Lv.{1} {2})", role.Name, role.Level, role.Job));
             selectTip.text = "正在进入游戏...";
             selectTip.color = UIBuilder.TextDim;
-            NetClient.Instance.Send(new SelectRoleReq { RoleId = role.RoleId });
+            NetClient.Instance.Send(new EnterGameReq { RoleId = role.RoleId });
         }
 
         private void OnBack()

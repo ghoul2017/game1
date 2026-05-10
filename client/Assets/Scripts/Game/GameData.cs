@@ -32,6 +32,7 @@ namespace Client.Game
         }
 
         public static RoleData CurrentRole { get; set; }
+        public static List<RoleData> Roles { get; set; } = new List<RoleData>();
         public static long PlayerId { get; set; }
         public static string Token { get; set; } = "";
 

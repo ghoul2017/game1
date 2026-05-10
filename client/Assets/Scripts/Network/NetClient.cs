@@ -499,16 +499,15 @@ namespace Client.Network
 
             if (res.Code == 0)
             {
-                Debug.Log("[NetClient] Reconnect OK, role=" + res.Name);
-
-                // Update role data from server
-                if (GameData.CurrentRole == null)
-                    GameData.CurrentRole = new RoleData();
-                GameData.CurrentRole.RoleId = res.RoleId;
-                GameData.CurrentRole.Name = res.Name;
-                GameData.CurrentRole.Level = res.Level;
-
+                Debug.Log("[NetClient] Reconnect OK, sending EnterGameReq...");
+                GameData.Token = res.Token;
                 Instance._state = ConnState.Connected;
+
+                // 重连成功后自动走进入游戏流程
+                if (GameData.CurrentRole != null)
+                {
+                    Instance.Send(new EnterGameReq { RoleId = GameData.CurrentRole.RoleId });
+                }
 
                 Instance.OnReconnected?.Invoke();
             }

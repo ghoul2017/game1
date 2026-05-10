@@ -9,12 +9,10 @@ namespace Shared.Common
         // User 登录/角色 (10101-10200)
         public const ushort LoginReq = 10101;
         public const ushort LoginRes = 10102;
-        public const ushort RoleListReq = 10103;
-        public const ushort RoleListRes = 10104;
         public const ushort CreateRoleReq = 10105;
         public const ushort CreateRoleRes = 10106;
-        public const ushort SelectRoleReq = 10107;
-        public const ushort SelectRoleRes = 10108;
+        public const ushort EnterGameReq = 10107;
+        public const ushort EnterGameRes = 10108;
         public const ushort ReconnectReq = 10109;
         public const ushort ReconnectRes = 10110;
         public const ushort KickNtf = 10111;
