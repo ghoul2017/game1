@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Game.Core;
 using Game.Core.Network;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 using Shared.Common.Protos;
@@ -13,6 +15,18 @@ namespace Game.Components.Misc;
 public static class MiscHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(MiscHandlers));
+
+    private const int CheckIntervalSeconds = 20;
+
+    [EventSubscriber]
+    public static void OnServerInit(EventType.ServerInitEvent e)
+    {
+        GameTimer.Start(CheckIntervalSeconds * 1000, () =>
+        {
+            Context.Network.DoHeartbeatCheck();
+        });
+        Log.Info("心跳检测定时器已启动");
+    }
 
     [MessageHandler(typeof(RpcMethodHandler))]
     public static async Task<IMessage> HandshakeHandler(TcpSession session, HandshakeReq req, HandshakeRes res)

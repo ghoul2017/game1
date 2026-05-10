@@ -24,6 +24,23 @@ public static class UserHandler
     }
 
     /// <summary>
+    /// 踢人下线（发 KickNtf + Disconnect）
+    /// </summary>
+    public static void KickUser(TcpSession session, LogoutReason reason)
+    {
+        Log.Info($"踢人 SessionId:{session.SessionId} UserId:{session.UserId} Reason:{reason}");
+        try
+        {
+            session.Send(new KickNtf { Reason = (int)reason });
+        }
+        catch (Exception e)
+        {
+            Log.Error("踢人发送失败", e);
+        }
+        session.Disconnect(reason);
+    }
+
+    /// <summary>
     /// 登录处理。验证账号 → 自动注册 → BindUser → 生成重连Token。
     /// </summary>
     [MessageHandler(typeof(RpcMethodHandler))]
@@ -46,22 +63,7 @@ public static class UserHandler
             // 踢旧连接下线
             if (oldUser.Session != null)
             {
-                var oldSession = oldUser.Session;
-                // 先清理 PlayerEntity（如果已选角）
-                if (oldSession.RoleId != 0)
-                {
-                    var oldPlayer = Context.Players.GetByRoleId(oldSession.RoleId);
-                    if (oldPlayer != null)
-                    {
-                        oldPlayer.Online.Session = null;
-                        _ = Context.Players.SaveRoleAsync(oldPlayer);
-                        Context.Players.RemovePlayer(oldSession.RoleId);
-                        EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = oldSession.RoleId });
-                    }
-                    // 发踢人通知再断开
-                    oldSession.Send(new KickNtf { Reason = (int)LogoutReason.AnotherSession });
-                }
-                oldSession.Disconnect();
+                KickUser(oldUser.Session, LogoutReason.AnotherSession);
             }
             userComponent.Users.Remove(oldUser.Id);
             userComponent.Usernames.Remove(oldUser.Username);

@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 using Shared.Common.Enums;
 using Shared.Core.ECS;
 using Shared.Core.Log;
-using Shared.Common.Protos;
 using Shared.Core.Network;
 
 namespace Game.Core.Network;
 
 /// <summary>
-/// 网络组件。管理 TCP 连接和心跳检测，不持有业务级会话映射。
+/// 网络组件。管理 TCP 连接，不持有业务级会话映射。
+/// 心跳检测由外部定时调用 DoHeartbeatCheck 驱动。
 /// session 引用由各业务对象（User、PlayerOnlineComponent）自行持有。
 /// 通过 SessionDisconnected 回调通知上层清理 session 引用。
 /// </summary>
@@ -31,18 +31,14 @@ public class NetworkComponent : Component
     private readonly Dictionary<long, TcpSession> _sessionMap = new(); // sessionId -> session
 
     private const int HeartbeatTimeoutSeconds = 60;
-    private const int CheckIntervalSeconds = 20;
-
-    private GameTimerHandle _heartbeatTimer;
 
     /// <summary>会话断开回调。上层注册此回调清理业务对象上的 session 引用。</summary>
-    public Action<TcpSession>? SessionDisconnected { get; set; }
+    public Action<TcpSession, LogoutReason>? SessionDisconnected { get; set; }
 
     public NetworkComponent()
     {
         _router = new MessageRouter();
         _router.AutoRegister();
-        _heartbeatTimer = GameTimer.Start(CheckIntervalSeconds * 1000, DoHeartbeatCheck);
     }
 
     public async Task Listen(string host, int port, int maxConnections = 5000)
@@ -72,7 +68,7 @@ public class NetworkComponent : Component
 
                 if (_sessionMap.Count >= MaxConnections)
                 {
-                    session.Disconnect();
+                    session.Disconnect(LogoutReason.ServerClose);
                     Log.Warn("达到最大连接数，拒绝新连接");
                     continue;
                 }
@@ -95,16 +91,16 @@ public class NetworkComponent : Component
         }
     }
 
-    private void OnSessionDisconnected(TcpSession session)
+    private void OnSessionDisconnected(TcpSession session, LogoutReason reason)
     {
         // 通知上层清理业务对象上的 session 引用
-        SessionDisconnected?.Invoke(session);
+        SessionDisconnected?.Invoke(session, reason);
 
         _sessionMap.Remove(session.SessionId);
         session.OnDisconnected -= OnSessionDisconnected;
         session.Dispose();
 
-        Log.Info($"会话断开 SessionId:{session.SessionId}，当前连接数: {_sessionMap.Count}");
+        Log.Info($"会话断开 SessionId:{session.SessionId} Reason:{reason}，当前连接数: {_sessionMap.Count}");
     }
 
     /// <summary>按 sessionId 获取</summary>
@@ -113,19 +109,18 @@ public class NetworkComponent : Component
         return _sessionMap.GetValueOrDefault(sessionId);
     }
 
-    /// <summary>踢人</summary>
-    public void Kick(TcpSession session, LogoutReason reason)
+    /// <summary>客户端模式：主动连接远端服务器</summary>
+    public async Task<TcpSession> ConnectAsync(string host, int port)
     {
-        Log.Info($"踢人 SessionId:{session.SessionId} UserId:{session.UserId} Reason:{reason}");
-        try
-        {
-            session.Send(new KickNtf { Reason = (int)reason });
-        }
-        catch (Exception e)
-        {
-            Log.Error("踢人失败", e);
-        }
-        session.Disconnect();
+        var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        await socket.ConnectAsync(host, port);
+        var session = new TcpSession(socket, _router);
+        _sessionMap[session.SessionId] = session;
+        session.OnDisconnected += OnSessionDisconnected;
+        session.StartReceive();
+
+        Log.Info($"客户端连接 {host}:{port} SessionId:{session.SessionId}，当前连接数: {_sessionMap.Count}");
+        return session;
     }
 
     /// <summary>服务器关闭时踢出所有连接</summary>
@@ -134,12 +129,13 @@ public class NetworkComponent : Component
         var sessions = new List<TcpSession>(_sessionMap.Values);
         foreach (var session in sessions)
         {
-            session.Disconnect();
+            session.Disconnect(reason);
         }
         Log.Info($"全部断开，共 {sessions.Count} 个连接");
     }
 
-    private void DoHeartbeatCheck()
+    /// <summary>心跳检测（由外部定时调用）</summary>
+    public void DoHeartbeatCheck()
     {
         var now = DateTime.UtcNow;
         var timeoutSessions = _sessionMap.Values
@@ -149,7 +145,7 @@ public class NetworkComponent : Component
         foreach (var session in timeoutSessions)
         {
             Log.Warn($"心跳超时 SessionId:{session.SessionId} UserId:{session.UserId}");
-            Kick(session, LogoutReason.HeartbeatTimeout);
+            session.Disconnect(LogoutReason.HeartbeatTimeout);
         }
 
         if (timeoutSessions.Count > 0)

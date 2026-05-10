@@ -10,6 +10,7 @@ using Game.Config;
 using Game.Core;
 using Game.Database;
 using Game.Core.Network;
+using Shared.Common.Enums;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -81,7 +82,7 @@ public static class AppStart
         }
     }
 
-    private static void OnSessionDisconnected(TcpSession session)
+    private static void OnSessionDisconnected(TcpSession session, LogoutReason reason)
     {
         // 清理 User 级 session 引用
         if (session.UserId != 0)
@@ -102,7 +103,7 @@ public static class AppStart
                 player.Online.Session = null;
                 _ = Context.Players.SaveRoleAsync(player);
                 Context.Players.RemovePlayer(session.RoleId);
-                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId });
+                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId, Reason = reason });
             }
         }
     }

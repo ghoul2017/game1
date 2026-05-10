@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Shared.Common.Enums;
 using Shared.Core.Network;
 using Shared.Core.Log;
 
@@ -34,7 +35,10 @@ namespace Shared.Core.Network
         public DateTime LastActiveTime { get; private set; } = DateTime.UtcNow;
 
         /// <summary>会话断开时的回调</summary>
-        public event Action<TcpSession>? OnDisconnected;
+        public event Action<TcpSession, LogoutReason>? OnDisconnected;
+
+        /// <summary>断开原因（Disconnect 后可读）</summary>
+        public LogoutReason DisconnectReason { get; private set; } = LogoutReason.NetDisconnected;
 
         private static long _nextSessionId;
 
@@ -75,10 +79,11 @@ namespace Shared.Core.Network
             }
         }
 
-        public void Disconnect()
+        public void Disconnect(LogoutReason reason = LogoutReason.NetDisconnected)
         {
             if (!IsConnected) return;
             IsConnected = false;
+            DisconnectReason = reason;
             try
             {
                 _socket.Shutdown(SocketShutdown.Both);
@@ -95,8 +100,8 @@ namespace Shared.Core.Network
             {
             }
 
-            Log.Info($"断开连接 SessionId:{SessionId} UserId:{UserId}");
-            OnDisconnected?.Invoke(this);
+            Log.Info($"断开连接 SessionId:{SessionId} UserId:{UserId} Reason:{reason}");
+            OnDisconnected?.Invoke(this, reason);
         }
 
         /// <summary>更新最后活跃时间（收到消息时调用）</summary>

@@ -1,4 +1,5 @@
 ﻿using Game.Components.Player;
+using Shared.Common.Enums;
 
 namespace Shared.Core.Event;
 
@@ -19,6 +20,7 @@ public static class EventType
     public struct PlayerOfflineEvent : IEvent
     {
         public long RoleId;
+        public LogoutReason Reason;
     }
 
     /// <summary>玩家进入地图</summary>
