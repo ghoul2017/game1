@@ -82,7 +82,7 @@ namespace Shared.Core.Network
             }
             catch (Exception ex)
             {
-                Log.Error($"处理消息 {msgId} 异常: {ex.Message}");
+                Log.Error($"处理消息 {msgId} 异常",ex);
             }
         }
     }
