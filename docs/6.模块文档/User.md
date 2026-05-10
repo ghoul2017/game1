@@ -88,6 +88,16 @@ public class UserComponent : Component
 |------|------|------|
 | `ServerInitEvent` | `ServerInitEvent()` | 服务器初始化时自动挂载 UserComponent |
 
+### KickUser
+
+```csharp
+public static void KickUser(TcpSession session, LogoutReason reason)
+```
+
+- 发送 KickNtf 通知客户端 + 断开连接
+- LoginHandler 中同名用户踢下线调用此方法
+- KickNtf 发送权归 User 模块，NetworkComponent 不再提供 Kick 方法
+
 ### 登录（Login）
 
 **MsgId**: 10101 → 10102

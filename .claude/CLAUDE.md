@@ -80,7 +80,7 @@ server/Game/
     Database/           # MongoDb (统一入口), IEntity, IEntityExtensions
     Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener
-    Network/            # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler
+    Network/            # NetworkComponent, RpcMethodHandler, NtfMethodHandler
   Data/Tables/          # CSV 配置表数据文件
 server/tools/           # xlsx2csv, xlsx2cs, proto2cs
 server/scripts/         # cmd 快捷脚本

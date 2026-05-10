@@ -12,12 +12,11 @@ NetworkComponent、DatabaseManager 等底层基础设施不应依赖 EventBus（
 // 底层：只暴露回调
 public class NetworkComponent : Component
 {
-    public Action<TcpSession>? OnSessionDisconnected;
-    public Action<TcpSession>? OnSessionConnected;
+    public Action<TcpSession, LogoutReason>? SessionDisconnected;
 }
 
 // 上层：注册回调
-network.OnSessionDisconnected = session =>
+network.SessionDisconnected = (session, reason) =>
 {
     // 业务逻辑：保存数据、发布事件、清理状态
 };

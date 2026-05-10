@@ -2,17 +2,29 @@
 
 ## 概述
 
-Misc 模块提供网络基础通信功能：握手（Handshake）和心跳（Heartbeat）。握手用于连接建立后的初始验证，心跳用于保持连接活跃和测量网络延迟。是最小的独立模块，无状态、无持久化。
+Misc 模块提供网络基础通信功能：握手（Handshake）和心跳（Heartbeat）。握手用于连接建立后的初始验证，心跳用于保持连接活跃和测量网络延迟。同时负责驱动服务端心跳检测定时器（每20秒检查超时连接）。是最小的独立模块，无状态、无持久化。
 
 ## 文件清单
 
 | 文件 | 行数 | 职责 |
 |------|------|------|
-| `server/Game/Components/Misc/MiscHandlers.cs` | 39 | 握手+心跳处理 |
+| `server/Game/Components/Misc/MiscHandlers.cs` | ~55 | 握手+心跳处理 + 心跳检测定时器 |
 | `client/Assets/Scripts/shared/Common/Protos/MiscProtos.cs` | 39 | 消息定义 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10201-10300 段 |
 
 ## Handler 详解
+
+### 事件订阅
+
+| 事件 | 方法 | 说明 |
+|------|------|------|
+| `ServerInitEvent` | `OnServerInit()` | 服务器初始化时启动心跳检测定时器 |
+
+### 心跳检测定时器
+
+- MiscHandlers.OnServerInit 订阅 ServerInitEvent，启动 GameTimer 每20秒调用 `Context.Network.DoHeartbeatCheck()`
+- NetworkComponent.DoHeartbeatCheck() 检查超时60秒的连接并断开
+- 心跳定时器原在 NetworkComponent 构造函数中启动，现已分离到 Misc 模块
 
 ### HandshakeHandler（MsgId 10201→10202）
 
@@ -56,7 +68,8 @@ Misc 模块提供网络基础通信功能：握手（Handshake）和心跳（Hea
 
 ```
 Misc 模块
-  ├── 依赖 → Network（RpcMethodHandler、TcpSession）
+  ├── 依赖 → Network（RpcMethodHandler、TcpSession、DoHeartbeatCheck）
+  ├── 依赖 → GameTimer（心跳检测定时器）
   │
   └── 无被依赖（纯基础设施模块）
 ```
@@ -64,4 +77,3 @@ Misc 模块
 ## 已知待办
 
 1. **握手验证**：HandshakeHandler 未验证 Token，仅记录日志
-2. **心跳超时**：无服务端主动断开超时连接的逻辑（UpdateActiveTime 已调用但未检测超时）

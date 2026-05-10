@@ -31,7 +31,7 @@ server/Game/
 │   ├── Database/         # MongoDb (统一入口), IEntity
 │   ├── Entity/           # IEntity
 │   ├── Event/            # EventBus, IEvent, IEventListener
-│   └── Network/          # NetworkComponent, SessionManager, RpcMethodHandler, NtfMethodHandler
+│   └── Network/          # NetworkComponent, RpcMethodHandler, NtfMethodHandler
 ├── Data/Tables/          # CSV 配置表数据文件
 tools/
 ├── Program.cs            # 入口：自动扫描 ITool 实现
@@ -89,7 +89,7 @@ Context.Players.AddPlayer(player);
 - **添加新实体**: 实现 `IEntity` + `[ProtoContract]` + `[BsonId]` → 通过 `MongoDb.Instance` 进行 CRUD
 - **事件总线**: 定义事件类实现 `IEvent` → `EventBus.Instance.Subscribe<T>()` → `EventBus.Instance.PublishAsync()`
 - **Handler 规范**: static 类 + `[MessageHandler(typeof(RpcMethodHandler/NtfMethodHandler))]`，无状态
-- **会话管理**: SessionManager 单例管理 userId/roleId → TcpSession 映射，BindRole，顶号踢旧连接，Kick/Broadcast
+- **会话管理**: 业务级 session 引用由 User/PlayerOnlineComponent 自行持有，NetworkComponent 只管 sessionId→TcpSession（连接生命周期）。踢人由 UserHandler.KickUser() 处理
 - **线程模型**: GameSynchronizationContext 保证所有逻辑在主线程执行，Timer 回调通过 Post 回主线程
 - **日志配置**: `appsettings.json` 的 `Log` 节
 - **构建输出**: `Directory.Build.props` 统一管理
