@@ -58,8 +58,10 @@ public static class UserHandler
                         Context.Players.RemovePlayer(oldSession.RoleId);
                         EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = oldSession.RoleId });
                     }
+                    // 发踢人通知再断开
+                    oldSession.Send(new KickNtf { Reason = (int)LogoutReason.AnotherSession });
                 }
-                Context.Server.GetComponent<NetworkComponent>().Kick(oldSession, LogoutReason.AnotherSession);
+                oldSession.Disconnect();
             }
             userComponent.Users.Remove(oldUser.Id);
             userComponent.Usernames.Remove(oldUser.Username);
@@ -167,8 +169,8 @@ public static class UserHandler
         // 生成角色ID（雪花算法）
         var roleId = IdGenerator.Instance.NextId();
 
-        // 创建 Role 实体（持久化到 MongoDB role 集合）
-        var role = new Role
+        // 创建 RoleDataComponent 实体（持久化到 MongoDB role 集合）
+        var roleData = new RoleDataComponent
         {
             Id = roleId,
             UserId = session.UserId,
@@ -177,7 +179,7 @@ public static class UserHandler
             Job = req.Job,
             CreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
-        await MongoDb.Instance.InsertAsync(role);
+        await MongoDb.Instance.InsertAsync(roleData);
 
         // 写入角色索引
         await MongoDb.Instance.InsertAsync(new UserRole
@@ -198,7 +200,7 @@ public static class UserHandler
     }
 
     /// <summary>
-    /// 进入游戏。加载角色 → 绑定会话 → 创建 PlayerEntity + 挂载全部 Component。
+    /// 进入游戏。用 UserRole 验证角色归属 → 调用 PlayerSystem.EnterGame。
     /// </summary>
     [MessageHandler(typeof(RpcMethodHandler))]
     public static async Task<IMessage> EnterGameHandler(TcpSession session, EnterGameReq req, EnterGameRes res)
@@ -210,48 +212,36 @@ public static class UserHandler
             return res;
         }
 
-        // 加载角色
-        var role = await Context.Players.LoadRoleAsync(req.RoleId);
-        if (role == null)
+        // 用 UserRole 验证角色归属（轻量索引，不加载完整 Role 实体）
+        var userRole = await MongoDb.Instance.QueryFirstOrDefaultAsync<UserRole>(
+            r => r.RoleId == req.RoleId && r.UserId == session.UserId);
+        if (userRole == null)
         {
             res.Code = 1002;
-            res.Message = "角色不存在";
+            res.Message = "角色不存在或不属于该账号";
             return res;
         }
 
-        if (role.UserId != session.UserId)
+        // 调用 PlayerSystem.EnterGame 完成创建
+        var result = await Context.Players.EnterGame(req.RoleId, session.UserId, session);
+        if (result == null)
         {
             res.Code = 1003;
-            res.Message = "不是你的角色";
+            res.Message = "进入游戏失败";
             return res;
         }
 
-        // 绑定角色到会话
-        session.RoleId = role.Id;
-
-        // 生成重连Token（含roleId）并写入角色
-        var token = TokenSigner.Instance.Generate(session.UserId, role.Id);
-        session.ReconnectToken = token;
-        role.LastToken = token;
-
-        // 创建在线玩家
-        var player = PlayerEntity.Create(role.Id, session.UserId, role);
-        player.Online.Session = session;
-
-        Context.Players.AddPlayer(player);
-
-        // 发布上线事件，各模块自行挂载 Component 并加载数据
-        await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { RoleId = role.Id });
+        var (player, token) = result.Value;
+        var roleData = player.RoleData;
 
         res.Code = 0;
         res.Message = "OK";
-        res.RoleId = role.Id;
-        res.Name = role.Name;
-        res.Level = role.Level;
-        res.Job = role.Job;
+        res.RoleId = roleData.Id;
+        res.Name = roleData.Name;
+        res.Level = roleData.Level;
+        res.Job = roleData.Job;
         res.Token = token;
 
-        Log.Info($"选角入场 UserId:{session.UserId} RoleId:{role.Id} Name:{role.Name}");
         return res;
     }
 
@@ -273,12 +263,12 @@ public static class UserHandler
 
         var (userId, roleId, _) = parsed.Value;
 
-        // 如果有 roleId，检查 Role.LastToken 匹配（单次有效）
-        Role? role = null;
+        // 如果有 roleId，检查 RoleDataComponent.LastToken 匹配（单次有效）
+        RoleDataComponent? roleData = null;
         if (roleId > 0)
         {
-            role = await Context.Players.LoadRoleAsync(roleId);
-            if (role == null || role.LastToken != req.Token)
+            roleData = await Context.Players.LoadRoleDataAsync(roleId);
+            if (roleData == null || roleData.LastToken != req.Token)
             {
                 res.Code = 1002;
                 res.Message = "Token已失效";
@@ -294,9 +284,9 @@ public static class UserHandler
         session.ReconnectToken = newToken;
 
         // 更新 LastToken
-        if (role != null)
+        if (roleData != null)
         {
-            role.LastToken = newToken;
+            roleData.LastToken = newToken;
         }
 
         res.Code = 0;

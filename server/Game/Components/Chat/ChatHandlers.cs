@@ -17,7 +17,7 @@ public static class ChatHandlers
     public static Task<IMessage> ChatHandler(PlayerEntity player, ChatReq req, ChatAck res)
     {
         var (code, ntf, targetRoleId) = Context.Chat.HandleChat(
-            player.Id, player.RoleData.Role?.Name ?? "", req.Channel, req.Content, req.TargetName);
+            player.Id, player.RoleData.Name, req.Channel, req.Content, req.TargetName);
 
         res.Code = code;
 

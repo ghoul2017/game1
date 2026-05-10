@@ -29,7 +29,7 @@ public class PlayerEntity : Entity
     public RoleTaskComponent RoleTask => GetComponent<RoleTaskComponent>();
 
     /// <summary>创建玩家实体（选角入场时调用）</summary>
-    public static PlayerEntity Create(long roleId, long userId, Role role)
+    public static PlayerEntity Create(long roleId, long userId)
     {
         var entity = CreateEntityById<PlayerEntity>(roleId);
         var online = entity.AddComponent<PlayerOnlineComponent>();
@@ -37,8 +37,7 @@ public class PlayerEntity : Entity
         online.LoginTime = DateTime.UtcNow;
         online.LastActiveTime = DateTime.UtcNow;
 
-        var roleData = entity.AddComponent<RoleDataComponent>();
-        roleData.Role = role;
+        entity.AddComponent<RoleDataComponent>();
 
         return entity;
     }

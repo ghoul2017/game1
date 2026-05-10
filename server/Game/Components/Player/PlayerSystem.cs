@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Game.Core;
+using Game.Core.Database;
 using Game.Database;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 
@@ -18,7 +21,7 @@ public static class PlayerSystem
     public static void AddPlayer(this PlayerComponent self, PlayerEntity player)
     {
         var online = player.Online;
-        var role = player.RoleData.Role;
+        var roleData = player.RoleData;
 
         if (self.Players.TryGetValue(player.Id, out var oldPlayer))
         {
@@ -28,9 +31,9 @@ public static class PlayerSystem
 
         self.Players[player.Id] = player;
         self.PlayersByUserId[online.UserId] = player;
-        if (role != null && !string.IsNullOrEmpty(role.Name))
+        if (!string.IsNullOrEmpty(roleData.Name))
         {
-            self.PlayersByName[role.Name] = player;
+            self.PlayersByName[roleData.Name] = player;
         }
         Log.Info($"玩家上线 RoleId:{player.Id}，在线人数: {self.Players.Count}");
     }
@@ -49,13 +52,13 @@ public static class PlayerSystem
     public static void RemovePlayer(this PlayerComponent self, PlayerEntity player)
     {
         var online = player.Online;
-        var role = player.RoleData.Role;
+        var roleData = player.RoleData;
 
         self.Players.Remove(player.Id);
         self.PlayersByUserId.Remove(online.UserId);
-        if (role != null && !string.IsNullOrEmpty(role.Name))
+        if (!string.IsNullOrEmpty(roleData.Name))
         {
-            self.PlayersByName.Remove(role.Name);
+            self.PlayersByName.Remove(roleData.Name);
         }
     }
 
@@ -102,11 +105,56 @@ public static class PlayerSystem
         player?.Online.Session?.Send(msg);
     }
 
-    public static async Task<Role?> LoadRoleAsync(this PlayerComponent self, long roleId)
+    /// <summary>进入游戏：创建 PlayerEntity + 加载角色数据 + 绑定会话 + 生成 Token + 发布上线事件</summary>
+    public static async Task<(PlayerEntity player, string token)?> EnterGame(
+        this PlayerComponent self, long roleId, long userId, TcpSession session)
+    {
+        var player = PlayerEntity.Create(roleId, userId);
+        var roleData = player.RoleData;
+
+        // 加载角色持久化数据
+        var loaded = await self.LoadRoleDataAsync(roleId);
+        if (loaded == null)
+        {
+            Log.Error($"进入游戏失败，角色数据不存在 RoleId:{roleId}");
+            return null;
+        }
+
+        // 拷贝到已挂载的 Component（保留 _parent 引用）
+        roleData.Id = loaded.Id;
+        roleData.UserId = loaded.UserId;
+        roleData.Name = loaded.Name;
+        roleData.Level = loaded.Level;
+        roleData.Job = loaded.Job;
+        roleData.Exp = loaded.Exp;
+        roleData.VipLevel = loaded.VipLevel;
+        roleData.LastLogoutTime = loaded.LastLogoutTime;
+        roleData.CreateTime = loaded.CreateTime;
+        roleData.LastToken = loaded.LastToken;
+
+        // 绑定会话
+        session.RoleId = roleId;
+        player.Online.Session = session;
+
+        // 生成重连Token（含roleId）并写入角色
+        var token = TokenSigner.Instance.Generate(userId, roleId);
+        session.ReconnectToken = token;
+        roleData.LastToken = token;
+
+        self.AddPlayer(player);
+
+        // 发布上线事件，各模块自行挂载 Component 并加载数据
+        await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { RoleId = roleId });
+
+        Log.Info($"进入游戏 UserId:{userId} RoleId:{roleId} Name:{roleData.Name}");
+        return (player, token);
+    }
+
+    public static async Task<RoleDataComponent?> LoadRoleDataAsync(this PlayerComponent self, long roleId)
     {
         try
         {
-            return await MongoDb.Instance.LoadAsync<Role>(roleId);
+            return await MongoDb.Instance.LoadAsync<RoleDataComponent>(roleId);
         }
         catch (Exception ex)
         {
@@ -117,11 +165,9 @@ public static class PlayerSystem
 
     public static async Task SaveRoleAsync(this PlayerComponent self, PlayerEntity player)
     {
-        var role = player.RoleData.Role;
-        if (role == null) return;
         try
         {
-            await MongoDb.Instance.UpdateAsync(role);
+            await MongoDb.Instance.UpdateAsync(player.RoleData);
         }
         catch (Exception ex)
         {
@@ -133,17 +179,13 @@ public static class PlayerSystem
     {
         foreach (var player in self.Players.Values)
         {
-            var role = player.RoleData.Role;
-            if (role != null)
+            try
             {
-                try
-                {
-                    await MongoDb.Instance.UpdateAsync(role);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error($"保存角色数据失败 RoleId:{player.Id}: {ex.Message}");
-                }
+                await MongoDb.Instance.UpdateAsync(player.RoleData);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"保存角色数据失败 RoleId:{player.Id}: {ex.Message}");
             }
         }
         Log.Info($"保存所有在线角色完成，共 {self.Players.Count} 个");

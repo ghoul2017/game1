@@ -48,7 +48,7 @@ public static class MapHandlers
         int x = map.BirthX;
         int y = map.BirthY;
 
-        if (!Context.Map.EnterMap(player.Id, player.RoleData.Role?.Name ?? "", req.MapCfgId, req.Line, x, y))
+        if (!Context.Map.EnterMap(player.Id, player.RoleData.Name, req.MapCfgId, req.Line, x, y))
         {
             res.Code = MapErrorCode.MapNotFound;
             return Task.FromResult<IMessage>(res);
@@ -100,7 +100,7 @@ public static class MapHandlers
         int x = req.X > 0 ? req.X : targetMap.BirthX;
         int y = req.Y > 0 ? req.Y : targetMap.BirthY;
 
-        if (!Context.Map.ChangeMap(player.Id, player.RoleData.Role?.Name ?? "", req.TargetMapCfgId, req.TargetLine, x, y))
+        if (!Context.Map.ChangeMap(player.Id, player.RoleData.Name, req.TargetMapCfgId, req.TargetLine, x, y))
         {
             res.Code = MapErrorCode.MapNotFound;
             return Task.FromResult<IMessage>(res);
