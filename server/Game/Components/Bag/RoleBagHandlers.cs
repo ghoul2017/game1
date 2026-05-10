@@ -17,6 +17,7 @@ public static class RoleBagHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> QueryBagHandler(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
+        await Task.CompletedTask;
         res.Code = ErrorCode.Ok;
         res.Capacity = player.RoleBag.Capacity;
         res.Items = player.RoleBag.Items.Select(ToInfo).ToList();
