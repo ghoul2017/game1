@@ -103,18 +103,14 @@ public static class RoleBagHandlers
     [EventSubscriber]
     public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
     {
-        var player = Context.Players.GetByRoleId(e.RoleId);
-        if (player == null)
-        {
-            return;
-        }
+        var player = e.Player;
 
-        var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(e.RoleId);
+        var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(player.Id);
         if (bag == null)
         {
-            bag = new RoleBagComponent { Id = e.RoleId, Capacity = 100 };
+            bag = new RoleBagComponent { Id = player.Id, Capacity = 100 };
             await MongoDb.Instance.InsertAsync(bag);
-            Log.Info($"创建新背包 RoleId:{e.RoleId}");
+            Log.Info($"创建新背包 RoleId:{player.Id}");
         }
         bag.RebuildIndex();
         player.AddComponent(bag);

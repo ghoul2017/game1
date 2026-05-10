@@ -220,14 +220,9 @@ public static class UserHandler
         }
 
         var (player, token) = result.Value;
-        var roleData = player.RoleData;
 
         res.Code = 0;
         res.Message = "OK";
-        res.RoleId = roleData.Id;
-        res.Name = roleData.Name;
-        res.Level = roleData.Level;
-        res.Job = roleData.Job;
         res.Token = token;
 
         return res;

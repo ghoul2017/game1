@@ -1,4 +1,6 @@
-﻿namespace Shared.Core.Event;
+﻿using Game.Components.Player;
+
+namespace Shared.Core.Event;
 
 public static class EventType
 {
@@ -10,7 +12,7 @@ public static class EventType
     /// <summary>玩家上线（选角/重连成功后）</summary>
     public struct PlayerOnlineEvent : IEvent
     {
-        public long RoleId;
+        public PlayerEntity Player;
     }
 
     /// <summary>玩家下线（断线/被踢）</summary>

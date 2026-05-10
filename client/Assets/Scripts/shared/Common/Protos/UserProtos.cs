@@ -70,11 +70,7 @@ namespace Shared.Common.Protos
         public ushort MsgId => MsgIdConst.EnterGameRes;
         [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public string Message { get; set; } = "";
-        [ProtoMember(3)] public long RoleId { get; set; }
-        [ProtoMember(4)] public string Name { get; set; } = "";
-        [ProtoMember(5)] public int Level { get; set; }
-        [ProtoMember(6)] public int Job { get; set; }
-        [ProtoMember(7)] public string Token { get; set; } = "";
+        [ProtoMember(3)] public string Token { get; set; } = "";
     }
 
     // --- 断线重连 ---
@@ -111,5 +107,9 @@ namespace Shared.Common.Protos
     public class EnterGameNtf : IMessage
     {
         public ushort MsgId => MsgIdConst.EnterGameNtf;
+        [ProtoMember(1)] public long RoleId { get; set; }
+        [ProtoMember(2)] public string Name { get; set; } = "";
+        [ProtoMember(3)] public int Level { get; set; }
+        [ProtoMember(4)] public int Job { get; set; }
     }
 }

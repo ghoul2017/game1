@@ -12,18 +12,14 @@ public static class PlayerHandlers
     [EventSubscriber]
     public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
     {
-        var player = Context.Players.GetByRoleId(e.RoleId);
-        if (player == null)
-        {
-            return;
-        }
+        var player = e.Player;
 
-        var attr = await MongoDb.Instance.LoadAsync<RoleAttributeComponent>(e.RoleId);
+        var attr = await MongoDb.Instance.LoadAsync<RoleAttributeComponent>(player.Id);
         if (attr == null)
         {
-            attr = new RoleAttributeComponent { Id = e.RoleId };
+            attr = new RoleAttributeComponent { Id = player.Id };
             await MongoDb.Instance.InsertAsync(attr);
-            Log.Info($"创建新角色属性 RoleId:{e.RoleId}");
+            Log.Info($"创建新角色属性 RoleId:{player.Id}");
         }
         player.AddComponent(attr);
     }

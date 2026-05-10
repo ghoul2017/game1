@@ -86,18 +86,14 @@ public static class RoleTaskHandlers
     [EventSubscriber]
     public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
     {
-        var player = Context.Players.GetByRoleId(e.RoleId);
-        if (player == null)
-        {
-            return;
-        }
+        var player = e.Player;
 
-        var task = await MongoDb.Instance.LoadAsync<RoleTaskComponent>(e.RoleId);
+        var task = await MongoDb.Instance.LoadAsync<RoleTaskComponent>(player.Id);
         if (task == null)
         {
-            task = new RoleTaskComponent { Id = e.RoleId };
+            task = new RoleTaskComponent { Id = player.Id };
             await MongoDb.Instance.InsertAsync(task);
-            Log.Info($"创建新任务列表 RoleId:{e.RoleId}");
+            Log.Info($"创建新任务列表 RoleId:{player.Id}");
         }
         task.RebuildIndex();
         player.AddComponent(task);

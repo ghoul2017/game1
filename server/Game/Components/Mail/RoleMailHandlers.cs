@@ -87,18 +87,14 @@ public static class RoleMailHandlers
     [EventSubscriber]
     public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
     {
-        var player = Context.Players.GetByRoleId(e.RoleId);
-        if (player == null)
-        {
-            return;
-        }
+        var player = e.Player;
 
-        var mail = await MongoDb.Instance.LoadAsync<RoleMailComponent>(e.RoleId);
+        var mail = await MongoDb.Instance.LoadAsync<RoleMailComponent>(player.Id);
         if (mail == null)
         {
-            mail = new RoleMailComponent { Id = e.RoleId };
+            mail = new RoleMailComponent { Id = player.Id };
             await MongoDb.Instance.InsertAsync(mail);
-            Log.Info($"创建新邮件 RoleId:{e.RoleId}");
+            Log.Info($"创建新邮件 RoleId:{player.Id}");
         }
         mail.RebuildIndex();
         player.AddComponent(mail);

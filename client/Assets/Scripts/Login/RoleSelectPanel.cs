@@ -128,6 +128,7 @@ namespace Client.Login
             {
                 nc.Dispatcher.Register<CreateRoleRes>(MsgIdConst.CreateRoleRes, HandleCreateRoleRes);
                 nc.Dispatcher.Register<EnterGameRes>(MsgIdConst.EnterGameRes, HandleEnterGameRes);
+                nc.Dispatcher.Register<EnterGameNtf>(MsgIdConst.EnterGameNtf, HandleEnterGameNtf);
                 nc.Dispatcher.Register<EnterMapAck>(MsgIdConst.EnterMapAck, HandleEnterMapAck);
             }
         }
@@ -139,6 +140,7 @@ namespace Client.Login
             {
                 nc.Dispatcher.Unregister(MsgIdConst.CreateRoleRes);
                 nc.Dispatcher.Unregister(MsgIdConst.EnterGameRes);
+                nc.Dispatcher.Unregister(MsgIdConst.EnterGameNtf);
                 nc.Dispatcher.Unregister(MsgIdConst.EnterMapAck);
             }
         }
@@ -185,20 +187,9 @@ namespace Client.Login
         {
             if (res.Code == 0)
             {
-                GameData.CurrentRole = new RoleData
-                {
-                    RoleId = res.RoleId,
-                    Name = res.Name,
-                    Level = res.Level,
-                    Job = GameData.GetJobName(res.Job)
-                };
                 GameData.Token = res.Token;
-                Debug.Log(string.Format("[RoleSelectPanel] 进入游戏成功: {0} Lv.{1}，正在进入地图...", res.Name, res.Level));
-                selectTip.text = "正在进入地图...";
+                selectTip.text = "正在进入游戏...";
                 selectTip.color = UIBuilder.TextDim;
-
-                // 发送进图请求（默认进入新手村）
-                NetClient.Instance.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
             }
             else
             {
@@ -206,6 +197,23 @@ namespace Client.Login
                 selectTip.color = Color.red;
                 enterBtn.interactable = true;
             }
+        }
+
+        private void HandleEnterGameNtf(EnterGameNtf ntf)
+        {
+            GameData.CurrentRole = new RoleData
+            {
+                RoleId = ntf.RoleId,
+                Name = ntf.Name,
+                Level = ntf.Level,
+                Job = GameData.GetJobName(ntf.Job)
+            };
+            Debug.Log(string.Format("[RoleSelectPanel] 进入游戏成功: {0} Lv.{1}，正在进入地图...", ntf.Name, ntf.Level));
+            selectTip.text = "正在进入地图...";
+            selectTip.color = UIBuilder.TextDim;
+
+            // 发送进图请求（默认进入新手村）
+            NetClient.Instance.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
         }
 
         private void HandleEnterMapAck(EnterMapAck res)
