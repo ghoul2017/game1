@@ -18,7 +18,6 @@ public static class PlayerHandlers
             return;
         }
 
-        var attrComp = player.AddComponent<RoleAttributeComponent>();
         var attr = await MongoDb.Instance.LoadAsync<RoleAttributeComponent>(e.RoleId);
         if (attr == null)
         {
@@ -26,23 +25,6 @@ public static class PlayerHandlers
             await MongoDb.Instance.InsertAsync(attr);
             Log.Info($"创建新角色属性 RoleId:{e.RoleId}");
         }
-        attrComp.Id = attr.Id;
-        attrComp.Hp = attr.Hp;
-        attrComp.MaxHp = attr.MaxHp;
-        attrComp.Mp = attr.Mp;
-        attrComp.MaxMp = attr.MaxMp;
-        attrComp.PhyAttMin = attr.PhyAttMin;
-        attrComp.PhyAttMax = attr.PhyAttMax;
-        attrComp.MagicAttMin = attr.MagicAttMin;
-        attrComp.MagicAttMax = attr.MagicAttMax;
-        attrComp.PhyDef = attr.PhyDef;
-        attrComp.MagicDef = attr.MagicDef;
-        attrComp.MoveSpeed = attr.MoveSpeed;
-        attrComp.AttackSpeed = attr.AttackSpeed;
-        attrComp.CriticalRate = attr.CriticalRate;
-        attrComp.CriticalDamage = attr.CriticalDamage;
-        attrComp.Exp = attr.Exp;
-        attrComp.Level = attr.Level;
-        attrComp.Gold = attr.Gold;
+        player.AddComponent(attr);
     }
 }

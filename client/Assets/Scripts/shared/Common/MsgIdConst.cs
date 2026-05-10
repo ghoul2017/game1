@@ -16,6 +16,7 @@ namespace Shared.Common
         public const ushort ReconnectReq = 10109;
         public const ushort ReconnectRes = 10110;
         public const ushort KickNtf = 10111;
+        public const ushort EnterGameNtf = 10112;
 
         // Misc 杂项 (10201-10300)
         public const ushort HandshakeReq = 10201;

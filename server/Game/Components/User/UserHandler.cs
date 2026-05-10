@@ -169,19 +169,7 @@ public static class UserHandler
         // 生成角色ID（雪花算法）
         var roleId = IdGenerator.Instance.NextId();
 
-        // 创建 RoleDataComponent 实体（持久化到 MongoDB role 集合）
-        var roleData = new RoleDataComponent
-        {
-            Id = roleId,
-            UserId = session.UserId,
-            Name = name,
-            Level = 1,
-            Job = req.Job,
-            CreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
-        await MongoDb.Instance.InsertAsync(roleData);
-
-        // 写入角色索引
+        // 写入角色索引（RoleDataComponent 在首次进入游戏时按需创建）
         await MongoDb.Instance.InsertAsync(new UserRole
         {
             RoleId = roleId,
@@ -222,8 +210,8 @@ public static class UserHandler
             return res;
         }
 
-        // 调用 PlayerSystem.EnterGame 完成创建
-        var result = await Context.Players.EnterGame(req.RoleId, session.UserId, session);
+        // 调用 PlayerSystem.EnterGame 完成创建（传递 UserRole 数据供首次创建 RoleDataComponent 使用）
+        var result = await Context.Players.EnterGame(req.RoleId, session.UserId, session, userRole.Name, userRole.Level, userRole.Job);
         if (result == null)
         {
             res.Code = 1003;

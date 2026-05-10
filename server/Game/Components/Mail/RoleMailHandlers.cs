@@ -2,6 +2,7 @@ using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
 using Game.Core.Network;
+using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -92,8 +93,15 @@ public static class RoleMailHandlers
             return;
         }
 
-        var mailComp = player.AddComponent<RoleMailComponent>();
-        await mailComp.LoadMailsAsync(e.RoleId);
+        var mail = await MongoDb.Instance.LoadAsync<RoleMailComponent>(e.RoleId);
+        if (mail == null)
+        {
+            mail = new RoleMailComponent { Id = e.RoleId };
+            await MongoDb.Instance.InsertAsync(mail);
+            Log.Info($"创建新邮件 RoleId:{e.RoleId}");
+        }
+        mail.RebuildIndex();
+        player.AddComponent(mail);
     }
 
     #endregion

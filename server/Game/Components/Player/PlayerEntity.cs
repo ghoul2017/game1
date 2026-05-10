@@ -37,8 +37,6 @@ public class PlayerEntity : Entity
         online.LoginTime = DateTime.UtcNow;
         online.LastActiveTime = DateTime.UtcNow;
 
-        entity.AddComponent<RoleDataComponent>();
-
         return entity;
     }
 }

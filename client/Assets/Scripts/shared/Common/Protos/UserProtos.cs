@@ -104,4 +104,12 @@ namespace Shared.Common.Protos
         public ushort MsgId => MsgIdConst.KickNtf;
         [ProtoMember(1)] public int Reason { get; set; }
     }
+
+    // --- 进入游戏通知 ---
+
+    [ProtoContract]
+    public class EnterGameNtf : IMessage
+    {
+        public ushort MsgId => MsgIdConst.EnterGameNtf;
+    }
 }

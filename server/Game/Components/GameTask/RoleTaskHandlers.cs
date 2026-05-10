@@ -2,6 +2,7 @@ using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
 using Game.Core.Network;
+using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -91,8 +92,15 @@ public static class RoleTaskHandlers
             return;
         }
 
-        var taskComp = player.AddComponent<RoleTaskComponent>();
-        await taskComp.LoadTasksAsync(e.RoleId);
+        var task = await MongoDb.Instance.LoadAsync<RoleTaskComponent>(e.RoleId);
+        if (task == null)
+        {
+            task = new RoleTaskComponent { Id = e.RoleId };
+            await MongoDb.Instance.InsertAsync(task);
+            Log.Info($"创建新任务列表 RoleId:{e.RoleId}");
+        }
+        task.RebuildIndex();
+        player.AddComponent(task);
     }
 
     [EventSubscriber]

@@ -107,30 +107,28 @@ public static class PlayerSystem
 
     /// <summary>进入游戏：创建 PlayerEntity + 加载角色数据 + 绑定会话 + 生成 Token + 发布上线事件</summary>
     public static async Task<(PlayerEntity player, string token)?> EnterGame(
-        this PlayerComponent self, long roleId, long userId, TcpSession session)
+        this PlayerComponent self, long roleId, long userId, TcpSession session, string name, int level, int job)
     {
         var player = PlayerEntity.Create(roleId, userId);
-        var roleData = player.RoleData;
 
-        // 加载角色持久化数据
-        var loaded = await self.LoadRoleDataAsync(roleId);
-        if (loaded == null)
+        // 加载角色持久化数据，不存在则用 UserRole 数据创建
+        var roleData = await self.LoadRoleDataAsync(roleId);
+        if (roleData == null)
         {
-            Log.Error($"进入游戏失败，角色数据不存在 RoleId:{roleId}");
-            return null;
+            // 首次进入游戏，按需创建 RoleDataComponent
+            roleData = new RoleDataComponent
+            {
+                Id = roleId,
+                UserId = userId,
+                Name = name,
+                Level = level,
+                Job = job,
+                CreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            };
+            await MongoDb.Instance.InsertAsync(roleData);
+            Log.Info($"首次进入游戏，创建角色数据 RoleId:{roleId}");
         }
-
-        // 拷贝到已挂载的 Component（保留 _parent 引用）
-        roleData.Id = loaded.Id;
-        roleData.UserId = loaded.UserId;
-        roleData.Name = loaded.Name;
-        roleData.Level = loaded.Level;
-        roleData.Job = loaded.Job;
-        roleData.Exp = loaded.Exp;
-        roleData.VipLevel = loaded.VipLevel;
-        roleData.LastLogoutTime = loaded.LastLogoutTime;
-        roleData.CreateTime = loaded.CreateTime;
-        roleData.LastToken = loaded.LastToken;
+        player.AddComponent(roleData);
 
         // 绑定会话
         session.RoleId = roleId;
@@ -142,6 +140,9 @@ public static class PlayerSystem
         roleData.LastToken = token;
 
         self.AddPlayer(player);
+
+        // 通知客户端进入游戏准备就绪（在 PlayerOnlineEvent 之前，让客户端做好准备接收后续消息）
+        session.Send(new Shared.Common.Protos.EnterGameNtf());
 
         // 发布上线事件，各模块自行挂载 Component 并加载数据
         await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { RoleId = roleId });

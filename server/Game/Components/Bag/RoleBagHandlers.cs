@@ -109,7 +109,6 @@ public static class RoleBagHandlers
             return;
         }
 
-        var bagComp = player.AddComponent<RoleBagComponent>();
         var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(e.RoleId);
         if (bag == null)
         {
@@ -117,10 +116,8 @@ public static class RoleBagHandlers
             await MongoDb.Instance.InsertAsync(bag);
             Log.Info($"创建新背包 RoleId:{e.RoleId}");
         }
-        bagComp.Id = bag.Id;
-        bagComp.Capacity = bag.Capacity;
-        bagComp.Items = bag.Items;
-        bagComp.RebuildIndex();
+        bag.RebuildIndex();
+        player.AddComponent(bag);
     }
 
     #endregion

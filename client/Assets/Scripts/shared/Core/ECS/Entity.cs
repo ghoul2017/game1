@@ -40,6 +40,17 @@ namespace Shared.Core.ECS
             _components.Add(type, component);
             return component;
         }
+        public void AddComponent<T>(T component) where T : Component, new()
+        {
+            Type type = typeof(T);
+            if (_components.ContainsKey(type))
+            {
+                throw new Exception($"重复添加组件: {type.FullName}");
+            }
+
+            component.SetParent(this);
+            _components.Add(type, component);
+        }
 
         public T GetComponent<T>() where T : Component
         {
