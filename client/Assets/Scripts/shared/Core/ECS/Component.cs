@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Game.Core;
+using Shared.Core;
 using Shared.Core.Log;
 
 #nullable enable

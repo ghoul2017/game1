@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Shared.Core.Log;
 
-namespace Game.Core;
+namespace Shared.Core;
 
 /// <summary>
 /// 游戏主线程同步上下文。所有游戏逻辑串行执行在专用线程上，

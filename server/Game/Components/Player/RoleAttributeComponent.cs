@@ -1,5 +1,5 @@
 using Game.Components.Fight;
-using Game.Core.Database;
+using Shared.Core.Database;
 using MongoDB.Bson.Serialization.Attributes;
 using Shared.Core.ECS;
 

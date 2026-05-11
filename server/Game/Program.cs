@@ -1,17 +1,5 @@
-using System;
-using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Game.Components.Chat;
-using Game.Components.Fight;
-using Game.Components.Map;
-using Game.Components.Monster;
-using Game.Components.Player;
-using Game.Components.User;
-using Game.Config;
-using Game.Core;
-using Game.Core.Network;
-using Game.Database;
+using Shared.Core;
 using Shared.Core.Log;
 
 namespace Game;

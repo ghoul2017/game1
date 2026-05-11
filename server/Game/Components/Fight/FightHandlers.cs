@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Game.Components.Fight;
 using Game.Components.Player;
-using Game.Core.Network;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;

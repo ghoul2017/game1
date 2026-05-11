@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Game.Core.Aoi;
+using Shared.Core.Aoi;
 using Shared.Core.Log;
 
 namespace Game.Components.Map;

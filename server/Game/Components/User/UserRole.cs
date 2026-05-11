@@ -1,4 +1,4 @@
-using Game.Core.Database;
+using Shared.Core.Database;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace Game.Components.User;

@@ -3,10 +3,10 @@ using Game.Components.Fight;
 using Game.Components.Map;
 using Game.Components.Monster;
 using Game.Components.Player;
-using Game.Core;
-using Game.Core.Network;
+using Shared.Core;
+using Shared.Core.Network;
 using Game.Database;
-using Game.Entities;
+using Shared.Core.Entities;
 
 namespace Game;
 

@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using Shared.Core.Log;
 
-namespace Game.Core;
+namespace Shared.Core;
 
 /// <summary>
 /// 游戏定时器。回调自动在游戏主线程执行，使用者无需关心线程安全。

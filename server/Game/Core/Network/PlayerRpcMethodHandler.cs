@@ -4,11 +4,11 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Game;
 using Game.Components.Player;
-using Game.Core;
+using Shared.Core;
 using ProtoBuf;
 using Shared.Core.Network;
 
-namespace Game.Core.Network;
+namespace Shared.Core.Network;
 
 /// <summary>
 /// Player RPC 风格消息处理器适配器。

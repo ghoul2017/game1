@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Shared.Core.Log;
 
-namespace Game.Core;
+namespace Shared.Core;
 
 /// <summary>
 /// Token 签名器。使用 HMAC-SHA256 对 userId:roleId:timestamp 签名，

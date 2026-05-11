@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Shared.Core.Log;
 
-namespace Game.Core.Aoi;
+namespace Shared.Core.Aoi;
 
 /// <summary>
 /// 灯塔 AOI 系统

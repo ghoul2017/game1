@@ -1,7 +1,7 @@
 using System;
 using Shared.Core.Log;
 
-namespace Game.Core
+namespace Shared.Core
 {
     /// <summary>
     /// 雪花算法 ID 生成器。单机模式，workerId 固定为 1。

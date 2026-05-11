@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using Game.Core;
-using Game.Entities;
+using Shared.Core;
+using Shared.Core.Entities;
 using Game.Components.Monster;
 using Shared.Core.ECS;
 

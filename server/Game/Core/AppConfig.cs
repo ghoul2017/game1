@@ -1,6 +1,6 @@
 using Shared.Core.Log;
 
-namespace Game.Core;
+namespace Shared.Core;
 
 public class AppConfig
 {

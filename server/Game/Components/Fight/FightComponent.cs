@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Game.Entities;
+using Shared.Core.Entities;
 using Game.Components.Fight;
 using Shared.Core.ECS;
 

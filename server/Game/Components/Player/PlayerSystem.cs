@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Game.Core;
-using Game.Core.Database;
+using Shared.Core;
+using Shared.Core.Database;
 using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;

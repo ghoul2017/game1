@@ -1,4 +1,4 @@
-using Game.Core.Database;
+using Shared.Core.Database;
 
 namespace Game.Database;
 

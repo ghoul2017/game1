@@ -1,4 +1,4 @@
-namespace Game.Core;
+namespace Shared.Core;
 
 public class ServerOptions
 {

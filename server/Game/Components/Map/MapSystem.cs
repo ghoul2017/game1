@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Game.Entities;
+using Shared.Core.Entities;
 using Game.Components.Map;
 using Game.Components.Player;
 using Shared.Core.Log;

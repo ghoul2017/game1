@@ -1,4 +1,4 @@
-namespace Game.Core.Aoi;
+namespace Shared.Core.Aoi;
 
 /// <summary>
 /// AOI 对象接口，所有需要进入 AOI 系统的实体需实现此接口

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using ProtoBuf;
 using Shared.Core.Network;
 
-namespace Client.Network
+namespace Shared.Core.Network
 {
     /// <summary>
     /// 通知风格消息处理器适配器（无响应）。

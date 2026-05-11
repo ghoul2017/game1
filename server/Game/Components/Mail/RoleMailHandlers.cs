@@ -1,7 +1,6 @@
 using Game.Components.Player;
 using System.Linq;
 using System.Threading.Tasks;
-using Game.Core.Network;
 using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
