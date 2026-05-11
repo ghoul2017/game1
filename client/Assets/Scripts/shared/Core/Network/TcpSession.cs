@@ -40,6 +40,12 @@ namespace Shared.Core.Network
         /// <summary>断开原因（Disconnect 后可读）</summary>
         public LogoutReason DisconnectReason { get; private set; } = LogoutReason.NetDisconnected;
 
+        /// <summary>可选的调度器，用于将消息处理投递到主线程（客户端设置，服务端为 null）</summary>
+        public Action<Action>? PostToMainThread { get; set; }
+
+        /// <summary>收到消息时的回调（在 RouteAsync 之前调用）</summary>
+        public Action<TcpSession, ushort, byte[]>? OnMessageReceived { get; set; }
+
         private static long _nextSessionId;
 
         public TcpSession(Socket socket, MessageRouter router)
@@ -163,8 +169,22 @@ namespace Shared.Core.Network
                 // 收到任何消息都更新活跃时间
                 UpdateActiveTime();
 
-                // 分发给路由器处理（不 await，避免阻塞接收循环）
-                _ = _router.RouteAsync(this, result.MsgId, result.Payload);
+                if (PostToMainThread != null)
+                {
+                    var msgId = result.MsgId;
+                    var payload = result.Payload;
+                    var self = this;
+                    PostToMainThread(() =>
+                    {
+                        OnMessageReceived?.Invoke(self, msgId, payload);
+                        _ = _router.RouteAsync(self, msgId, payload);
+                    });
+                }
+                else
+                {
+                    OnMessageReceived?.Invoke(this, result.MsgId, result.Payload);
+                    _ = _router.RouteAsync(this, result.MsgId, result.Payload);
+                }
             }
 
             // 保留未消费的数据

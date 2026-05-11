@@ -25,7 +25,7 @@ namespace Shared.Core
             Console.CancelKeyPress += (_, e) =>
             {
                 e.Cancel = true;
-                GameSynchronizationContext.Instance.Post(_ => Cancel(), null);
+                SynchronizationContext.Current?.Post(_ => Cancel(), null);
             };
         }
 

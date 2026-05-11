@@ -63,7 +63,14 @@ namespace Shared.Core.Network
             {
                 while (!ShutdownToken.Instance.IsCancellationRequested)
                 {
-                    var clientSocket = await listenSocket.AcceptAsync(ShutdownToken.Instance.Token);
+                    Socket clientSocket;
+                    using (ShutdownToken.Instance.Token.Register(() => listenSocket.Close()))
+                    {
+                        clientSocket = await Task.Factory.FromAsync(
+                            (callback, state) => listenSocket.BeginAccept(callback, state),
+                            listenSocket.EndAccept,
+                            null);
+                    }
                     var session = new TcpSession(clientSocket, _router);
 
                     if (_sessionMap.Count >= MaxConnections)
@@ -81,6 +88,9 @@ namespace Shared.Core.Network
                 }
             }
             catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
             {
             }
             finally
@@ -113,7 +123,10 @@ namespace Shared.Core.Network
         public async Task<TcpSession> ConnectAsync(string host, int port)
         {
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            await socket.ConnectAsync(host, port);
+            await Task.Factory.FromAsync(
+                (callback, state) => socket.BeginConnect(host, port, callback, state),
+                socket.EndConnect,
+                null);
             var session = new TcpSession(socket, _router);
             _sessionMap[session.SessionId] = session;
             session.OnDisconnected += OnSessionDisconnected;

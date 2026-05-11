@@ -74,6 +74,7 @@
      <Compile Include="Assets\Scripts\Game\ChangeMapPanel.cs" />
      <Compile Include="Assets\Scripts\shared\Core\IdGenerator.cs" />
      <Compile Include="Assets\Scripts\Core\GameEntry.cs" />
+    <Compile Include="Assets\Scripts\Core\Context.cs" />
      <Compile Include="Assets\Scripts\shared\Core\Log\LogLevel.cs" />
      <Compile Include="Assets\Scripts\shared\Core\Network\NetworkComponent.cs" />
      <Compile Include="Assets\Scripts\shared\Core\Log\ConsoleLogAppender.cs" />

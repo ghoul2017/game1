@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
 using System.Net.Sockets;
-using System.Threading;
 using Client.Game;
 using Shared.Common;
+using Client;
+using Shared.Common.Enums;
 using Shared.Core.Event;
 using Shared.Core.Network;
 using Shared.Common.Protos;
@@ -14,8 +13,8 @@ using UnityEngine;
 namespace Client.Network
 {
     /// <summary>
-    /// 客户端TCP网络管理器
-    /// 负责：连接管理、消息收发、心跳保活、断线重连
+    /// 客户端网络管理器。基于 NetworkComponent + TcpSession，
+    /// 负责连接、心跳、断线重连。消息处理由 NetworkComponent 的 MessageRouter 统一分发。
     /// </summary>
     public class NetClient : MonoBehaviour
     {
@@ -44,7 +43,7 @@ namespace Client.Network
 
         public bool IsConnected
         {
-            get { return _state == ConnState.Connected && IsSocketAlive(); }
+            get { return _state == ConnState.Connected && _session != null && _session.IsConnected; }
         }
 
         public bool IsConnecting
@@ -67,20 +66,14 @@ namespace Client.Network
         private ConnState _state = ConnState.Disconnected;
 
         // --- Internals ---
-        private TcpClient _tcp;
-        private NetworkStream _stream;
-        private Thread _recvThread;
-        private volatile bool _running;
-        private readonly object _sendLock = new object();
-
-        // Receive
-        private byte[] _recvBuffer = new byte[8192];
-        private readonly List<byte> _pendingData = new List<byte>();
+        private TcpSession _session;
+        private MessageDispatcher _dispatcher;
         private readonly ConcurrentQueue<Action> _mainQueue = new ConcurrentQueue<Action>();
 
         // Timing
         private float _lastSendTime;
         private float _lastRecvTime;
+        private volatile bool _running;
 
         // Reconnect
         private int _reconnectAttempts;
@@ -96,10 +89,6 @@ namespace Client.Network
         public event Action<string> OnReconnectFailed;
         public event Action<int> OnKicked;
 
-        // --- External ---
-        private MessageDispatcher _dispatcher;
-        private MessageRouter _router;
-
         void Awake()
         {
             if (Instance != null && Instance != this)
@@ -110,8 +99,8 @@ namespace Client.Network
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            _router = new MessageRouter();
-            _router.AutoRegister();
+
+            Context.Client.AddComponent<NetworkComponent>();
             EventBus.Instance.AutoRegister();
         }
 
@@ -134,7 +123,7 @@ namespace Client.Network
             if (_state == ConnState.Reconnecting && Time.time >= _nextReconnectTime)
             {
                 Debug.Log("[NetClient] Reconnecting (" + _reconnectAttempts + "/" + maxReconnectAttempts + ")...");
-                DoConnect();
+                _ = StartConnectAsync();
             }
 
             // Handshake timeout
@@ -143,7 +132,7 @@ namespace Client.Network
                 if (Time.time - _lastRecvTime > recvTimeout)
                 {
                     Debug.LogWarning("[NetClient] Handshake timeout");
-                    HandleDisconnect("Handshake timeout");
+                    DisposeSession(LogoutReason.NetDisconnected, "Handshake timeout");
                 }
             }
 
@@ -159,14 +148,15 @@ namespace Client.Network
                 if (now - _lastRecvTime > recvTimeout)
                 {
                     Debug.LogWarning("[NetClient] Receive timeout, disconnecting");
-                    HandleDisconnect("Receive timeout");
+                    DisposeSession(LogoutReason.NetDisconnected, "Receive timeout");
                 }
             }
         }
 
         void OnDestroy()
         {
-            DoDisconnect();
+            _running = false;
+            DisposeSession(LogoutReason.NetDisconnected, "Destroyed");
             if (Instance == this) Instance = null;
         }
 
@@ -193,41 +183,26 @@ namespace Client.Network
             _userDisconnect = false;
             _hadSession = false;
             _reconnectAttempts = 0;
-            DoConnect();
+            _state = ConnState.Connecting;
+            _ = StartConnectAsync();
         }
 
         public void Disconnect()
         {
             _userDisconnect = true;
-            HandleDisconnect("User disconnect");
+            DisposeSession(LogoutReason.NetDisconnected, "User disconnect");
         }
 
         public void Send(IMessage msg)
         {
-            if ((_state != ConnState.Connected && _state != ConnState.Handshaking) || _stream == null)
+            if (_state != ConnState.Connected && _state != ConnState.Handshaking)
             {
                 Debug.LogWarning("[NetClient] Cannot send: not connected");
                 return;
             }
 
-            byte[] payload = msg.Serialize();
-            byte[] packet = PacketCodec.Encode(msg.MsgId, payload);
-
-            try
-            {
-                lock (_sendLock)
-                {
-                    _stream.Write(packet, 0, packet.Length);
-                    _stream.Flush();
-                }
-
-                _lastSendTime = Time.time;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("[NetClient] Send error: " + ex.Message);
-                HandleDisconnect("Send error");
-            }
+            _session?.Send(msg);
+            _lastSendTime = Time.time;
         }
 
         /// <summary>
@@ -242,54 +217,40 @@ namespace Client.Network
 
         // ==================== Connect / Disconnect ====================
 
-        private void DoConnect()
+        private async System.Threading.Tasks.Task StartConnectAsync()
         {
-            _state = ConnState.Connecting;
             _running = true;
-            _pendingData.Clear();
-
             try
             {
-                _tcp = new TcpClient();
-                _tcp.NoDelay = true;
-                _tcp.BeginConnect(host, port, OnConnectResult, null);
+                var session = await Context.Network.ConnectAsync(host, port);
+                _mainQueue.Enqueue(() => OnConnectSuccess(session));
             }
             catch (Exception ex)
             {
-                Debug.LogError("[NetClient] Connect error: " + ex.Message);
-                HandleConnectFailed(ex.Message);
+                _mainQueue.Enqueue(() => HandleConnectFailed(ex.Message));
             }
         }
 
-        private void OnConnectResult(IAsyncResult ar)
+        private void OnConnectSuccess(TcpSession session)
         {
-            try
+            if (!_running) return;
+
+            _session = session;
+            _session.PostToMainThread = action => _mainQueue.Enqueue(() =>
             {
-                _tcp.EndConnect(ar);
-                _stream = _tcp.GetStream();
+                _lastRecvTime = Time.time;
+                action();
+            });
+            _session.OnMessageReceived = (_, msgId, payload) => _dispatcher?.Dispatch(msgId, payload);
+            _session.OnDisconnected += OnSessionDisconnected;
 
-                _recvThread = new Thread(ReceiveLoop) { IsBackground = true };
-                _recvThread.Start();
+            _state = ConnState.Handshaking;
+            _reconnectAttempts = 0;
+            _lastRecvTime = Time.time;
+            _lastSendTime = Time.time;
+            Debug.Log("[NetClient] TCP connected, sending handshake...");
 
-                _mainQueue.Enqueue(() =>
-                {
-                    if (!_running) return;
-                    _state = ConnState.Handshaking;
-                    _reconnectAttempts = 0;
-                    _lastSendTime = Time.time;
-                    _lastRecvTime = Time.time;
-                    Debug.Log("[NetClient] TCP connected, sending handshake...");
-
-
-                    // Send handshake request
-                    Send(new HandshakeReq());
-                });
-            }
-            catch (Exception ex)
-            {
-                string msg = ex.Message;
-                _mainQueue.Enqueue(() => HandleConnectFailed(msg));
-            }
+            Send(new HandshakeReq());
         }
 
         private void HandleConnectFailed(string reason)
@@ -314,17 +275,46 @@ namespace Client.Network
             }
         }
 
-        private void HandleDisconnect(string reason)
+        private void OnSessionDisconnected(TcpSession session, LogoutReason reason)
         {
-            if (_state != ConnState.Connected && _state != ConnState.Handshaking) return;
+            _mainQueue.Enqueue(() =>
+            {
+                _session = null;
+                HandlePostDisconnect();
+            });
+        }
 
-            // Remember if we had an authenticated session for reconnect
-            if (!string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
-                _hadSession = true;
+        private void DisposeSession(LogoutReason reason, string debugMsg)
+        {
+            if (_session != null)
+            {
+                _session.OnDisconnected -= OnSessionDisconnected;
+                _session.PostToMainThread = null;
+                _session.OnMessageReceived = null;
+                _session.Disconnect(reason);
+                _session = null;
+            }
 
-            DoDisconnect();
+            if (reason != LogoutReason.NetDisconnected || debugMsg != "Destroyed")
+            {
+                Debug.Log("[NetClient] DisposeSession: " + debugMsg);
+            }
 
-            if (!_userDisconnect && autoReconnect && _reconnectAttempts < maxReconnectAttempts)
+            HandlePostDisconnect();
+        }
+
+        /// <summary>断开后的状态处理：重连或通知</summary>
+        private void HandlePostDisconnect()
+        {
+            if (_userDisconnect)
+            {
+                _state = ConnState.Disconnected;
+                Debug.Log("[NetClient] Disconnected by user");
+                OnDisconnected?.Invoke();
+                return;
+            }
+
+            if (autoReconnect && _reconnectAttempts < maxReconnectAttempts)
             {
                 _reconnectAttempts++;
                 float delay = Math.Min(
@@ -332,144 +322,14 @@ namespace Client.Network
                     maxReconnectDelay);
                 _nextReconnectTime = Time.time + delay;
                 _state = ConnState.Reconnecting;
-                Debug.Log("[NetClient] Disconnected (" + reason + "), reconnect in " + delay + "s");
+                Debug.Log("[NetClient] Disconnected, reconnect in " + delay + "s (" + _reconnectAttempts + "/" +
+                          maxReconnectAttempts + ")");
             }
             else
             {
                 _state = ConnState.Disconnected;
-                Debug.Log("[NetClient] Disconnected: " + reason);
+                Debug.Log("[NetClient] Disconnected");
                 OnDisconnected?.Invoke();
-            }
-        }
-
-        private void DoDisconnect()
-        {
-            _running = false;
-            _state = ConnState.Disconnected;
-            PingMs = 0;
-
-            try
-            {
-                _stream?.Close();
-            }
-            catch
-            {
-            }
-
-            try
-            {
-                _tcp?.Close();
-            }
-            catch
-            {
-            }
-
-            try
-            {
-                if (_recvThread != null && _recvThread.IsAlive) _recvThread.Join(1000);
-            }
-            catch
-            {
-            }
-
-            _stream = null;
-            _tcp = null;
-            _recvThread = null;
-            _pendingData.Clear();
-        }
-
-        // ==================== Receive ====================
-
-        private void ReceiveLoop()
-        {
-            while (_running)
-            {
-                try
-                {
-                    int bytesRead = _stream.Read(_recvBuffer, 0, _recvBuffer.Length);
-                    if (bytesRead == 0)
-                    {
-                        _mainQueue.Enqueue(() => HandleDisconnect("Server closed"));
-                        break;
-                    }
-
-                    byte[] data = new byte[bytesRead];
-                    Buffer.BlockCopy(_recvBuffer, 0, data, 0, bytesRead);
-
-                    _mainQueue.Enqueue(() =>
-                    {
-                        ProcessReceivedBytes(data);
-                        _lastRecvTime = Time.time;
-                    });
-                }
-                catch (IOException)
-                {
-                    if (_running)
-                        _mainQueue.Enqueue(() => HandleDisconnect("Connection lost"));
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    if (_running)
-                        _mainQueue.Enqueue(() => HandleDisconnect("Recv error: " + ex.Message));
-                    break;
-                }
-            }
-        }
-
-        private void ProcessReceivedBytes(byte[] data)
-        {
-            _pendingData.AddRange(data);
-
-            int offset = 0;
-            byte[] buf = _pendingData.ToArray();
-            int count = buf.Length;
-
-            while (count - offset >= PacketCodec.HeaderSize)
-            {
-                PacketCodec.DecodeResult result = PacketCodec.TryDecode(buf, offset, count - offset);
-                if (result == null) break;
-
-                if (_dispatcher != null)
-                    _dispatcher.Dispatch(result.MsgId, result.Payload);
-                _router.RouteAsync(null, result.MsgId, result.Payload);
-                offset += result.Consumed;
-            }
-
-            if (offset > 0)
-                _pendingData.RemoveRange(0, offset);
-        }
-
-        // ==================== Handshake ====================
-
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleHandshakeRes(TcpSession session,HandshakeRes res)
-        {
-            if (res.Code != 0)
-            {
-                Debug.LogWarning("[NetClient] Handshake failed: " + res.Message);
-                Instance._hadSession = false;
-                Instance.HandleDisconnect("Handshake rejected: " + res.Message);
-                return;
-            }
-
-            if (Instance._hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
-            {
-                // Had previous session — attempt application-level reconnect
-                Debug.Log("[NetClient] Handshake OK, sending ReconnectReq...");
-                var req = new ReconnectReq();
-                req.Token = GameData.Token;
-                req.RoleId = GameData.CurrentRole.RoleId;
-                Instance.Send(req);
-            }
-            else
-            {
-                // Fresh connection
-                Debug.Log("[NetClient] Handshake OK, connected to " + Instance.host + ":" + Instance.port);
-                Instance._state = ConnState.Connected;
-
-
-                Instance.OnConnected?.Invoke();
             }
         }
 
@@ -483,17 +343,46 @@ namespace Client.Network
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleHeartbeatRes(TcpSession session,HeartbeatRes res)
+        public static void HandleHeartbeatRes(TcpSession session, HeartbeatRes res)
         {
             long nowTicks = DateTime.UtcNow.Ticks;
             long rttTicks = nowTicks - res.ClientTime;
-            Instance.PingMs = (int)(rttTicks / System.TimeSpan.TicksPerMillisecond);
+            Instance.PingMs = (int)(rttTicks / TimeSpan.TicksPerMillisecond);
+        }
+
+        // ==================== Handshake ====================
+
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void HandleHandshakeRes(TcpSession session, HandshakeRes res)
+        {
+            if (res.Code != 0)
+            {
+                Debug.LogWarning("[NetClient] Handshake failed: " + res.Message);
+                Instance._hadSession = false;
+                Instance.DisposeSession(LogoutReason.NetDisconnected, "Handshake rejected: " + res.Message);
+                return;
+            }
+
+            if (Instance._hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
+            {
+                Debug.Log("[NetClient] Handshake OK, sending ReconnectReq...");
+                var req = new ReconnectReq();
+                req.Token = GameData.Token;
+                req.RoleId = GameData.CurrentRole.RoleId;
+                Instance.Send(req);
+            }
+            else
+            {
+                Debug.Log("[NetClient] Handshake OK, connected to " + Instance.host + ":" + Instance.port);
+                Instance._state = ConnState.Connected;
+                Instance.OnConnected?.Invoke();
+            }
         }
 
         // ==================== Reconnect ====================
 
         [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleReconnectRes(TcpSession session,ReconnectRes res)
+        public static void HandleReconnectRes(TcpSession session, ReconnectRes res)
         {
             Instance._hadSession = false;
 
@@ -503,7 +392,6 @@ namespace Client.Network
                 GameData.Token = res.Token;
                 Instance._state = ConnState.Connected;
 
-                // 重连成功后自动走进入游戏流程
                 if (GameData.CurrentRole != null)
                 {
                     Instance.Send(new EnterGameReq { RoleId = GameData.CurrentRole.RoleId });
@@ -519,7 +407,6 @@ namespace Client.Network
                 GameData.CurrentMap = null;
 
                 Instance._state = ConnState.Connected;
-
                 Instance.OnReconnectFailed?.Invoke(res.Message);
             }
         }
@@ -527,7 +414,7 @@ namespace Client.Network
         // ==================== Kick ====================
 
         [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleKickNtf(TcpSession session,KickNtf ntf)
+        public static void HandleKickNtf(TcpSession session, KickNtf ntf)
         {
             Debug.Log("[NetClient] Kicked, reason=" + ntf.Reason);
             Instance._userDisconnect = true;
@@ -536,21 +423,7 @@ namespace Client.Network
             GameData.CurrentRole = null;
             GameData.CurrentMap = null;
             Instance.OnKicked?.Invoke(ntf.Reason);
-            Instance.HandleDisconnect("Kicked by server");
-        }
-
-        // ==================== Helpers ====================
-
-        private bool IsSocketAlive()
-        {
-            try
-            {
-                return _tcp != null && _tcp.Connected;
-            }
-            catch
-            {
-                return false;
-            }
+            Instance.DisposeSession(LogoutReason.NetDisconnected, "Kicked by server");
         }
     }
 }
