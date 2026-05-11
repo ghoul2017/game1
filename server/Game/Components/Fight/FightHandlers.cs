@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using Game.Components.Fight;
+using Game.Components.Map;
 using Game.Components.Player;
 using Shared.Core.Event;
 using Shared.Core.Log;
@@ -15,7 +15,7 @@ public static class FightHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static Task<IMessage> UseSkillHandler(PlayerEntity player, UseSkillReq req, UseSkillAck res)
     {
-        var result = Context.Fight.UseSkill(player.Id, req.SkillId, req.X, req.Y, req.TargetId);
+        var result = FightSystem.UseSkill(player.Id, req.SkillId, req.X, req.Y, req.TargetId);
         res.Code = result.Code;
 
         return Task.FromResult<IMessage>(res);
@@ -37,15 +37,23 @@ public static class FightHandlers
     [EventSubscriber]
     public static void OnPlayerOffline(EventType.PlayerOfflineEvent e)
     {
-        Context.Fight.UnregisterUnit(e.RoleId);
-        Log.Debug($"玩家下线注销战斗单元 RoleId:{e.RoleId}");
+        var mapObj = Context.Map.FindMapObject(e.RoleId);
+        if (mapObj != null)
+        {
+            mapObj.UnregisterUnit();
+            Log.Debug($"玩家下线注销战斗单元 RoleId:{e.RoleId}");
+        }
     }
 
     [EventSubscriber]
     public static void OnPlayerLeaveMap(EventType.PlayerLeaveMapEvent e)
     {
-        Context.Fight.UnregisterUnit(e.RoleId);
-        Log.Debug($"玩家离开地图注销战斗单元 RoleId:{e.RoleId}");
+        var mapObj = Context.Map.FindMapObject(e.RoleId);
+        if (mapObj != null)
+        {
+            mapObj.UnregisterUnit();
+            Log.Debug($"玩家离开地图注销战斗单元 RoleId:{e.RoleId}");
+        }
     }
 
     #endregion

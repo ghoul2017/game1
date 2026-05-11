@@ -1,4 +1,5 @@
-using Shared.Core;
+using Game.Components.Fight;
+using Game.Components.Map;
 using Shared.Core.Event;
 using Shared.Core.Log;
 
@@ -11,27 +12,30 @@ public static class MonsterHandlers
     [EventSubscriber]
     public static void OnMonsterKilled(EventType.MonsterKilledEvent e)
     {
-        Context.Monster.OnMonsterKilled(e.MonsterId, e.KillerId);
+        var monsterComp = Context.Monster;
+        monsterComp.OnMonsterKilled(e.MonsterId, e.KillerId);
     }
 
     [EventSubscriber]
     public static void OnPlayerEnterMap(EventType.PlayerEnterMapEvent e)
     {
-        Context.Monster.InitMapMonsters(e.MapCfgId, e.Line);
+        var monsterComp = Context.Monster;
+        monsterComp.InitMapMonsters(e.MapCfgId, e.Line);
     }
 
     [EventSubscriber]
     public static void OnPlayerOffline(EventType.PlayerOfflineEvent e)
     {
+        var monsterComp = Context.Monster;
         // 清除以该玩家为追击目标的怪物仇恨
-        foreach (var kvp in Context.Monster.MapMonsters)
+        foreach (var kvp in monsterComp.MapMonsters)
         {
             foreach (var monster in kvp.Value.Values)
             {
-                if (monster.ChaseTarget == e.RoleId)
+                if (monster.Ai.ChaseTarget == e.RoleId)
                 {
-                    monster.AiState = AiState.Idle;
-                    monster.ChaseTarget = null;
+                    monster.Ai.ChaseTarget = null;
+                    monster.Ai.AiState = AiState.Idle;
                 }
             }
         }

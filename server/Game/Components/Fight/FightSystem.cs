@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using Game.Config;
 using Game.Components.Map;
+using Game.Components.Monster;
 using Game.Components.Player;
+using Game.Entities;
 using Shared.Core;
-using Shared.Core.Entities;
 using Shared.Common.Config;
 using Shared.Common.Protos;
 using Shared.Core.Event;
@@ -15,34 +16,107 @@ namespace Game.Components.Fight;
 
 /// <summary>
 /// 战斗系统。提供战斗单元管理、技能使用、死亡处理等核心战斗逻辑。
-/// 所有操作通过 FightComponent 扩展方法实现，无状态设计。
+/// 战斗单元通过 MapObjectEntity 上的 FightUnitComponent 访问。
 /// </summary>
 public static class FightSystem
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(FightSystem));
 
+    #region FightUnitComponent 扩展方法
+
+    /// <summary>受伤，返回实际扣血量</summary>
+    public static int TakeDamage(this FightUnitComponent self, int damage)
+    {
+        int actual = Math.Min(damage, self.Attr.Hp);
+        self.Attr.Hp = Math.Max(0, self.Attr.Hp - damage);
+        return actual;
+    }
+
+    /// <summary>回血，返回实际回血量</summary>
+    public static int Heal(this FightUnitComponent self, int amount)
+    {
+        int actual = Math.Min(amount, self.Attr.MaxHp - self.Attr.Hp);
+        self.Attr.Hp = Math.Min(self.Attr.MaxHp, self.Attr.Hp + amount);
+        return actual;
+    }
+
+    /// <summary>添加仇恨</summary>
+    public static void AddThreat(this FightUnitComponent self, long targetId, int value)
+    {
+        self.ThreatMap.TryGetValue(targetId, out var existing);
+        self.ThreatMap[targetId] = existing + value;
+    }
+
+    /// <summary>获取仇恨最高的目标</summary>
+    public static long GetMaxThreatTarget(this FightUnitComponent self)
+    {
+        if (self.ThreatMap.Count == 0) return 0;
+
+        long targetId = 0;
+        int maxThreat = 0;
+        foreach (var kv in self.ThreatMap)
+        {
+            if (kv.Value > maxThreat)
+            {
+                maxThreat = kv.Value;
+                targetId = kv.Key;
+            }
+        }
+        return targetId;
+    }
+
+    /// <summary>添加技能</summary>
+    public static void AddSkill(this FightUnitComponent self, Skill skill)
+    {
+        self.Skills[skill.SkillId] = skill;
+    }
+
+    /// <summary>获取技能</summary>
+    public static Skill? GetSkill(this FightUnitComponent self, int skillId)
+    {
+        return self.Skills.TryGetValue(skillId, out var skill) ? skill : null;
+    }
+
+    /// <summary>重置战斗状态（满血复活）</summary>
+    public static void ResetFightState(this FightUnitComponent self)
+    {
+        self.Attr.Hp = self.Attr.MaxHp;
+        self.ThreatMap.Clear();
+        self.SkillCoolDown.Clear();
+        self.KillerId = 0;
+        self.KillerSkillId = 0;
+    }
+
+    #endregion
+
     #region 战斗单元管理
 
-    /// <summary>注册战斗单元（玩家进入地图时调用）</summary>
-    public static FightUnit RegisterUnit(this FightComponent self, long objectId, int objectType, string name, int cfgId, FightAttribute attr)
+    /// <summary>注册战斗单元（玩家/怪物进入地图时调用）</summary>
+    public static FightUnitComponent RegisterUnit(this MapObjectEntity entity, FightAttribute attr)
     {
-        var unit = new FightUnit(objectId, objectType, name, cfgId, attr);
-        self.Units[objectId] = unit;
-        Log.Debug($"注册战斗单元 ObjectId:{objectId} Name:{name}");
-        return unit;
+        var fight = entity.AddComponent<FightUnitComponent>();
+        fight.Attr = attr;
+        Log.Debug($"注册战斗单元 ObjectId:{entity.ObjectId} Name:{entity.Name}");
+        return fight;
     }
 
-    /// <summary>注销战斗单元（玩家离开地图时调用）</summary>
-    public static void UnregisterUnit(this FightComponent self, long objectId)
+    /// <summary>注销战斗单元（玩家/怪物离开地图时调用）</summary>
+    public static void UnregisterUnit(this MapObjectEntity entity)
     {
-        self.Units.Remove(objectId);
-        Log.Debug($"注销战斗单元 ObjectId:{objectId}");
+        if (entity.TryGetComponent<FightUnitComponent>(out _))
+        {
+            entity.RemoveComponent(entity.GetComponent<FightUnitComponent>());
+            Log.Debug($"注销战斗单元 ObjectId:{entity.ObjectId}");
+        }
     }
 
-    /// <summary>获取战斗单元</summary>
-    public static FightUnit? GetUnit(this FightComponent self, long objectId)
+    /// <summary>获取战斗单元（通过全局查找）</summary>
+    public static FightUnitComponent? GetFightUnit(long objectId)
     {
-        return self.Units.TryGetValue(objectId, out var unit) ? unit : null;
+        var mapObj = Context.Map.FindMapObject(objectId);
+        if (mapObj != null && mapObj.TryGetComponent<FightUnitComponent>(out var fight))
+            return fight;
+        return null;
     }
 
     #endregion
@@ -62,24 +136,24 @@ public static class FightSystem
     /// <summary>
     /// 使用技能。核心战斗入口。
     /// </summary>
-    public static UseSkillResult UseSkill(this FightComponent self, long attackerId, int skillId, int x, int y, long targetId)
+    public static UseSkillResult UseSkill(long attackerId, int skillId, int x, int y, long targetId)
     {
         var result = new UseSkillResult();
 
-        var attacker = self.GetUnit(attackerId);
-        if (attacker == null)
+        var attackerFight = GetFightUnit(attackerId);
+        if (attackerFight == null)
         {
             result.Code = FightErrorCode.NotInFight;
             return result;
         }
 
-        if (attacker.IsDead)
+        if (attackerFight.IsDead)
         {
             result.Code = FightErrorCode.AlreadyDead;
             return result;
         }
 
-        var skill = attacker.GetSkill(skillId);
+        var skill = attackerFight.GetSkill(skillId);
         if (skill == null)
         {
             result.Code = FightErrorCode.SkillNotFound;
@@ -101,14 +175,14 @@ public static class FightSystem
             return result;
         }
 
-        var target = self.GetUnit(targetId);
-        if (target == null)
+        var targetFight = GetFightUnit(targetId);
+        if (targetFight == null)
         {
             result.Code = FightErrorCode.TargetNotFound;
             return result;
         }
 
-        if (target.IsDead)
+        if (targetFight.IsDead)
         {
             result.Code = FightErrorCode.TargetDead;
             return result;
@@ -135,7 +209,7 @@ public static class FightSystem
         skill.LastUseTime = now;
 
         // 执行战斗计算
-        var hitResults = FightCore.UseSkill(attacker, target, skillCfg);
+        var hitResults = FightCore.UseSkill(attackerFight, attackerId, targetFight, targetId, skillCfg);
 
         result.Code = FightErrorCode.Ok;
         result.AttackerId = attackerId;
@@ -150,7 +224,7 @@ public static class FightSystem
         {
             if (hit.IsDead)
             {
-                OnUnitKilled(self, hit.TargetId, attackerId);
+                OnUnitKilled(hit.TargetId, attackerId);
             }
         }
 
@@ -166,20 +240,23 @@ public static class FightSystem
     #region 死亡处理
 
     /// <summary>战斗单元死亡回调</summary>
-    private static void OnUnitKilled(FightComponent self, long victimId, long killerId)
+    private static void OnUnitKilled(long victimId, long killerId)
     {
-        var victim = self.GetUnit(victimId);
-        if (victim == null) return;
+        var victimFight = GetFightUnit(victimId);
+        if (victimFight == null) return;
 
-        Log.Info($"战斗死亡 Victim:{victimId}({victim.Name}) Killer:{killerId}");
+        var killerFight = GetFightUnit(killerId);
 
-        bool isMonster = victim.ObjectType == MapObjectType.Npc;
+        Log.Info($"战斗死亡 Victim:{victimId} Killer:{killerId}");
+
+        var mapObj = Context.Map.FindMapObject(victimId);
+        bool isMonster = mapObj is MonsterEntity;
 
         // 通知被击杀者
         SendToRole(victimId, new KilledByNtf
         {
             KillerId = killerId,
-            KillerName = self.GetUnit(killerId)?.Name ?? "",
+            KillerName = killerFight != null ? Context.Map.FindMapObject(killerId)?.Name ?? "" : "",
             IsMonster = isMonster,
         });
 
@@ -187,34 +264,27 @@ public static class FightSystem
         BroadcastToWatchers(victimId, new HpChangedNtf
         {
             ObjectId = victimId,
-            DeltaHp = -victim.Attr.Hp,
+            DeltaHp = -victimFight.Attr.Hp,
             Hp = 0,
             Reason = HpChangeReason.Killed,
         });
 
         // 如果是怪物，发布击杀事件
-        if (isMonster)
+        if (isMonster && mapObj is MonsterEntity monster)
         {
-            var map = Context.Map.GetPlayerMap(victimId);
-            var monsterMap = map ?? Context.Map.GetPlayerMap(killerId);
-            int mapCfgId = 0;
-            int line = 0;
-            if (monsterMap != null)
-            {
-                mapCfgId = monsterMap.CfgId;
-                line = monsterMap.Line;
-            }
+            int mapCfgId = monster.MapId;
+            int line = monster.Line;
 
             EventBus.Instance.Publish(new EventType.MonsterKilledEvent
             {
                 MonsterId = victimId,
                 KillerId = killerId,
-                MonsterCfgId = victim.CfgId,
+                MonsterCfgId = monster.CfgId,
                 MapId = mapCfgId,
                 Line = line,
             });
         }
-        else
+        else if (!isMonster)
         {
             // 玩家死亡事件
             EventBus.Instance.Publish(new EventType.PlayerDeathEvent
@@ -230,25 +300,25 @@ public static class FightSystem
     #region 复活
 
     /// <summary>复活战斗单元</summary>
-    public static bool Revive(this FightComponent self, long objectId, int hpPercent = 100)
+    public static bool Revive(long objectId, int hpPercent = 100)
     {
-        var unit = self.GetUnit(objectId);
-        if (unit == null || !unit.IsDead) return false;
+        var fight = GetFightUnit(objectId);
+        if (fight == null || !fight.IsDead) return false;
 
-        unit.Attr.Hp = unit.Attr.MaxHp * hpPercent / 100;
-        unit.ThreatMap.Clear();
-        unit.KillerId = 0;
-        unit.KillerSkillId = 0;
+        fight.Attr.Hp = fight.Attr.MaxHp * hpPercent / 100;
+        fight.ThreatMap.Clear();
+        fight.KillerId = 0;
+        fight.KillerSkillId = 0;
 
         BroadcastToWatchers(objectId, new HpChangedNtf
         {
             ObjectId = objectId,
-            DeltaHp = unit.Attr.Hp,
-            Hp = unit.Attr.Hp,
+            DeltaHp = fight.Attr.Hp,
+            Hp = fight.Attr.Hp,
             Reason = HpChangeReason.Revive,
         });
 
-        Log.Info($"战斗复活 ObjectId:{objectId} Hp:{unit.Attr.Hp}");
+        Log.Info($"战斗复活 ObjectId:{objectId} Hp:{fight.Attr.Hp}");
         return true;
     }
 
@@ -318,17 +388,6 @@ public static class FightSystem
     }
 
     #endregion
-
-    #region 清理
-
-    /// <summary>清除所有战斗单元（停服时调用）</summary>
-    public static void RemoveAll(this FightComponent self)
-    {
-        self.Units.Clear();
-        Log.Info("战斗管理器已清空");
-    }
-
-    #endregion
 }
 
 /// <summary>技能使用结果</summary>
@@ -342,4 +401,3 @@ public class UseSkillResult
     public int Y { get; set; }
     public List<SkillHitResult> HitResults { get; set; } = new();
 }
-

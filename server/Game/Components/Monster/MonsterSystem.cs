@@ -7,10 +7,10 @@ using Game.Components.Fight;
 using Game.Components.Map;
 using Game.Components.Player;
 using Game.Config;
-using Shared.Core;
 using Game.Database;
 using Shared.Common.Config;
 using Shared.Common.Protos;
+using Shared.Core;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -58,7 +58,7 @@ public static class MonsterSystem
 
         long mapKey = GetMapKey(mapId, line);
         if (!self.MapMonsters.ContainsKey(mapKey))
-            self.MapMonsters[mapKey] = new Dictionary<long, MonsterUnit>();
+            self.MapMonsters[mapKey] = new Dictionary<long, MonsterEntity>();
 
         foreach (var cfg in monsters)
         {
@@ -82,7 +82,7 @@ public static class MonsterSystem
     #region 怪物生成
 
     /// <summary>生成怪物</summary>
-    public static MonsterUnit? SpawnMonster(this MonsterComponent self, int mapId, int line, MonsterConfig cfg)
+    public static MonsterEntity? SpawnMonster(this MonsterComponent self, int mapId, int line, MonsterConfig cfg)
     {
         var map = Context.Map.GetMap(mapId, line);
         if (map == null) return null;
@@ -96,14 +96,14 @@ public static class MonsterSystem
     }
 
     /// <summary>在指定位置生成怪物</summary>
-    public static MonsterUnit? SpawnMonsterAt(this MonsterComponent self, int mapId, int line, MonsterConfig cfg, int x, int y)
+    public static MonsterEntity? SpawnMonsterAt(this MonsterComponent self, int mapId, int line, MonsterConfig cfg, int x, int y)
     {
         var map = Context.Map.GetMap(mapId, line);
         if (map == null) return null;
 
         long mapKey = GetMapKey(mapId, line);
         if (!self.MapMonsters.ContainsKey(mapKey))
-            self.MapMonsters[mapKey] = new Dictionary<long, MonsterUnit>();
+            self.MapMonsters[mapKey] = new Dictionary<long, MonsterEntity>();
 
         var mapMonsters = self.MapMonsters[mapKey];
 
@@ -114,7 +114,7 @@ public static class MonsterSystem
 
         long monsterId = Interlocked.Increment(ref self.NextMonsterId);
 
-        var monster = new MonsterUnit(monsterId, cfg);
+        var monster = MonsterEntity.Create(monsterId, cfg, mapId, line, x, y);
 
         // 创建战斗单元
         var fightAttr = new FightAttribute
@@ -127,23 +127,11 @@ public static class MonsterSystem
             PhyDefMax = cfg.Defense,
         };
 
-        var fightUnit = Context.Fight.RegisterUnit(
-            monsterId,
-            MapObjectType.Npc,
-            cfg.Name,
-            cfg.Id,
-            fightAttr);
+        monster.RegisterUnit(fightAttr);
+        monster.Fight.AddSkill(new Skill(1));
 
         // 添加到地图
-        var npc = new MapNpc((int)monsterId, cfg.Id, cfg.Name, mapId, line, x, y);
-        map.AddObject(npc);
-
-        monster.Npc = npc;
-        monster.FightUnit = fightUnit;
-        monster.X = x;
-        monster.Y = y;
-        monster.AiState = AiState.Idle;
-        monster.LastUpdateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        map.AddObject(monster);
 
         mapMonsters[monsterId] = monster;
 
@@ -167,9 +155,7 @@ public static class MonsterSystem
 
     #region 怪物死亡
 
-    /// <summary>
-    /// 怪物死亡
-    /// </summary>
+    /// <summary>怪物死亡</summary>
     public static void OnMonsterKilled(this MonsterComponent self, long monsterId, long killerId)
     {
         // 从所有地图中查找
@@ -177,12 +163,12 @@ public static class MonsterSystem
         {
             if (kvp.Value.TryGetValue(monsterId, out var monster))
             {
-                // 移除战斗单元
-                Context.Fight.UnregisterUnit(monsterId);
+                // 注销战斗单元
+                monster.UnregisterUnit();
 
                 // 广播死亡
-                var mapId = monster.Npc?.MapId ?? 0;
-                var line = monster.Npc?.Line ?? 0;
+                int mapId = monster.MapId;
+                int line = monster.Line;
                 BroadcastMonsterDeath(mapId, line, monsterId);
 
                 // 从地图移除
@@ -192,12 +178,12 @@ public static class MonsterSystem
                 // 移除
                 kvp.Value.Remove(monsterId);
 
-                if (monster.Config != null)
+                if (monster.Info.Config != null)
                 {
                     // 设置刷新计时器
                     string timerKey = GetTimerKey(mapId, line, monster.CfgId);
                     self.SpawnTimers[timerKey] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                        + monster.Config.SpawnInterval * 1000;
+                        + monster.Info.Config.SpawnInterval * 1000;
 
                     // 计算掉落
                     CalculateAndGrantDrop(self, monster, killerId, mapId, line);
@@ -209,37 +195,35 @@ public static class MonsterSystem
         }
     }
 
-    /// <summary>
-    /// 计算并发放掉落
-    /// </summary>
-    private static async void CalculateAndGrantDrop(MonsterComponent self, MonsterUnit monster, long killerId, int mapId, int line)
+    /// <summary>计算并发放掉落</summary>
+    private static async void CalculateAndGrantDrop(MonsterComponent self, MonsterEntity monster, long killerId, int mapId, int line)
     {
-        if (monster.Config == null) return;
+        if (monster.Info.Config == null) return;
 
         var player = Context.Players.GetByRoleId(killerId);
         if (player == null) return;
 
         // 发放经验
-        await GrantExpToPlayer(killerId, monster.Config.Exp);
+        await GrantExpToPlayer(killerId, monster.Info.Config.Exp);
 
         // 发放金币
         var random = new Random();
-        int gold = random.Next(monster.Config.GoldMin, monster.Config.GoldMax + 1);
+        int gold = random.Next(monster.Info.Config.GoldMin, monster.Info.Config.GoldMax + 1);
         if (gold > 0)
         {
             await GrantGoldToPlayer(killerId, gold);
         }
 
         // 计算物品掉落
-        if (!string.IsNullOrEmpty(monster.Config.DropItems))
+        if (!string.IsNullOrEmpty(monster.Info.Config.DropItems))
         {
-            var dropItemIds = monster.Config.DropItems.Split(',');
+            var dropItemIds = monster.Info.Config.DropItems.Split(',');
             foreach (var itemIdStr in dropItemIds)
             {
                 if (int.TryParse(itemIdStr.Trim(), out int itemId))
                 {
                     // 按掉落概率判定
-                    if (random.Next(1, 10001) <= monster.Config.DropRate)
+                    if (random.Next(1, 10001) <= monster.Info.Config.DropRate)
                     {
                         await GrantItemToPlayer(killerId, itemId, 1);
                     }
@@ -247,12 +231,10 @@ public static class MonsterSystem
             }
         }
 
-        Log.Info($"怪物掉落 KillerId:{killerId} Exp:{monster.Config.Exp} Gold:{gold}");
+        Log.Info($"怪物掉落 KillerId:{killerId} Exp:{monster.Info.Config.Exp} Gold:{gold}");
     }
 
-    /// <summary>
-    /// 发放经验给玩家
-    /// </summary>
+    /// <summary>发放经验给玩家</summary>
     private static async Task GrantExpToPlayer(long roleId, int exp)
     {
         if (exp <= 0) return;
@@ -262,7 +244,7 @@ public static class MonsterSystem
 
         var roleAttr = player.RoleAttribute;
         roleAttr.Exp += exp;
-        // 检查升级（简化处理）
+        // 检查升级
         int newLevel = CalculateLevel(roleAttr.Exp);
         if (newLevel > roleAttr.Level)
         {
@@ -290,9 +272,7 @@ public static class MonsterSystem
         EventBus.Instance.Publish(new EventType.PlayerExpChangedEvent { RoleId = roleId, Exp = roleAttr.Exp, Level = roleAttr.Level });
     }
 
-    /// <summary>
-    /// 发放金币给玩家
-    /// </summary>
+    /// <summary>发放金币给玩家</summary>
     private static async Task GrantGoldToPlayer(long roleId, int gold)
     {
         if (gold <= 0) return;
@@ -311,9 +291,7 @@ public static class MonsterSystem
         EventBus.Instance.Publish(new EventType.PlayerGoldChangedEvent { RoleId = roleId, Gold = roleAttr.Gold });
     }
 
-    /// <summary>
-    /// 发放物品给玩家
-    /// </summary>
+    /// <summary>发放物品给玩家</summary>
     private static async Task GrantItemToPlayer(long roleId, int configId, int count)
     {
         var player = Context.Players.GetByRoleId(roleId);
@@ -342,9 +320,7 @@ public static class MonsterSystem
         }
     }
 
-    /// <summary>
-    /// 根据经验计算等级（简化公式：每级需100*level点经验）
-    /// </summary>
+    /// <summary>根据经验计算等级（简化公式：每级需100*level点经验）</summary>
     private static int CalculateLevel(int exp)
     {
         int level = 1;
@@ -389,20 +365,20 @@ public static class MonsterSystem
     }
 
     /// <summary>更新单个怪物AI</summary>
-    private static void UpdateMonsterAi(MonsterComponent self, MonsterUnit monster, long now)
+    private static void UpdateMonsterAi(MonsterComponent self, MonsterEntity monster, long now)
     {
-        if (monster.Config == null) return;
-        if (monster.FightUnit != null && monster.FightUnit.IsDead) return;
+        if (monster.Info.Config == null) return;
+        if (monster.Fight.IsDead) return;
 
         // 更新间隔
         long updateInterval = 1000;
-        if (now - monster.LastUpdateTime < updateInterval) return;
-        monster.LastUpdateTime = now;
+        if (now - monster.Ai.LastUpdateTime < updateInterval) return;
+        monster.Ai.LastUpdateTime = now;
 
-        var map = Context.Map.GetMap(monster.Npc?.MapId ?? 0, monster.Npc?.Line ?? 0);
+        var map = Context.Map.GetMap(monster.MapId, monster.Line);
         if (map == null) return;
 
-        switch (monster.AiState)
+        switch (monster.Ai.AiState)
         {
             case AiState.Idle:
                 UpdateAiIdle(self, monster, map);
@@ -423,13 +399,13 @@ public static class MonsterSystem
     }
 
     /// <summary>待机AI</summary>
-    private static void UpdateAiIdle(MonsterComponent self, MonsterUnit monster, GameMap map)
+    private static void UpdateAiIdle(MonsterComponent self, MonsterEntity monster, GameMap map)
     {
-        if (monster.Config != null && (monster.Config.AiType == 2 || monster.Config.AiType == 3))
+        if (monster.Info.Config != null && (monster.Info.Config.AiType == 2 || monster.Info.Config.AiType == 3))
         {
             // 主动或守卫AI，开始巡逻
-            monster.AiState = AiState.Patrol;
-            monster.PatrolTarget = GetRandomPatrolPoint(monster);
+            monster.Ai.AiState = AiState.Patrol;
+            monster.Ai.PatrolTarget = GetRandomPatrolPoint(monster);
         }
         else
         {
@@ -437,34 +413,34 @@ public static class MonsterSystem
             var targetId = FindTarget(monster, map);
             if (targetId.HasValue)
             {
-                monster.AiState = AiState.Chase;
-                monster.ChaseTarget = targetId;
+                monster.Ai.AiState = AiState.Chase;
+                monster.Ai.ChaseTarget = targetId;
             }
         }
     }
 
     /// <summary>巡逻AI</summary>
-    private static void UpdateAiPatrol(MonsterComponent self, MonsterUnit monster, GameMap map, long now)
+    private static void UpdateAiPatrol(MonsterComponent self, MonsterEntity monster, GameMap map, long now)
     {
         // 检查是否有可攻击目标
         var targetId = FindTarget(monster, map);
         if (targetId.HasValue)
         {
-            monster.AiState = AiState.Chase;
-            monster.ChaseTarget = targetId;
+            monster.Ai.AiState = AiState.Chase;
+            monster.Ai.ChaseTarget = targetId;
             return;
         }
 
         // 移动向巡逻点
-        if (monster.PatrolTarget.HasValue)
+        if (monster.Ai.PatrolTarget.HasValue)
         {
-            int dx = monster.PatrolTarget.Value.X - monster.X;
-            int dy = monster.PatrolTarget.Value.Y - monster.Y;
+            int dx = monster.Ai.PatrolTarget.Value.X - monster.X;
+            int dy = monster.Ai.PatrolTarget.Value.Y - monster.Y;
 
             if (Math.Abs(dx) <= 1 && Math.Abs(dy) <= 1)
             {
                 // 到达巡逻点，切换新巡逻点
-                monster.AiState = AiState.Idle;
+                monster.Ai.AiState = AiState.Idle;
             }
             else
             {
@@ -477,16 +453,16 @@ public static class MonsterSystem
     }
 
     /// <summary>追击AI</summary>
-    private static void UpdateAiChase(MonsterComponent self, MonsterUnit monster, GameMap map, long now)
+    private static void UpdateAiChase(MonsterComponent self, MonsterEntity monster, GameMap map, long now)
     {
-        if (monster.ChaseTarget == null) return;
+        if (monster.Ai.ChaseTarget == null) return;
 
-        var targetPlayer = map.GetPlayer(monster.ChaseTarget.Value);
+        var targetPlayer = map.GetPlayer(monster.Ai.ChaseTarget.Value);
         if (targetPlayer == null)
         {
             // 目标丢失，返回待机
-            monster.AiState = AiState.Idle;
-            monster.ChaseTarget = null;
+            monster.Ai.AiState = AiState.Idle;
+            monster.Ai.ChaseTarget = null;
             return;
         }
 
@@ -495,17 +471,17 @@ public static class MonsterSystem
             Math.Abs(targetPlayer.X - monster.X),
             Math.Abs(targetPlayer.Y - monster.Y));
 
-        if (monster.Config != null && dist <= monster.Config.AttackRange)
+        if (monster.Info.Config != null && dist <= monster.Info.Config.AttackRange)
         {
             // 进入攻击距离
-            monster.AiState = AiState.Attack;
-            monster.LastAttackTime = now;
+            monster.Ai.AiState = AiState.Attack;
+            monster.Ai.LastAttackTime = now;
         }
-        else if (monster.Config != null && dist > monster.Config.SightRange)
+        else if (monster.Info.Config != null && dist > monster.Info.Config.SightRange)
         {
             // 超出视野，返回
-            monster.AiState = AiState.Idle;
-            monster.ChaseTarget = null;
+            monster.Ai.AiState = AiState.Idle;
+            monster.Ai.ChaseTarget = null;
         }
         else
         {
@@ -517,35 +493,35 @@ public static class MonsterSystem
     }
 
     /// <summary>攻击AI</summary>
-    private static void UpdateAiAttack(MonsterComponent self, MonsterUnit monster, GameMap map, long now)
+    private static void UpdateAiAttack(MonsterComponent self, MonsterEntity monster, GameMap map, long now)
     {
-        if (monster.ChaseTarget == null) return;
+        if (monster.Ai.ChaseTarget == null) return;
 
-        var targetPlayer = map.GetPlayer(monster.ChaseTarget.Value);
+        var targetPlayer = map.GetPlayer(monster.Ai.ChaseTarget.Value);
         if (targetPlayer == null)
         {
-            monster.AiState = AiState.Idle;
-            monster.ChaseTarget = null;
+            monster.Ai.AiState = AiState.Idle;
+            monster.Ai.ChaseTarget = null;
             return;
         }
 
         // 检查攻击间隔
         int attackInterval = 2000; // 2秒攻击一次
-        if (now - monster.LastAttackTime < attackInterval) return;
+        if (now - monster.Ai.LastAttackTime < attackInterval) return;
 
         // 执行攻击（使用普通攻击技能ID=1）
-        Context.Fight.UseSkill(monster.ObjectId, 1, monster.X, monster.Y, targetPlayer.RoleId);
-        monster.LastAttackTime = now;
+        FightSystem.UseSkill(monster.ObjectId, 1, monster.X, monster.Y, targetPlayer.RoleId);
+        monster.Ai.LastAttackTime = now;
 
         // 丢失目标后返回
-        monster.AiState = AiState.Idle;
-        monster.ChaseTarget = null;
+        monster.Ai.AiState = AiState.Idle;
+        monster.Ai.ChaseTarget = null;
     }
 
     /// <summary>查找目标</summary>
-    private static long? FindTarget(MonsterUnit monster, GameMap map)
+    private static long? FindTarget(MonsterEntity monster, GameMap map)
     {
-        var sightRange = monster.Config?.SightRange ?? 5;
+        var sightRange = monster.Info.Config?.SightRange ?? 5;
 
         var players = map.GetAllPlayers();
         foreach (var player in players)
@@ -562,26 +538,21 @@ public static class MonsterSystem
     }
 
     /// <summary>获取随机巡逻点</summary>
-    private static (int X, int Y)? GetRandomPatrolPoint(MonsterUnit monster)
+    private static (int X, int Y)? GetRandomPatrolPoint(MonsterEntity monster)
     {
-        if (monster.Config == null) return null;
+        if (monster.Info.Config == null) return null;
 
         var random = new Random();
-        int x = random.Next(monster.Config.SpawnX1, monster.Config.SpawnX2 + 1);
-        int y = random.Next(monster.Config.SpawnY1, monster.Config.SpawnY2 + 1);
+        int x = random.Next(monster.Info.Config.SpawnX1, monster.Info.Config.SpawnX2 + 1);
+        int y = random.Next(monster.Info.Config.SpawnY1, monster.Info.Config.SpawnY2 + 1);
         return (x, y);
     }
 
     /// <summary>尝试移动</summary>
-    private static bool TryMove(MonsterComponent self, MonsterUnit monster, GameMap map, int x, int y)
+    private static bool TryMove(MonsterComponent self, MonsterEntity monster, GameMap map, int x, int y)
     {
-        if (monster.Npc == null) return false;
-
         if (map.MoveObject(monster.ObjectId, x, y))
         {
-            monster.X = x;
-            monster.Y = y;
-
             // 广播移动给附近玩家
             var ntf = new MapNpcMoveNtf
             {
@@ -589,7 +560,7 @@ public static class MonsterSystem
                 X = x,
                 Y = y,
             };
-            BroadcastToMap(monster.Npc.MapId, monster.Npc.Line, ntf);
+            BroadcastToMap(monster.MapId, monster.Line, ntf);
 
             return true;
         }
@@ -627,15 +598,13 @@ public static class MonsterSystem
     #region 广播
 
     /// <summary>广播怪物出现</summary>
-    private static void BroadcastMonsterAppear(int mapId, int line, MonsterUnit monster)
+    private static void BroadcastMonsterAppear(int mapId, int line, MonsterEntity monster)
     {
-        if (monster.Npc == null) return;
-
         var ntf = new MapNpcEnterNtf
         {
             ObjectId = monster.ObjectId,
             NpcId = monster.CfgId,
-            Name = monster.Config?.Name ?? "",
+            Name = monster.Name ?? "",
             X = monster.X,
             Y = monster.Y,
         };

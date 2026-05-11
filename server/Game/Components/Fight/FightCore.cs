@@ -6,7 +6,7 @@ namespace Game.Components.Fight;
 
 /// <summary>
 /// 战斗核心计算。包含伤害公式、命中判定、暴击判定等。
-/// 参考: Java 项目的 SkillCore + SkillUse。
+/// 所有方法接收 FightUnitComponent 而非 FightUnit。
 /// </summary>
 public static class FightCore
 {
@@ -18,7 +18,7 @@ public static class FightCore
     /// 计算技能伤害。
     /// 公式: MAX((攻击 * 伤害系数 + 附加伤害 - 防御) * 伤害减免, 随机最小伤害) * 暴击系数
     /// </summary>
-    public static int CalculateDamage(FightUnit attacker, FightUnit target, SkillConfig skillCfg, bool isCritical)
+    public static int CalculateDamage(FightUnitComponent attacker, FightUnitComponent target, SkillConfig skillCfg, bool isCritical)
     {
         // 随机攻击值
         int attack = RandomRange(attacker.Attr.PhyAttMin, attacker.Attr.PhyAttMax);
@@ -56,7 +56,7 @@ public static class FightCore
     #region 命中/暴击/闪避判定
 
     /// <summary>命中判定。命中概率 = 基础命中率 + 攻击者命中 - 目标闪避</summary>
-    public static bool IsHit(FightUnit attacker, FightUnit target)
+    public static bool IsHit(FightUnitComponent attacker, FightUnitComponent target)
     {
         int hitRate = 95 + (attacker.Attr.HitRate - target.Attr.DodgeRate) / 100;
         hitRate = Math.Clamp(hitRate, 10, 99);
@@ -64,7 +64,7 @@ public static class FightCore
     }
 
     /// <summary>暴击判定</summary>
-    public static bool IsCritical(FightUnit attacker, FightUnit target)
+    public static bool IsCritical(FightUnitComponent attacker, FightUnitComponent target)
     {
         int rate = attacker.Attr.CriticalRate;
         return _random.Next(10000) < rate;
@@ -78,14 +78,14 @@ public static class FightCore
     /// 执行一次技能攻击。
     /// 返回伤害结果列表。
     /// </summary>
-    public static List<SkillHitResult> UseSkill(FightUnit attacker, FightUnit target, SkillConfig skillCfg)
+    public static List<SkillHitResult> UseSkill(FightUnitComponent attacker, long attackerId, FightUnitComponent target, long targetId, SkillConfig skillCfg)
     {
         var results = new List<SkillHitResult>();
 
         // 命中判定
         if (!IsHit(attacker, target))
         {
-            results.Add(new SkillHitResult { TargetId = target.ObjectId, Missed = true });
+            results.Add(new SkillHitResult { TargetId = targetId, Missed = true });
             return results;
         }
 
@@ -99,11 +99,11 @@ public static class FightCore
         int actualDamage = target.TakeDamage(damage);
 
         // 仇恨
-        attacker.AddThreat(target.ObjectId, damage);
+        attacker.AddThreat(targetId, damage);
 
         var result = new SkillHitResult
         {
-            TargetId = target.ObjectId,
+            TargetId = targetId,
             Damage = actualDamage,
             Hp = target.Attr.Hp,
             IsCritical = critical,
@@ -112,7 +112,7 @@ public static class FightCore
 
         if (target.IsDead)
         {
-            target.KillerId = attacker.ObjectId;
+            target.KillerId = attackerId;
             target.KillerSkillId = skillCfg.SkillId;
         }
 
@@ -121,13 +121,13 @@ public static class FightCore
     }
 
     /// <summary>AOE 技能攻击多个目标</summary>
-    public static List<SkillHitResult> UseSkillAoe(FightUnit attacker, List<FightUnit> targets, SkillConfig skillCfg)
+    public static List<SkillHitResult> UseSkillAoe(FightUnitComponent attacker, long attackerId, List<(FightUnitComponent fight, long id)> targets, SkillConfig skillCfg)
     {
         var results = new List<SkillHitResult>();
-        foreach (var target in targets)
+        foreach (var (targetFight, targetId) in targets)
         {
-            if (target.IsDead) continue;
-            results.AddRange(UseSkill(attacker, target, skillCfg));
+            if (targetFight.IsDead) continue;
+            results.AddRange(UseSkill(attacker, attackerId, targetFight, targetId, skillCfg));
         }
         return results;
     }

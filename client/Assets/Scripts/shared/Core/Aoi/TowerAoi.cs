@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Shared.Core.Log;
 
 namespace Shared.Core.Aoi;
@@ -60,6 +61,70 @@ public class TowerAoi
     {
         _listeners.Remove(listener);
     }
+
+    #region 一站式 API
+
+    /// <summary>
+    /// 添加 AOI 实体（一站式操作，同时处理对象和观察者）
+    /// viewRange > 0 时同时作为观察者
+    /// </summary>
+    public bool AddAoiEntity(IAoiObject obj, int viewRange = 0)
+    {
+        AddObject(obj);
+        if (viewRange > 0)
+            AddWatcher(obj, viewRange);
+        return true;
+    }
+
+    /// <summary>
+    /// 移除 AOI 实体（一站式操作，同时处理对象和观察者）
+    /// </summary>
+    public bool RemoveAoiEntity(IAoiObject obj)
+    {
+        if (_watcherInfoMap.ContainsKey(obj.ObjectId))
+            RemoveWatcher(obj);
+        RemoveObject(obj);
+        return true;
+    }
+
+    /// <summary>
+    /// 更新 AOI 实体位置（一站式操作，同时处理对象和观察者）
+    /// </summary>
+    public bool UpdateAoiEntity(IAoiObject obj, int oldX, int oldY, int newX, int newY)
+    {
+        if (_watcherInfoMap.ContainsKey(obj.ObjectId))
+        {
+            UpdateWatcher(obj, oldX, oldY, newX, newY);
+            // UpdateWatcher 内部已更新 obj.X/Y，跳过 UpdateObject 避免重复
+            var oldCoord = ToTowerCoord(oldX, oldY);
+            var newCoord = ToTowerCoord(newX, newY);
+            if (oldCoord != newCoord)
+            {
+                // 跨塔时 UpdateWatcher 已处理对象移塔，但需确保对象在正确灯塔
+                // UpdateWatcher 只移动了观察者注册，对象本身需要单独处理
+                UpdateObject(obj, oldX, oldY, newX, newY);
+            }
+            else
+            {
+                // 同塔内只需更新坐标
+                obj.X = newX;
+                obj.Y = newY;
+                var tower = GetTower(oldCoord.tx, oldCoord.ty);
+                if (tower != null)
+                {
+                    foreach (var listener in _listeners)
+                        listener.OnObjectMove(obj, tower.Watchers, tower.Watchers, tower.Watchers);
+                }
+            }
+        }
+        else
+        {
+            UpdateObject(obj, oldX, oldY, newX, newY);
+        }
+        return true;
+    }
+
+    #endregion
 
     #region 对象管理
 
@@ -197,20 +262,10 @@ public class TowerAoi
         if (!_watcherInfoMap.Remove(watcher.ObjectId, out var info))
             return false;
 
-        var removedObjects = new List<IAoiObject>();
-
         ForEachTowerInRange(info.Tx, info.Ty, info.Range, (tower) =>
         {
             tower.RemoveWatcher(watcher);
-            removedObjects.AddRange(tower.GetAllObjects());
         });
-
-        // 通知观察者：失去了哪些对象
-        if (removedObjects.Count > 0)
-        {
-            foreach (var listener in _listeners)
-                listener.OnWatcherUpdate(watcher, Array.Empty<IAoiObject>(), removedObjects);
-        }
 
         return true;
     }
@@ -235,8 +290,8 @@ public class TowerAoi
         var range = info.Range;
         _watcherInfoMap[watcher.ObjectId] = new WatcherInfo(newCoord.tx, newCoord.ty, range);
 
-        // 计算灯塔变更
-        var change = GetTowerChange(oldCoord, newCoord);
+        // 计算观察者视野变更（考虑 range）
+        var change = GetWatcherTowerChange(oldCoord, newCoord, range);
 
         // 从离开的灯塔中移除观察者
         foreach (var pos in change.Removed)
@@ -328,6 +383,18 @@ public class TowerAoi
         return null;
     }
 
+    /// <summary>判断对象是否在 AOI 系统中</summary>
+    public bool ContainsObject(long objectId)
+    {
+        return _objectTowerMap.ContainsKey(objectId);
+    }
+
+    /// <summary>判断对象是否是观察者</summary>
+    public bool IsWatcher(long objectId)
+    {
+        return _watcherInfoMap.ContainsKey(objectId);
+    }
+
     #endregion
 
     #region 内部方法
@@ -372,24 +439,36 @@ public class TowerAoi
         }
     }
 
-    /// <summary>计算灯塔变更（移动时哪些灯塔需要添加/移除）</summary>
+    /// <summary>计算对象跨塔时的灯塔变更（range=0，只看所在灯塔）</summary>
     private TowerChangeResult GetTowerChange((int tx, int ty) oldCoord, (int tx, int ty) newCoord)
     {
         var added = new List<(int tx, int ty)>();
         var removed = new List<(int tx, int ty)>();
 
-        // 旧位置视野有但新位置视野没有的灯塔 → 移除
-        // 新位置视野有但旧位置视野没有的灯塔 → 添加
-        // 对于对象移动，range=0 表示只看所在灯塔
         if (!oldCoord.Equals(newCoord))
         {
-            // 对象从 oldCoord 移到 newCoord
-            // 离开 oldCoord 的灯塔
             removed.Add(oldCoord);
-            // 进入 newCoord 的灯塔
             added.Add(newCoord);
         }
 
+        return new TowerChangeResult(added, removed);
+    }
+
+    /// <summary>计算观察者跨塔时的视野变更（考虑观察者的 range）</summary>
+    private TowerChangeResult GetWatcherTowerChange((int tx, int ty) oldCenter, (int tx, int ty) newCenter, int range)
+    {
+        var oldSet = new HashSet<(int, int)>();
+        var newSet = new HashSet<(int, int)>();
+
+        for (int dx = -range; dx <= range; dx++)
+            for (int dy = -range; dy <= range; dy++)
+            {
+                oldSet.Add((oldCenter.tx + dx, oldCenter.ty + dy));
+                newSet.Add((newCenter.tx + dx, newCenter.ty + dy));
+            }
+
+        var added = newSet.Except(oldSet).ToList();
+        var removed = oldSet.Except(newSet).ToList();
         return new TowerChangeResult(added, removed);
     }
 

@@ -1,8 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using Shared.Core.Entities;
-using Game.Components.Map;
+using Game.Components.Fight;
 using Game.Components.Player;
+using Game.Config;
+using Game.Entities;
+using Shared.Common.Config;
+using Shared.Core.Entities;
 using Shared.Core.Log;
 
 namespace Game.Components.Map;
@@ -40,13 +43,16 @@ public static class MapSystem
     /// <summary>获取玩家所在的地图</summary>
     public static GameMap? GetPlayerMap(this MapComponent self, long roleId)
     {
-        return self.PlayerMapMap.TryGetValue(roleId, out var map) ? map : null;
+        if (!self.PlayerMapEntities.TryGetValue(roleId, out var mapPlayer))
+            return null;
+
+        return self.GetMap(mapPlayer.MapId, mapPlayer.Line);
     }
 
-    /// <summary>获取玩家的地图对象</summary>
-    public static MapPlayer? GetPlayerMapObj(this MapComponent self, long roleId)
+    /// <summary>获取玩家的地图投影实体</summary>
+    public static MapPlayerEntity? GetPlayerMapEntity(this MapComponent self, long roleId)
     {
-        return self.PlayerMapObjMap.TryGetValue(roleId, out var obj) ? obj : null;
+        return self.PlayerMapEntities.TryGetValue(roleId, out var entity) ? entity : null;
     }
 
     /// <summary>获取所有地图</summary>
@@ -57,7 +63,7 @@ public static class MapSystem
     #region 玩家进入/离开/切图
 
     /// <summary>玩家进入地图</summary>
-    public static bool EnterMap(this MapComponent self, long roleId, string roleName, int cfgId, int line, int x, int y)
+    public static bool EnterMap(this MapComponent self, long roleId, string roleName, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
     {
         var map = self.GetMap(cfgId, line);
         if (map == null)
@@ -67,20 +73,40 @@ public static class MapSystem
         }
 
         // 如果玩家已在某张地图，先退出
-        if (self.PlayerMapMap.ContainsKey(roleId))
+        if (self.PlayerMapEntities.ContainsKey(roleId))
         {
             QuitMapInternal(self, roleId);
         }
 
-        var mapPlayer = new MapPlayer(roleId, roleName, cfgId, line, x, y);
+        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity);
+
+        // 注册战斗单元
+        var roleAttr = playerEntity.RoleAttribute;
+        var fightAttr = new FightAttribute
+        {
+            MaxHp = roleAttr.MaxHp,
+            Hp = roleAttr.Hp,
+            PhyAttMin = roleAttr.PhyAttMin,
+            PhyAttMax = roleAttr.PhyAttMax,
+            PhyDefMin = roleAttr.PhyDef,
+            PhyDefMax = roleAttr.PhyDef,
+        };
+        mapPlayer.RegisterUnit(fightAttr);
+
+        // 添加技能（普通攻击）
+        var skillCfg = ConfigManager.Get<SkillConfig>(1);
+        if (skillCfg != null)
+        {
+            mapPlayer.Fight.AddSkill(new Skill(1));
+        }
+
         if (!map.AddObject(mapPlayer))
         {
             Log.Warn($"玩家进入地图失败 RoleId:{roleId}");
             return false;
         }
 
-        self.PlayerMapMap[roleId] = map;
-        self.PlayerMapObjMap[roleId] = mapPlayer;
+        self.PlayerMapEntities[roleId] = mapPlayer;
 
         Log.Info($"玩家进入地图 RoleId:{roleId} MapId:{cfgId} Line:{line} Pos:({x},{y})");
         return true;
@@ -94,41 +120,64 @@ public static class MapSystem
 
     private static bool QuitMapInternal(MapComponent self, long roleId)
     {
-        if (!self.PlayerMapMap.Remove(roleId, out var map))
+        if (!self.PlayerMapEntities.Remove(roleId, out var mapPlayer))
             return false;
 
-        self.PlayerMapObjMap.Remove(roleId);
-        map.RemoveObject(roleId);
+        var map = self.GetMap(mapPlayer.MapId, mapPlayer.Line);
+        map?.RemoveObject(roleId);
 
-        Log.Info($"玩家离开地图 RoleId:{roleId} MapId:{map.CfgId} Line:{map.Line}");
+        Log.Info($"玩家离开地图 RoleId:{roleId}");
         return true;
     }
 
     /// <summary>玩家切图（从当前地图移动到新地图）</summary>
-    public static bool ChangeMap(this MapComponent self, long roleId, string roleName, int newCfgId, int newLine, int newX, int newY)
+    public static bool ChangeMap(this MapComponent self, long roleId, string roleName, int newCfgId, int newLine, int newX, int newY, PlayerEntity playerEntity)
     {
         QuitMapInternal(self, roleId);
-        return EnterMapInternal(self, roleId, roleName, newCfgId, newLine, newX, newY);
+        return EnterMapInternal(self, roleId, roleName, newCfgId, newLine, newX, newY, playerEntity);
     }
 
-    private static bool EnterMapInternal(MapComponent self, long roleId, string roleName, int cfgId, int line, int x, int y)
+    private static bool EnterMapInternal(MapComponent self, long roleId, string roleName, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
     {
         var map = self.GetMap(cfgId, line);
         if (map == null) return false;
 
-        var mapPlayer = new MapPlayer(roleId, roleName, cfgId, line, x, y);
+        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity);
+
+        // 注册战斗单元
+        var roleAttr = playerEntity.RoleAttribute;
+        var fightAttr = new FightAttribute
+        {
+            MaxHp = roleAttr.MaxHp,
+            Hp = roleAttr.Hp,
+            PhyAttMin = roleAttr.PhyAttMin,
+            PhyAttMax = roleAttr.PhyAttMax,
+            PhyDefMin = roleAttr.PhyDef,
+            PhyDefMax = roleAttr.PhyDef,
+        };
+        mapPlayer.RegisterUnit(fightAttr);
+
+        // 添加技能（普通攻击）
+        var skillCfg = ConfigManager.Get<SkillConfig>(1);
+        if (skillCfg != null)
+        {
+            mapPlayer.Fight.AddSkill(new Skill(1));
+        }
+
         if (!map.AddObject(mapPlayer)) return false;
 
-        self.PlayerMapMap[roleId] = map;
-        self.PlayerMapObjMap[roleId] = mapPlayer;
+        self.PlayerMapEntities[roleId] = mapPlayer;
         return true;
     }
 
     /// <summary>玩家移动（同地图内）</summary>
     public static bool Move(this MapComponent self, long roleId, int newX, int newY)
     {
-        if (!self.PlayerMapMap.TryGetValue(roleId, out var map))
+        if (!self.PlayerMapEntities.TryGetValue(roleId, out var mapPlayer))
             return false;
+
+        var map = self.GetMap(mapPlayer.MapId, mapPlayer.Line);
+        if (map == null) return false;
 
         return map.MoveObject(roleId, newX, newY);
     }
@@ -136,19 +185,20 @@ public static class MapSystem
     /// <summary>获取玩家位置信息</summary>
     public static (int mapId, int line, int x, int y)? GetPlayerPosition(this MapComponent self, long roleId)
     {
-        if (!self.PlayerMapObjMap.TryGetValue(roleId, out var obj))
+        if (!self.PlayerMapEntities.TryGetValue(roleId, out var mapPlayer))
             return null;
-        return (obj.MapId, obj.Line, obj.X, obj.Y);
+        return (mapPlayer.MapId, mapPlayer.Line, mapPlayer.X, mapPlayer.Y);
     }
 
     /// <summary>获取同地图的玩家列表（排除自己）</summary>
-    public static List<MapPlayer> GetNearbyPlayers(this MapComponent self, long roleId)
+    public static List<MapPlayerEntity> GetNearbyPlayers(this MapComponent self, long roleId)
     {
-        if (!self.PlayerMapObjMap.TryGetValue(roleId, out var obj))
-            return new List<MapPlayer>();
+        if (!self.PlayerMapEntities.TryGetValue(roleId, out var mapPlayer))
+            return new List<MapPlayerEntity>();
 
-        if (!self.PlayerMapMap.TryGetValue(roleId, out var map))
-            return new List<MapPlayer>();
+        var map = self.GetMap(mapPlayer.MapId, mapPlayer.Line);
+        if (map == null)
+            return new List<MapPlayerEntity>();
 
         return map.GetAllPlayers().Where(p => p.RoleId != roleId).ToList();
     }
@@ -171,8 +221,7 @@ public static class MapSystem
     /// <summary>移除所有玩家（服务器关闭时调用）</summary>
     public static void RemoveAll(this MapComponent self)
     {
-        self.PlayerMapMap.Clear();
-        self.PlayerMapObjMap.Clear();
+        self.PlayerMapEntities.Clear();
         self.Maps.Clear();
         Log.Info("地图管理器已清空");
     }

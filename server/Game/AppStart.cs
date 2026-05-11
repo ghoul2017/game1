@@ -1,6 +1,5 @@
 ﻿using Game.Components.Bag;
 using Game.Components.Chat;
-using Game.Components.Fight;
 using Game.Components.Mail;
 using Game.Components.Map;
 using Game.Components.Monster;
@@ -54,7 +53,6 @@ public static class AppStart
         networkComponent.SessionDisconnected = OnSessionDisconnected;
         EventBus.Instance.Publish(new EventType.ServerInitEvent());
         Context.Server.AddComponent<PlayerComponent>();
-        Context.Server.AddComponent<FightComponent>();
         Context.Server.AddComponent<ChatComponent>();
         Context.Server.AddComponent<MapComponent>();
         Context.Server.AddComponent<MonsterComponent>();
@@ -75,7 +73,6 @@ public static class AppStart
         {
             // 停服清理
             await Context.Players.SaveAllRolesAsync();
-            Context.Fight.RemoveAll();
             Context.Map.RemoveAll();
             Context.Monster.Stop();
         }

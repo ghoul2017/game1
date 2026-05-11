@@ -1,3 +1,4 @@
+using Game.Components.Monster;
 using Game.Components.Player;
 using System.Collections.Generic;
 using Shared.Core.Aoi;
@@ -9,8 +10,7 @@ namespace Game.Components.Map;
 /// <summary>
 /// AOI 事件通知器。将 AOI 事件转换为网络消息发送给客户端。
 /// 处理：OnObjectEnter → MapPlayerEnterNtf，OnObjectLeave → MapPlayerLeaveNtf，
-/// OnObjectMove → MapPlayerMoveNtf。
-/// 不处理 OnWatcherUpdate（初始视野由 Handler 中的 SendVisibleObjects 负责）。
+/// OnObjectMove → MapPlayerMoveNtf，OnWatcherUpdate → 视野变化自动推送。
 /// </summary>
 public class MapAoiNotifier : IAoiEventListener
 {
@@ -69,13 +69,46 @@ public class MapAoiNotifier : IAoiEventListener
 
     public void OnWatcherUpdate(IAoiObject watcher, IReadOnlyList<IAoiObject> addedObjects, IReadOnlyList<IAoiObject> removedObjects)
     {
-        // 不处理。初始视野由 EnterMapHandler/ChangeMapHandler 的 SendVisibleObjects 负责。
-        // 跨塔移动的视野更新暂不处理（GetTowerChange 对 watcher range 的计算有已知局限）。
+        // 新视野中出现的对象
+        foreach (var obj in addedObjects)
+        {
+            if (obj is not IMapObject mapObj) continue;
+            if (mapObj.ObjectId == watcher.ObjectId) continue;
+
+            if (mapObj.ObjectType == MapObjectType.Player)
+            {
+                Context.Players.SendToPlayer(watcher.ObjectId, new MapPlayerEnterNtf
+                {
+                    Player = ToMapObjectInfo(mapObj)
+                });
+            }
+            else if (mapObj.ObjectType == MapObjectType.Monster && obj is MonsterEntity monster)
+            {
+                Context.Players.SendToPlayer(watcher.ObjectId, new MapNpcEnterNtf
+                {
+                    ObjectId = monster.ObjectId,
+                    NpcId = monster.CfgId,
+                    Name = monster.Name ?? "",
+                    X = monster.X,
+                    Y = monster.Y,
+                });
+            }
+        }
+
+        // 旧视野中消失的对象
+        foreach (var obj in removedObjects)
+        {
+            if (obj.ObjectId == watcher.ObjectId) continue;
+            Context.Players.SendToPlayer(watcher.ObjectId, new MapPlayerLeaveNtf
+            {
+                RoleId = obj.ObjectId
+            });
+        }
     }
 
     private static MapObjectInfo ToMapObjectInfo(IMapObject obj)
     {
-        return new MapObjectInfo
+        var info = new MapObjectInfo
         {
             ObjectId = obj.ObjectId,
             ObjectType = obj.ObjectType,
@@ -83,5 +116,10 @@ public class MapAoiNotifier : IAoiEventListener
             X = obj.X,
             Y = obj.Y
         };
+
+        if (obj is MonsterEntity monster)
+            info.NpcId = monster.CfgId;
+
+        return info;
     }
 }

@@ -112,7 +112,7 @@ public static class ItemEffectSystem
     private static void ApplyReviveEffect(long roleId, int hpPercent)
     {
         Log.Info($"复活请求 RoleId:{roleId} HpPercent:{hpPercent}");
-        var fightUnit = Context.Fight.GetUnit(roleId);
+        var fightUnit = FightSystem.GetFightUnit(roleId);
         if (fightUnit != null)
         {
             fightUnit.Attr.Hp = fightUnit.Attr.MaxHp * hpPercent / 100;

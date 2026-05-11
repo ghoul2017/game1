@@ -1,6 +1,6 @@
-using Shared.Core.Aoi;
-using Game.Components.Map;
+using Game.Components.Monster;
 using Game.Components.Player;
+using Game.Entities;
 using System.Linq;
 using System.Threading.Tasks;
 using Shared.Core.Event;
@@ -47,7 +47,7 @@ public static class MapHandlers
         int x = map.BirthX;
         int y = map.BirthY;
 
-        if (!Context.Map.EnterMap(player.Id, player.RoleData.Name, req.MapCfgId, req.Line, x, y))
+        if (!Context.Map.EnterMap(player.Id, player.RoleData.Name, req.MapCfgId, req.Line, x, y, player))
         {
             res.Code = MapErrorCode.MapNotFound;
             return Task.FromResult<IMessage>(res);
@@ -99,7 +99,7 @@ public static class MapHandlers
         int x = req.X > 0 ? req.X : targetMap.BirthX;
         int y = req.Y > 0 ? req.Y : targetMap.BirthY;
 
-        if (!Context.Map.ChangeMap(player.Id, player.RoleData.Name, req.TargetMapCfgId, req.TargetLine, x, y))
+        if (!Context.Map.ChangeMap(player.Id, player.RoleData.Name, req.TargetMapCfgId, req.TargetLine, x, y, player))
         {
             res.Code = MapErrorCode.MapNotFound;
             return Task.FromResult<IMessage>(res);
@@ -177,10 +177,10 @@ public static class MapHandlers
         }
     }
 
-    private static int GetMapObjectNpcId(IAoiObject obj)
+    private static int GetMapObjectNpcId(MapObjectEntity obj)
     {
-        if (obj is MapNpc npc)
-            return npc.CfgId;
+        if (obj is MonsterEntity monster)
+            return monster.CfgId;
         return 0;
     }
 
