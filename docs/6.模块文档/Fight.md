@@ -2,53 +2,42 @@
 
 ## 概述
 
-Fight 模块实现战斗系统，包含技能使用、伤害计算、命中/暴击/闪避判定、HP管理、死亡/复活、PK模式管理。战斗单元（FightUnit）在进入地图时注册，离开地图时注销。无数据库持久化，纯内存运算。
+Fight 模块实现战斗系统，包含技能使用、伤害计算、命中/暴击/闪避判定、HP管理、死亡/复活、PK模式管理。战斗单元（FightUnitComponent）挂载在 MapObjectEntity 上，进入地图时注册，离开地图时注销。无数据库持久化，纯内存运算。
 
 ## 文件清单
 
 | 文件 | 行数 | 职责 |
 |------|------|------|
-| `server/Game/Components/Fight/FightComponent.cs` | 16 | Module 级 Component，战斗单元集合 |
-| `server/Game/Components/Fight/FightSystem.cs` | 345 | 战斗操作扩展方法 |
+| `server/Game/Components/Fight/FightSystem.cs` | 403 | 战斗系统（FightUnitComponent扩展方法 + 技能使用 + 死亡处理） |
 | `server/Game/Components/Fight/FightHandlers.cs` | 54 | 消息处理 + 事件订阅 |
 | `server/Game/Components/Fight/FightCore.cs` | 158 | 伤害计算核心（纯函数） |
-| `server/Game/Components/Fight/FightUnit.cs` | 116 | 战斗单元数据类 |
+| `server/Game/Components/Fight/FightUnitComponent.cs` | 30 | 战斗单元 Component |
 | `server/Game/Components/Fight/FightAttribute.cs` | 76 | 战斗属性（ProtoContract） |
 | `server/Game/Components/Fight/FightErrorCode.cs` | 19 | 错误码常量 |
+| `server/Game/Components/Fight/Skill.cs` | — | 技能数据类 |
 | `client/Assets/Scripts/shared/Common/Protos/FightProtos.cs` | 108 | 消息定义 + PK模式 + HP变化原因 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10801-10900 段 |
 
 ## 数据模型
 
-### FightUnit（战斗单元）
+### FightUnitComponent（战斗单元 Component）
 
 ```csharp
-namespace Game.Components.Fight;
-
-public class FightUnit
+[ComponentOf(typeof(MapObjectEntity))]
+public class FightUnitComponent : Component
 {
-    public long ObjectId { get; }              // 对象ID（RoleId/MonsterId）
-    public int ObjectType { get; }             // MapObjectType: Player=1, Npc=2, Monster=3
-    public string Name { get; }
-    public int CfgId { get; }                  // 配置ID
-    public FightAttribute Attr { get; }        // 战斗属性
-    public Dictionary<int, Skill> Skills;      // 技能列表 skillId → Skill
-    public Dictionary<int, long> SkillCoolDown; // 冷却 groupId → 可用时间戳(ms)
-    public Dictionary<long, int> ThreatMap;    // 仇恨列表 targetId → 仇恨值
+    public FightAttribute Attr = new();
+    public Dictionary<int, Skill> Skills = new();
+    public Dictionary<int, long> SkillCoolDown = new();
+    public Dictionary<long, int> ThreatMap = new();
     public bool IsDead => Attr.Hp <= 0;
-    public long KillerId { get; set; }
-    public int KillerSkillId { get; set; }
-
-    // 方法
-    void AddSkill(Skill skill);
-    Skill? GetSkill(int skillId);
-    int TakeDamage(int damage);     // 返回实际伤害
-    int Heal(int amount);           // 返回实际治疗
-    void AddThreat(long targetId, int value);
-    long GetMaxThreatTarget();      // 返回最大仇恨目标
-    void Reset();                   // 重置满血
+    public long KillerId;
+    public int KillerSkillId;
 }
 ```
+
+- 挂载目标：MapObjectEntity（MapPlayerEntity / MonsterEntity）
+- 不持久化，运行时数据
 
 ### FightAttribute（战斗属性）
 
@@ -78,35 +67,38 @@ public class FightAttribute
 - 兼容 Protobuf 序列化（用于战斗通知）
 - RoleAttributeComponent.ToFightAttribute() 转换生成
 
-## Component
-
-### FightComponent（Module 级）
-
-```csharp
-[ComponentOf(typeof(Module))]
-public class FightComponent : Component
-{
-    public readonly Dictionary<long, FightUnit> Units;  // objectId → FightUnit
-}
-```
-
-- 挂载目标：`Context.Server`
-- Context 便利属性：`Context.Fight`
-- 不持久化，运行时维护
-
 ## System 详解
 
 ### FightSystem
 
+FightSystem 不再依赖 FightComponent，所有操作通过 MapObjectEntity 上的 FightUnitComponent。
+
+#### FightUnitComponent 扩展方法
+
 | 方法 | 签名 | 说明 |
 |------|------|------|
-| RegisterUnit | `RegisterUnit(this FightComponent, long objectId, int objectType, string name, int cfgId, FightAttribute attr) → FightUnit` | 注册战斗单元（进地图时） |
-| UnregisterUnit | `UnregisterUnit(this FightComponent, long objectId)` | 注销战斗单元（离地图/下线时） |
-| GetUnit | `GetUnit(this FightComponent, long objectId) → FightUnit?` | 获取战斗单元 |
-| GetSkillConfig | `GetSkillConfig(int skillId) → SkillConfig?` | 获取技能配置 |
-| UseSkill | `UseSkill(this FightComponent, long attackerId, int skillId, int x, int y, long targetId) → UseSkillResult` | 使用技能（核心入口） |
-| Revive | `Revive(this FightComponent, long objectId, int hpPercent=100) → bool` | 复活 |
-| RemoveAll | `RemoveAll(this FightComponent)` | 清除所有单元 |
+| TakeDamage | `TakeDamage(this FightUnitComponent, int damage) → int` | 受伤，返回实际扣血 |
+| Heal | `Heal(this FightUnitComponent, int amount) → int` | 回血，返回实际回血 |
+| AddThreat | `AddThreat(this FightUnitComponent, long targetId, int value)` | 添加仇恨 |
+| GetMaxThreatTarget | `GetMaxThreatTarget(this FightUnitComponent) → long` | 获取仇恨最高目标 |
+| AddSkill | `AddSkill(this FightUnitComponent, Skill skill)` | 添加技能 |
+| GetSkill | `GetSkill(this FightUnitComponent, int skillId) → Skill?` | 获取技能 |
+| ResetFightState | `ResetFightState(this FightUnitComponent)` | 重置战斗状态（满血复活） |
+
+#### 战斗单元管理
+
+| 方法 | 签名 | 说明 |
+|------|------|------|
+| RegisterUnit | `RegisterUnit(this MapObjectEntity, FightAttribute attr) → FightUnitComponent` | 注册战斗单元 |
+| UnregisterUnit | `UnregisterUnit(this MapObjectEntity)` | 注销战斗单元 |
+| GetFightUnit | `GetFightUnit(long objectId) → FightUnitComponent?` | 通过全局查找获取战斗单元 |
+
+#### 技能使用
+
+| 方法 | 签名 | 说明 |
+|------|------|------|
+| UseSkill | `UseSkill(long attackerId, int skillId, int x, int y, long targetId) → UseSkillResult` | 使用技能（静态方法） |
+| Revive | `Revive(long objectId, int hpPercent=100) → bool` | 复活 |
 
 #### UseSkill 流程
 
@@ -115,7 +107,7 @@ public class FightComponent : Component
 2. 校验技能存在且冷却完毕
 3. 校验目标存在且存活
 4. 校验攻击距离
-5. FightCore.UseSkill / UseSkillAoe 计算伤害
+5. FightCore.UseSkill 计算伤害
 6. 处理死亡
 7. 广播技能效果
 8. 返回 UseSkillResult
@@ -125,18 +117,11 @@ public class FightComponent : Component
 
 | 方法 | 签名 | 说明 |
 |------|------|------|
-| CalculateDamage | `CalculateDamage(FightUnit attacker, FightUnit target, SkillConfig skillCfg, bool isCritical) → int` | 伤害计算 |
-| IsHit | `IsHit(FightUnit attacker, FightUnit target) → bool` | 命中判定 |
-| IsCritical | `IsCritical(FightUnit attacker, FightUnit target) → bool` | 暴击判定 |
-| UseSkill | `UseSkill(FightUnit attacker, FightUnit target, SkillConfig) → List<SkillHitResult>` | 单体技能执行 |
-| UseSkillAoe | `UseSkillAoe(FightUnit attacker, List<FightUnit> targets, SkillConfig) → List<SkillHitResult>` | AOE技能执行 |
-
-#### 伤害公式
-
-```
-伤害 = MAX((攻击力 × 伤害系数 + 附加伤害 - 防御) × 伤害减免, 随机最小伤害) × 暴击系数
-命中率 = 95 + (attacker.HitRate - target.DodgeRate) / 100，范围 [10%, 99%]
-```
+| CalculateDamage | `CalculateDamage(FightUnitComponent attacker, FightUnitComponent target, SkillConfig, bool isCritical) → int` | 伤害计算 |
+| IsHit | `IsHit(FightUnitComponent attacker, FightUnitComponent target) → bool` | 命中判定 |
+| IsCritical | `IsCritical(FightUnitComponent attacker, FightUnitComponent target) → bool` | 暴击判定 |
+| UseSkill | `UseSkill(FightUnitComponent attacker, long attackerId, FightUnitComponent target, long targetId, SkillConfig) → List<SkillHitResult>` | 单体技能执行 |
+| UseSkillAoe | `UseSkillAoe(FightUnitComponent attacker, List<FightUnitComponent> targets, SkillConfig) → List<SkillHitResult>` | AOE技能执行 |
 
 ### 错误码
 
@@ -203,13 +188,13 @@ public class FightComponent : Component
 ```
 Fight 模块
   ├── 依赖 → Config（SkillConfig 配置表）
-  ├── 依赖 → Map（AOI 广播、FightUnit 注册/注销事件）
+  ├── 依赖 → Map（FindMapObject 查找、AOI 广播、FightUnitComponent 注册/注销）
   ├── 依赖 → Player（Context.Players.SendToPlayer）
   ├── 依赖 → EventBus（MonsterKilledEvent/PlayerDeathEvent 发布、PlayerOffline/LeaveMap 订阅）
   │
   └── 被依赖 ←
        ├── Monster（AI攻击 → UseSkill、OnMonsterKilled 处理死亡）
-       ├── Bag（ItemEffectSystem.ApplyReviveEffect → Fight.Revive）
+       ├── Bag（ItemEffectSystem.ApplyReviveEffect → FightSystem.Revive）
        └── GameTask（MonsterKilledEvent 驱动任务进度）
 ```
 

@@ -2,51 +2,55 @@
 
 ## 概述
 
-Monster 模块实现怪物系统，包含怪物生成、刷新、AI 状态机、战斗、掉落。AI 采用有限状态机（Idle/Patrol/Chase/Attack），每秒更新一次。怪物为纯运行时对象，不持久化到数据库。
+Monster 模块实现怪物系统，包含怪物生成、刷新、AI 状态机、战斗、掉落。AI 采用有限状态机（Idle/Patrol/Chase/Attack），每秒更新一次。怪物为纯运行时对象，不持久化到数据库。ECS 重构后，怪物为 MonsterEntity（继承 MapObjectEntity），AI/信息/战斗数据分散到独立 Component。
 
 ## 文件清单
 
 | 文件 | 行数 | 职责 |
 |------|------|------|
+| `server/Game/Components/Monster/MonsterEntity.cs` | 45 | 怪物实体（继承 MapObjectEntity） |
+| `server/Game/Components/Monster/MonsterComponent.cs` | 19 | Module 级 Component，怪物集合+刷新计时 |
+| `server/Game/Components/Monster/MonsterSystem.cs` | 667 | 怪物系统核心（生成/AI/掉落） |
+| `server/Game/Components/Monster/MonsterHandlers.cs` | 43 | 事件订阅 |
+| `server/Game/Components/Monster/MonsterInfoComponent.cs` | 20 | 怪物信息 Component |
+| `server/Game/Components/Monster/MonsterAiComponent.cs` | 18 | 怪物AI Component |
 | `server/Game/Components/Monster/AiState.cs` | 13 | AI 状态枚举 |
-| `server/Game/Components/Monster/MonsterComponent.cs` | 20 | Module 级 Component，怪物集合+刷新计时 |
-| `server/Game/Components/Monster/MonsterSystem.cs` | 697 | 怪物系统核心（生成/AI/掉落） |
-| `server/Game/Components/Monster/MonsterHandlers.cs` | 40 | 事件订阅 |
-| `server/Game/Components/Monster/MonsterUnit.cs` | 54 | 怪物运行时数据 |
 
-## 数据模型
+## 实体体系
+
+### MonsterEntity
+
+```csharp
+public class MonsterEntity : MapObjectEntity
+{
+    public override int ObjectType => MapObjectType.Monster;  // 值=3
+    public override string Name => Info.Name;
+
+    // 组件访问
+    private MonsterInfoComponent? _info;
+    public MonsterInfoComponent Info => _info ??= GetComponent<MonsterInfoComponent>();
+
+    private MonsterAiComponent? _ai;
+    public MonsterAiComponent Ai => _ai ??= GetComponent<MonsterAiComponent>();
+
+    private FightUnitComponent? _fight;
+    public FightUnitComponent Fight => _fight ??= GetComponent<FightUnitComponent>();
+
+    public int CfgId => Info.CfgId;
+
+    public static MonsterEntity Create(long monsterId, MonsterConfig config, int mapId, int line, int x, int y);
+}
+```
 
 ### AiState（AI 状态枚举）
 
 ```csharp
-namespace Game.Components.Monster;
-
 public enum AiState
 {
     Idle = 0,      // 待机
     Patrol = 1,    // 巡逻
     Chase = 2,     // 追击
     Attack = 3,    // 攻击
-}
-```
-
-### MonsterUnit（怪物单元）
-
-```csharp
-public class MonsterUnit
-{
-    public long ObjectId { get; }              // 唯一ID（从 100000 递增）
-    public MonsterConfig? Config { get; }      // 怪物配置
-    public FightUnit? FightUnit { get; set; }  // 战斗单元
-    public MapNpc? Npc { get; set; }           // 地图NPC对象
-    public int X { get; set; }                 // 当前X坐标
-    public int Y { get; set; }                 // 当前Y坐标
-    public AiState AiState { get; set; }       // AI 状态
-    public (int X, int Y)? PatrolTarget { get; set; }  // 巡逻目标
-    public long? ChaseTarget { get; set; }     // 追击目标（玩家RoleId）
-    public long LastAttackTime { get; set; }   // 上次攻击时间
-    public long LastUpdateTime { get; set; }   // 上次AI更新时间
-    public int CfgId => Config?.Id ?? 0;       // 配置ID
 }
 ```
 
@@ -58,9 +62,9 @@ public class MonsterUnit
 [ComponentOf(typeof(Module))]
 public class MonsterComponent : Component
 {
-    public readonly Dictionary<long, Dictionary<long, MonsterUnit>> MapMonsters = new();  // MapKey → 怪物列表
+    public readonly Dictionary<long, Dictionary<long, MonsterEntity>> MapMonsters = new();  // MapKey → 怪物列表
     public readonly Dictionary<string, long> SpawnTimers = new();  // timerKey → 下次刷新时间
-    public long NextMonsterId = 100000;    // 怪物ID生成器
+    public long NextMonsterId = 100000;    // 怪物ID生成器（简单递增）
     public GameTimerHandle UpdateTimer;    // AI更新定时器
 }
 ```
@@ -69,6 +73,32 @@ public class MonsterComponent : Component
 - Context 便利属性：`Context.Monster`
 - MapKey = mapCfgId × 1000 + line
 - TimerKey = $"{mapCfgId}_{line}_{cfgId}"
+
+### MonsterInfoComponent
+
+```csharp
+[ComponentOf(typeof(MonsterEntity))]
+public class MonsterInfoComponent : Component
+{
+    public MonsterConfig? Config;
+    public string Name = "";
+    public int CfgId => Config?.Id ?? 0;
+}
+```
+
+### MonsterAiComponent
+
+```csharp
+[ComponentOf(typeof(MonsterEntity))]
+public class MonsterAiComponent : Component
+{
+    public AiState AiState = AiState.Idle;
+    public (int X, int Y)? PatrolTarget;
+    public long? ChaseTarget;
+    public long LastAttackTime;
+    public long LastUpdateTime;
+}
+```
 
 ## System 详解
 
@@ -93,9 +123,9 @@ public class MonsterComponent : Component
 ```
 1. 分配 ObjectId（NextMonsterId++）
 2. 在配置的刷新区域随机坐标
-3. 创建 MonsterUnit
-4. 创建 FightUnit（注册到 FightComponent）
-5. 创建 MapNpc（加入地图 AOI）
+3. MonsterEntity.Create() 创建实体
+4. 注册 FightUnitComponent（RegisterUnit）
+5. 加入 GameMap（AddObject，自动注册 AOI）
 6. 广播怪物出现
 7. 加入 MapMonsters 索引
 ```
@@ -127,7 +157,7 @@ AI 类型（MonsterConfig.AiType）：
 
 - 技能ID=1（普通攻击）
 - 攻击间隔：2秒
-- 通过 `Context.Fight.UseSkill()` 执行攻击
+- 通过 `FightSystem.UseSkill(monster.ObjectId, 1, ...)` 执行攻击
 
 #### 死亡与掉落
 
@@ -138,20 +168,19 @@ AI 类型（MonsterConfig.AiType）：
 死亡掉落流程：
 ```
 1. 从 MapMonsters 移除
-2. 注销 FightUnit
-3. 移除 MapNpc
+2. 注销 FightUnitComponent（UnregisterUnit）
+3. 从 GameMap 移除（RemoveObject，自动移除 AOI）
 4. 广播怪物死亡
 5. 计算并发放奖励：
-   ├── 经验 → Context.Players.RoleAttribute.Exp + LevelUpNtf
-   ├── 金币 → Context.Players.RoleAttribute.Gold + GoldChangedNtf
-   └── 物品 → Context.Players.RoleBag.AddItem + ItemGainNtf
+   ├── 经验 → RoleAttribute.Exp + LevelUpNtf
+   ├── 金币 → RoleAttribute.Gold + GoldChangedNtf
+   └── 物品 → RoleBag.AddItem + ItemGainNtf
 6. 设置刷新定时器（按 SpawnInterval）
-7. 广播 MonsterDropNtf
 ```
 
 #### 刷新机制
 
-AI 更新循环（1秒/次）同时检查刷新定时器：
+AI 更新循环（1秒/次）同时检查刷新计时器：
 - 每个 timerKey 有独立的刷新间隔
 - 到时间后按 MaxCount 限制补充怪物
 
@@ -191,8 +220,8 @@ AI 更新循环（1秒/次）同时检查刷新定时器：
 ```
 Monster 模块
   ├── 依赖 → Config（MonsterConfig 配置表）
-  ├── 依赖 → Map（GameMap.AddNpc/RemoveNpc、AOI 广播）
-  ├── 依赖 → Fight（FightUnit 注册/注销、UseSkill 攻击）
+  ├── 依赖 → Map（GameMap.AddObject/RemoveObject、AOI 广播、FindMapObject）
+  ├── 依赖 → Fight（FightUnitComponent 注册/注销、FightSystem.UseSkill 攻击、FightSystem.GetFightUnit）
   ├── 依赖 → Player（奖励发放：Exp/Gold/Item）
   ├── 依赖 → Bag（掉落物品 → AddItem）
   ├── 依赖 → GameTimer（1秒 AI 更新定时器）
@@ -205,6 +234,5 @@ Monster 模块
 ## 已知待办
 
 1. **巡逻路径**：PatrolTarget 为随机点，无固定巡逻路径
-2. **仇恨系统**：ChaseTarget 仅记录一个目标，FightUnit.ThreatMap 未被 AI 使用
-3. **AOI 跨塔移动**：已知限制，移动可能不触发正确的视野更新
-4. **掉落独立**：ExpChangedNtf/GoldChangedNtf/ItemGainNtf 定义在 MonsterProtos.cs 中，但语义上属于通用通知
+2. **仇恨系统**：ChaseTarget 仅记录一个目标，FightUnitComponent.ThreatMap 未被 AI 使用
+3. **掉落独立**：ExpChangedNtf/GoldChangedNtf/ItemGainNtf 定义在 MonsterProtos.cs 中，但语义上属于通用通知

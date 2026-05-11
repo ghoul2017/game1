@@ -10,13 +10,13 @@
 
 **判断方法**：看到 `MonsterProtos.cs` 时，不要以为里面都是怪物相关消息。通用通知应按语义归属，后续重构时考虑移到通用 Protos 或各自所属模块。
 
-## MapNpc 既代表 NPC 也代表怪物
+## MapNpcEnterNtf 同时用于 NPC 和怪物
 
-`MapNpc` 类在地图上同时代表 NPC 和 Monster。`MonsterUnit.Npc` 属性类型就是 `MapNpc`。
+`MapNpcEnterNtf`/`MapNpcLeaveNtf`/`MapNpcMoveNtf` 三个通知同时用于 NPC 和怪物（Monster）。
 
-**原因**：地图系统设计时 NPC 和 Monster 共用了同一个对象类型。`MapObjectType` 虽然定义了 `Monster=3`，但实际运行时怪物在地图上仍以 `Npc=2` 类型存在。
+**原因**：历史遗留，ECS 重构后怪物已独立为 MonsterEntity（ObjectType=3），但通知消息名仍用 "Npc"。客户端需通过 ObjectType 字段区分。
 
-**影响**：`MapNpcEnterNtf`/`MapNpcLeaveNtf`/`MapNpcMoveNtf` 三个通知同时用于 NPC 和怪物，客户端需要通过 `MapObjectInfo.NpcId` 或其他字段区分。
+**判断方法**：看到 "MapNpc" 开头的通知时，不要以为只跟 NPC 有关，怪物也走这些通知。
 
 ## ErrorCode 是服务端专属，客户端只有 int
 
@@ -26,15 +26,15 @@
 
 ## ItemEffectSystem（Bag 模块）反向依赖 Fight 模块
 
-`ItemEffectSystem.ApplyReviveEffect()` 调用 `Context.Fight.GetUnit()` 复活玩家。这是 Bag → Fight 的反向依赖（正常方向是 Fight → Bag 做掉落发放）。
+`ItemEffectSystem.ApplyReviveEffect()` 调用 `FightSystem.GetFightUnit()` 复活玩家。这是 Bag → Fight 的反向依赖（正常方向是 Fight → Bag 做掉落发放）。
 
 **原因**：物品效果需要修改战斗状态，但物品系统在 Bag 模块。后续如果有更多跨模块物品效果，应考虑抽独立的效果处理层。
 
-## FightComponent 纯运行时，无持久化
+## FightComponent 已删除，战斗单元通过 MapObjectEntity 访问
 
-Fight 模块没有数据库操作，所有战斗状态（FightUnit、HP、仇恨）都是运行时数据。持久化的属性在 Player 模块的 `RoleAttributeComponent` 中。
+FightComponent 索引层已删除，不再有 `Context.Fight`。所有战斗单元查找走 `FightSystem.GetFightUnit(objectId)`，内部通过 `Context.Map.FindMapObject()` → `FightUnitComponent`。
 
-**数据流**：`RoleAttributeComponent.ToFightAttribute()` 在注册战斗单元时转换一次，战斗中 HP 变化在 FightUnit 上，不会自动同步回 RoleAttributeComponent。复活等需要手动同步。
+**影响**：不要写 `Context.Fight.xxx`，用 `FightSystem.GetFightUnit(roleId)?.xxx` 替代。
 
 ## 怪物 ID 是简单递增，不是雪花算法
 

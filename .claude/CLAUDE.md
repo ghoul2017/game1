@@ -56,8 +56,9 @@ client/Assets/Scripts/
 
 server/Game/
   Program.cs            # 入口：单线程调度 → Component 挂载 + 子系统初始化
-  Context.cs            # 静态上下文：Context.Server(Module), Context.Players, Context.Fight 等
+  Context.cs            # 静态上下文：Context.Server(Module), Context.Players, Context.Map 等
   Entities/Module.cs    # 根实体（所有 Module 级 Component 挂载于此）
+  Entities/MapObjectEntity.cs  # 地图对象实体基类（MapPlayerEntity/MonsterEntity 继承之）
   Components/
     User/               # UserComponent + UserComponentSystem + UserHandler
     Player/             # PlayerComponent + PlayerSystem + PlayerEntity + PlayerOnlineComponent + RoleDataComponent + RoleAttributeComponent + RoleAttribute
@@ -65,9 +66,9 @@ server/Game/
     Mail/               # MailComponent + MailSystem + MailHandlers + RoleMail
     Chat/               # ChatComponent + ChatSystem + ChatHandlers
     GameTask/            # TaskComponent + TaskSystem + TaskHandlers + RoleTaskList
-    Fight/              # FightComponent + FightSystem + FightHandlers + FightCore + FightUnit + FightAttribute + Skill
-    Map/                # MapComponent + MapSystem + MapHandlers + GameMap + MapPlayer + MapNpc + MapAoiNotifier + IMapObject
-    Monster/            # MonsterComponent + MonsterSystem + MonsterUnit + AiState
+    Fight/              # FightSystem + FightHandlers + FightCore + FightUnitComponent + FightAttribute + Skill
+    Map/                # MapComponent + MapSystem + MapHandlers + GameMap + MapPlayerEntity + MapPositionComponent + MapAoiNotifier + IMapObject
+    Monster/            # MonsterComponent + MonsterSystem + MonsterEntity + MonsterInfoComponent + MonsterAiComponent + AiState
     Misc/               # MiscHandlers（握手+心跳）
   Core/
     AppConfig.cs        # 配置根（Server, MongoDb, Tables, Log）
@@ -76,7 +77,6 @@ server/Game/
     GameTimer.cs        # 定时器（回调自动回主线程）
     ShutdownToken.cs    # 统一关闭信号
     TokenSigner.cs      # HMAC-SHA256 Token 签名器
-    Aoi/                # TowerAoi, Tower, IAoiObject, IAoiEventListener
     Database/           # MongoDb (统一入口), IEntity, IEntityExtensions
     Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener
@@ -102,7 +102,7 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
 
 | 级别 | 挂载目标 | 用途 | 示例 |
 |------|---------|------|------|
-| Module 级 | Context.Server | 全局数据集合 | PlayerComponent, FightComponent, MapComponent, MonsterComponent, ChatComponent |
+| Module 级 | Context.Server | 全局数据集合 | PlayerComponent, MapComponent, MonsterComponent, ChatComponent |
 | PlayerEntity 级 | PlayerEntity | 玩家数据 | BagComponent, MailComponent, TaskComponent, RoleAttributeComponent, PlayerOnlineComponent, RoleDataComponent |
 
 ### System 规则

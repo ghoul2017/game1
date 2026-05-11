@@ -7,8 +7,9 @@
 ```
 server/Game/
 ├── Program.cs            # 入口：单线程调度 → Component 挂载 + 子系统初始化
-├── Context.cs            # 静态上下文：Context.Server(Module), Context.Players, Context.Fight 等
+├── Context.cs            # 静态上下文：Context.Server(Module), Context.Players, Context.Map 等
 ├── Entities/Module.cs    # 根实体（所有 Module 级 Component 挂载于此）
+├── Entities/MapObjectEntity.cs  # 地图对象实体基类（MapPlayerEntity/MonsterEntity 继承之）
 ├── Components/
 │   ├── User/             # UserComponent + UserComponentSystem + UserHandler
 │   ├── Player/           # PlayerComponent + PlayerSystem + PlayerEntity + PlayerOnlineComponent + RoleDataComponent + RoleAttributeComponent + RoleAttribute
@@ -16,9 +17,9 @@ server/Game/
 │   ├── Mail/             # MailComponent + MailSystem + MailHandlers + RoleMailList + RoleMail
 │   ├── Chat/             # ChatComponent + ChatSystem + ChatHandlers
 │   ├── GameTask/         # TaskComponent + TaskSystem + TaskHandlers + RoleTaskList + RoleTask
-│   ├── Fight/            # FightComponent + FightSystem + FightHandlers + FightCore + FightUnit + FightAttribute + Skill
-│   ├── Map/              # MapComponent + MapSystem + MapHandlers + GameMap + MapPlayer + MapNpc + MapAoiNotifier + IMapObject
-│   ├── Monster/          # MonsterComponent + MonsterSystem + MonsterUnit + AiState
+│   ├── Fight/            # FightSystem + FightHandlers + FightCore + FightUnitComponent + FightAttribute + Skill
+│   ├── Map/              # MapComponent + MapSystem + MapHandlers + GameMap + MapPlayerEntity + MapPositionComponent + MapAoiNotifier + IMapObject
+│   ├── Monster/          # MonsterComponent + MonsterSystem + MonsterEntity + MonsterInfoComponent + MonsterAiComponent + AiState
 │   └── Misc/             # MiscHandlers（握手+心跳）
 ├── Core/
 │   ├── AppConfig.cs      # 配置根（Server, MongoDb, Tables, Log）
@@ -27,7 +28,6 @@ server/Game/
 │   ├── GameTimer.cs      # 定时器（回调自动回主线程）
 │   ├── ShutdownToken.cs  # 统一关闭信号
 │   ├── TokenStore.cs     # 内存 Token 存储
-│   ├── Aoi/              # TowerAoi, Tower, IAoiObject, IAoiEventListener
 │   ├── Database/         # MongoDb (统一入口), IEntity
 │   ├── Entity/           # IEntity
 │   ├── Event/            # EventBus, IEvent, IEventListener
@@ -57,14 +57,15 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
 
 | 级别 | 挂载目标 | 用途 | 示例 |
 |------|---------|------|------|
-| Module 级 | Context.Server | 全局数据集合 | PlayerComponent, FightComponent, MapComponent, MonsterComponent, ChatComponent |
+| Module 级 | Context.Server | 全局数据集合 | PlayerComponent, MapComponent, MonsterComponent, ChatComponent |
 | PlayerEntity 级 | PlayerEntity | 玩家数据 | BagComponent, MailComponent, TaskComponent, RoleAttributeComponent, PlayerOnlineComponent, RoleDataComponent |
 
 ### System 规则
 
 - System 是纯静态扩展方法类（`public static class XxxSystem`），只有方法和常量，不持有字段
 - 通过 `this XxxComponent self` 访问 Component 数据
-- Module 级：`Context.Fight.RegisterUnit(...)` — Context 提供便利属性
+- Module 级：`Context.Map.FindMapObject(...)` — Context 提供便利属性
+- 战斗单元通过 MapObjectEntity 上的 FightUnitComponent 访问，不再有 FightComponent 索引
 - PlayerEntity 级：`player.Bag.AddItem(...)` — PlayerEntity 提供便利属性
 - 日志用 `LogManager.GetLogger(nameof(XxxSystem))`（静态类不能做泛型参数）
 
