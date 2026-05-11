@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Net.Sockets;
 using Client.Game;
 using Shared.Common;
 using Client;
@@ -174,7 +173,8 @@ namespace Client.Network
 
         public void Connect(string host = null, int? port = null)
         {
-            if (_state == ConnState.Connecting || _state == ConnState.Connected || _state == ConnState.Handshaking)
+            if (_state == ConnState.Connecting || _state == ConnState.Connected ||
+                _state == ConnState.Handshaking || _state == ConnState.Reconnecting)
                 return;
 
             if (host != null) this.host = host;
@@ -219,6 +219,7 @@ namespace Client.Network
 
         private async System.Threading.Tasks.Task StartConnectAsync()
         {
+            _state = ConnState.Connecting;
             _running = true;
             try
             {
@@ -279,6 +280,10 @@ namespace Client.Network
         {
             _mainQueue.Enqueue(() =>
             {
+                // 非主动断开且有会话信息时标记，下次握手成功后自动重连
+                if (!_userDisconnect && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
+                    _hadSession = true;
+
                 _session = null;
                 HandlePostDisconnect();
             });
