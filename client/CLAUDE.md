@@ -20,7 +20,7 @@ Assets/
     ├── shared/       #   双端共享代码（服务端通过 csproj Compile Include 引用）
     │   ├── Core/     #     ECS, Network, Config, Log, IdGenerator
     │   └── Common/   #     Protos（消息定义）, Config（配置表定义）, MsgIdConst
-    ├── Core/         #   核心框架（UIManager, UIPanel, UIBuilder, GameEntry, UIToast, UIMessageBox）
+    ├── Core/         #   核心框架（Context, UIManager, UIPanel, UIBuilder, GameEntry, UIToast, UIMessageBox）
     ├── Config/       #   ClientConfigManager
     ├── Editor/       #   编辑器工具（SceneCreator）
     ├── Loading/      #   加载界面（LoadingPanel）
@@ -33,10 +33,12 @@ Assets/
 
 ## 网络层
 
-- **NetClient** — MonoBehaviour 单例，管理 TCP 连接/心跳/断线重连
-- **MessageRouter** — 自动扫描 `[MessageHandler]` 标记的静态方法（与服务端共享同一路由机制）
-- **MessageDispatcher** — 手动注册的按 MsgId 分发器（与 MessageRouter 并存）
-- **双路由**: `ProcessReceivedBytes` 同时调用 `_dispatcher.Dispatch()` 和 `_router.RouteAsync()`
+- **Context** — 客户端上下文（`Client.Context`），类似于服务端 `Context`，挂载 `NetworkComponent`
+- **NetClient** — MonoBehaviour 单例，底层基于 `Context.Network.ConnectAsync()` + `TcpSession`
+- **NetworkComponent** — 共享网络组件，客户端复用其 `ConnectAsync` 连接远端服务器
+- **TcpSession** — 连接会话，通过 `PostToMainThread` 回调将消息投递到 Unity 主线程
+- **MessageRouter** — 自动扫描 `[MessageHandler]` 标记的静态方法（在 `NetworkComponent` 构造函数中自动注册）
+- **MessageDispatcher** — 手动注册的按 MsgId 分发器（`TcpSession.OnMessageReceived` 转发，后续弃用）
 
 ## UI 框架约定
 
