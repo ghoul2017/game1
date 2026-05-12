@@ -403,9 +403,9 @@ namespace Client.Game
 
         private void HandleChatAck(ChatAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show(GetChatErrorText(ack.Code));
+                UIToast.Show(ack.ErrorMessage);
             }
         }
 
@@ -431,20 +431,6 @@ namespace Client.Game
 
             if (chatDisplay != null)
                 chatDisplay.text = string.Join("\n", chatLines.ToArray());
-        }
-
-        private static string GetChatErrorText(int code)
-        {
-            switch (code)
-            {
-                case 3001: return "聊天内容不能为空";
-                case 3002: return "发言太快，请稍后再试";
-                case 3003: return "无效的聊天频道";
-                case 3004: return "无效的私聊目标";
-                case 3005: return "目标玩家不在线";
-                case 3006: return "未登录";
-                default: return "发送失败(" + code + ")";
-            }
         }
 
         private void CreateSystemButtons()
@@ -687,9 +673,9 @@ namespace Client.Game
 
         private void HandleUseSkillAck(UseSkillAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show(GetFightErrorText(ack.Code));
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
 
@@ -830,21 +816,5 @@ namespace Client.Game
             }
         }
 
-        private static string GetFightErrorText(int code)
-        {
-            switch (code)
-            {
-                case 1: return "不在战斗状态";
-                case 2: return "已死亡";
-                case 3: return "技能不存在";
-                case 4: return "技能配置未找到";
-                case 5: return "技能冷却中";
-                case 6: return "目标不存在";
-                case 7: return "目标已死亡";
-                case 8: return "超出攻击范围";
-                case 9: return "MP不足";
-                default: return "操作失败(" + code + ")";
-            }
-        }
     }
 }

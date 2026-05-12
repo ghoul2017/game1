@@ -269,7 +269,7 @@ namespace Client.Login
 
         private void HandleLoginRes(LoginRes res)
         {
-            if (res.Code == 0)
+            if (string.IsNullOrEmpty(res.ErrorMessage))
             {
                 GameData.PlayerId = res.PlayerId;
                 GameData.Token = res.Token;
@@ -285,7 +285,7 @@ namespace Client.Login
             }
             else
             {
-                errorText.text = res.Message;
+                errorText.text = res.ErrorMessage;
                 isLoggingIn = false;
                 SetButtonEnabled(true);
             }

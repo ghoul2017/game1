@@ -16,8 +16,7 @@ namespace Shared.Common.Protos
     public class HandshakeRes : IMessage
     {
         public ushort MsgId => MsgIdConst.HandshakeRes;
-        [ProtoMember(1)] public int Code { get; set; }
-        [ProtoMember(2)] public string Message { get; set; } = "";
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     // --- 心跳 ---

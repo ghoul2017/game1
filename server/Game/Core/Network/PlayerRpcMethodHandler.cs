@@ -51,7 +51,10 @@ public class PlayerRpcMethodHandler : AMethodHandler
         var player = Context.Players.GetByRoleId(session.RoleId);
         if (player == null)
         {
-            // res.Code = ErrorCode.InvalidParam;
+            // 尝试设置 ErrorMessage
+            var errMsgProp = res?.GetType().GetProperty("ErrorMessage");
+            if (errMsgProp != null && errMsgProp.CanWrite)
+                errMsgProp.SetValue(res, "玩家不在线");
             return res;
         }
 

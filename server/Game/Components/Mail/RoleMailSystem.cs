@@ -54,7 +54,7 @@ public static class RoleMailSystem
         List<MailAttachment>? attachments = null, long expireTime = 0)
     {
         if (self.Mails.Count >= MaxMailCount)
-            return MailResult.Fail(MailErrorCode.MailFull);
+            return MailResult.Fail("邮箱已满");
 
         var mail = new RoleMail
         {
@@ -219,10 +219,10 @@ public static class RoleMailSystem
 
 #region 结果类型
 
-public record MailResult(bool Success, int ErrorCode, long MailId)
+public record MailResult(bool Success, string ErrorMessage = "", long MailId = 0)
 {
-    public static MailResult Ok(long mailId) => new(true, 0, mailId);
-    public static MailResult Fail(int error) => new(false, error, 0);
+    public static MailResult Ok(long mailId) => new(true, "", mailId);
+    public static MailResult Fail(string message) => new(false, message, 0);
 }
 
 public record MarkResult(bool Changed, List<long> ReadIds)
@@ -241,15 +241,6 @@ public record DeleteResult(bool Changed, List<long> DeletedIds)
 {
     public static DeleteResult Ok(List<long> ids) => new(true, ids);
     public static DeleteResult None() => new(false, []);
-}
-
-public static class MailErrorCode
-{
-    public const int Ok = 0;
-    public const int InvalidParam = 2001;
-    public const int MailNotFound = 2002;
-    public const int MailFull = 2003;
-    public const int AttachmentNotClaimed = 2004;
 }
 
 #endregion

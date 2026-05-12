@@ -35,7 +35,7 @@ public static class RoleBagSystem
     public static AddItemResult AddItem(this RoleBagComponent self, int configId, int count, int maxStack = 999)
     {
         if (count <= 0)
-            return AddItemResult.Fail(ErrorCode.InvalidParam);
+            return AddItemResult.Fail("参数错误");
 
         var remaining = count;
 
@@ -56,7 +56,7 @@ public static class RoleBagSystem
         {
             var emptyIndex = FindEmptyIndex(self);
             if (emptyIndex < 0)
-                return AddItemResult.Partial(count - remaining, ErrorCode.BagFull);
+                return AddItemResult.Partial(count - remaining, "背包已满");
 
             var addCount = Math.Min(remaining, maxStack);
             var newItem = new BagItem
@@ -195,14 +195,14 @@ public static class RoleBagSystem
     public static UseItemResult UseItem(this RoleBagComponent self, int index, int count)
     {
         if (count <= 0)
-            return UseItemResult.Fail(ErrorCode.InvalidParam);
+            return UseItemResult.Fail("参数错误");
 
         var item = self.GetByIndex(index);
         if (item == null)
-            return UseItemResult.Fail(ErrorCode.ItemNotFound);
+            return UseItemResult.Fail("物品不存在");
 
         if (item.Count < count)
-            return UseItemResult.Fail(ErrorCode.ItemNotEnough);
+            return UseItemResult.Fail("物品数量不足");
 
         // 扣除物品
         if (item.Count == count)
@@ -237,27 +237,16 @@ public static class RoleBagSystem
 }
 
 /// <summary>添加物品结果</summary>
-public record AddItemResult(int AddedCount, bool Success, int ErrorCode)
+public record AddItemResult(int AddedCount, bool Success, string ErrorMessage = "")
 {
-    public static AddItemResult Ok(int count) => new(count, true, 0);
-    public static AddItemResult Partial(int count, int error) => new(count, false, error);
-    public static AddItemResult Fail(int error) => new(0, false, error);
+    public static AddItemResult Ok(int count) => new(count, true);
+    public static AddItemResult Partial(int count, string message) => new(count, false, message);
+    public static AddItemResult Fail(string message) => new(0, false, message);
 }
 
 /// <summary>使用物品结果</summary>
-public record UseItemResult(int ConfigId, int UsedCount, bool Success, int ErrorCode)
+public record UseItemResult(int ConfigId, int UsedCount, bool Success, string ErrorMessage = "")
 {
-    public static UseItemResult Ok(int configId, int count) => new(configId, count, true, 0);
-    public static UseItemResult Fail(int error) => new(0, 0, false, error);
-}
-
-/// <summary>通用错误码</summary>
-public static class ErrorCode
-{
-    public const int Ok = 0;
-    public const int InvalidParam = 1001;
-    public const int BagFull = 1002;
-    public const int ItemNotFound = 1003;
-    public const int ItemNotEnough = 1004;
-    public const int ItemUseFail = 1005;
+    public static UseItemResult Ok(int configId, int count) => new(configId, count, true);
+    public static UseItemResult Fail(string message) => new(0, 0, false, message);
 }

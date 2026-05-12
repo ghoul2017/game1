@@ -19,7 +19,6 @@ public static class RoleMailHandlers
         var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var mails = player.RoleMail.GetMailList();
 
-        res.Code = MailErrorCode.Ok;
         res.Mails = mails.Select(player.RoleMail.ToMailInfo).ToList();
 
         return res;
@@ -35,8 +34,6 @@ public static class RoleMailHandlers
         {
             await player.RoleMail.SaveMailsAsync();
         }
-
-        res.Code = MailErrorCode.Ok;
         res.ReadMailIds = result.ReadIds;
 
         return res;
@@ -48,7 +45,6 @@ public static class RoleMailHandlers
         var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var result = await player.RoleMail.ClaimAttachmentsAsync(req.MailIds);
 
-        res.Code = MailErrorCode.Ok;
         res.ClaimedMailIds = result.ClaimedIds;
         res.Items = result.Items.Select(a => new MailAttachmentInfo
         {
@@ -75,7 +71,6 @@ public static class RoleMailHandlers
             await player.RoleMail.SaveMailsAsync();
         }
 
-        res.Code = MailErrorCode.Ok;
         res.DeletedMailIds = result.DeletedIds;
 
         return res;

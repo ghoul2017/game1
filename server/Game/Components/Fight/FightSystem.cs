@@ -141,27 +141,27 @@ public static class FightSystem
         var attackerFight = GetFightUnit(attackerId);
         if (attackerFight == null)
         {
-            result.Code = FightErrorCode.NotInFight;
+            result.ErrorMessage = "不在战斗状态";
             return result;
         }
 
         if (attackerFight.IsDead)
         {
-            result.Code = FightErrorCode.AlreadyDead;
+            result.ErrorMessage = "已死亡";
             return result;
         }
 
         var skill = attackerFight.GetSkill(skillId);
         if (skill == null)
         {
-            result.Code = FightErrorCode.SkillNotFound;
+            result.ErrorMessage = "技能不存在";
             return result;
         }
 
         var skillCfg = GetSkillConfig(skillId);
         if (skillCfg == null)
         {
-            result.Code = FightErrorCode.SkillConfigNotFound;
+            result.ErrorMessage = "技能配置未找到";
             return result;
         }
 
@@ -169,20 +169,20 @@ public static class FightSystem
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         if (skill.LastUseTime + skillCfg.CdTime > now)
         {
-            result.Code = FightErrorCode.SkillInCd;
+            result.ErrorMessage = "技能冷却中";
             return result;
         }
 
         var targetFight = GetFightUnit(targetId);
         if (targetFight == null)
         {
-            result.Code = FightErrorCode.TargetNotFound;
+            result.ErrorMessage = "目标不存在";
             return result;
         }
 
         if (targetFight.IsDead)
         {
-            result.Code = FightErrorCode.TargetDead;
+            result.ErrorMessage = "目标已死亡";
             return result;
         }
 
@@ -197,7 +197,7 @@ public static class FightSystem
                 int dist = Math.Max(Math.Abs(attackerObj.X - targetObj.X), Math.Abs(attackerObj.Y - targetObj.Y));
                 if (skillCfg.CastRange > 0 && dist > skillCfg.CastRange)
                 {
-                    result.Code = FightErrorCode.OutOfRange;
+                    result.ErrorMessage = "超出攻击范围";
                     return result;
                 }
             }
@@ -209,7 +209,7 @@ public static class FightSystem
         // 执行战斗计算
         var hitResults = FightCore.UseSkill(attackerFight, attackerId, targetFight, targetId, skillCfg);
 
-        result.Code = FightErrorCode.Ok;
+        // 成功，ErrorMessage 保持空
         result.AttackerId = attackerId;
         result.SkillId = skillId;
         result.TargetId = targetId;
@@ -331,7 +331,7 @@ public static class FightSystem
     {
         var ack = new UseSkillAck
         {
-            Code = skillResult.Code,
+            ErrorMessage = skillResult.ErrorMessage,
             AttackerId = skillResult.AttackerId,
             SkillId = skillResult.SkillId,
             MainTargetId = skillResult.TargetId,
@@ -370,7 +370,7 @@ public static class FightSystem
 /// <summary>技能使用结果</summary>
 public class UseSkillResult
 {
-    public int Code { get; set; }
+    public string ErrorMessage { get; set; } = "";
     public long AttackerId { get; set; }
     public int SkillId { get; set; }
     public long TargetId { get; set; }

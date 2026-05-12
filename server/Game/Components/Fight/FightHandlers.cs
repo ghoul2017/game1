@@ -16,7 +16,7 @@ public static class FightHandlers
     public static Task<IMessage> UseSkillHandler(PlayerEntity player, UseSkillReq req, UseSkillAck res)
     {
         var result = FightSystem.UseSkill(player.Id, req.SkillId, req.X, req.Y, req.TargetId);
-        res.Code = result.Code;
+        res.ErrorMessage = result.ErrorMessage;
 
         return Task.FromResult<IMessage>(res);
     }

@@ -17,9 +17,9 @@ namespace Shared.Common.Protos
     public class QueryBagAck : IMessage
     {
         public ushort MsgId => MsgIdConst.QueryBagAck;
-        [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<BagItemInfo> Items { get; set; } = new List<BagItemInfo>();
         [ProtoMember(3)] public int Capacity { get; set; }
+        [ProtoMember(4)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -36,8 +36,8 @@ namespace Shared.Common.Protos
     public class BagTidyAck : IMessage
     {
         public ushort MsgId => MsgIdConst.BagTidyAck;
-        [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public List<BagItemInfo> Items { get; set; } = new List<BagItemInfo>();
+        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -56,7 +56,7 @@ namespace Shared.Common.Protos
     public class BagSwapAck : IMessage
     {
         public ushort MsgId => MsgIdConst.BagSwapAck;
-        [ProtoMember(1)] public int Code { get; set; }
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -75,8 +75,8 @@ namespace Shared.Common.Protos
     public class BagUseItemAck : IMessage
     {
         public ushort MsgId => MsgIdConst.BagUseItemAck;
-        [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int ConfigId { get; set; }
+        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion

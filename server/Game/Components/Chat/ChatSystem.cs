@@ -22,11 +22,11 @@ public static class ChatSystem
     public const int MaxContentLength = 500;
 
     /// <summary>处理聊天请求</summary>
-    public static (int code, ChatNtf? ntf, long targetRoleId) HandleChat(this ChatComponent self, long senderRoleId, string senderName, int channel, string content, string targetName)
+    public static (string errorMessage, ChatNtf? ntf, long targetRoleId) HandleChat(this ChatComponent self, long senderRoleId, string senderName, int channel, string content, string targetName)
     {
         // 参数校验
         if (string.IsNullOrWhiteSpace(content))
-            return (ChatErrorCode.EmptyContent, null, 0);
+            return ("聊天内容不能为空", null, 0);
 
         if (content.Length > MaxContentLength)
             content = content[..MaxContentLength];
@@ -39,7 +39,7 @@ public static class ChatSystem
                 // 冷却检查
                 if (self.LastWorldChatTime.TryGetValue(senderRoleId, out var lastTime)
                     && now - lastTime < WorldChatCooldownMs)
-                    return (ChatErrorCode.Cooldown, null, 0);
+                    return ("发言太快，请稍后再试", null, 0);
 
                 self.LastWorldChatTime[senderRoleId] = now;
 
@@ -51,19 +51,19 @@ public static class ChatSystem
                     Content = content,
                     SendTime = now,
                 };
-                return (ChatErrorCode.Ok, worldNtf, 0);
+                return ("", worldNtf, 0);
 
             case ChatChannel.Private:
                 if (string.IsNullOrEmpty(targetName))
-                    return (ChatErrorCode.InvalidTarget, null, 0);
+                    return ("无效的私聊目标", null, 0);
 
                 if (targetName == senderName)
-                    return (ChatErrorCode.InvalidTarget, null, 0);
+                    return ("无效的私聊目标", null, 0);
 
                 // 查找目标角色
                 var targetPlayer = Context.Players.GetByRoleName(targetName);
                 if (targetPlayer == null)
-                    return (ChatErrorCode.TargetNotFound, null, 0);
+                    return ("目标玩家不在线", null, 0);
 
                 var privateNtf = new ChatNtf
                 {
@@ -73,10 +73,10 @@ public static class ChatSystem
                     Content = content,
                     SendTime = now,
                 };
-                return (ChatErrorCode.Ok, privateNtf, targetPlayer.Id);
+                return ("", privateNtf, targetPlayer.Id);
 
             default:
-                return (ChatErrorCode.InvalidChannel, null, 0);
+                return ("无效的聊天频道", null, 0);
         }
     }
 
@@ -99,15 +99,4 @@ public static class ChatSystem
     {
         self.LastWorldChatTime.Remove(roleId);
     }
-}
-
-public static class ChatErrorCode
-{
-    public const int Ok = 0;
-    public const int EmptyContent = 3001;
-    public const int Cooldown = 3002;
-    public const int InvalidChannel = 3003;
-    public const int InvalidTarget = 3004;
-    public const int TargetNotFound = 3005;
-    public const int NotLoggedIn = 3006;
 }

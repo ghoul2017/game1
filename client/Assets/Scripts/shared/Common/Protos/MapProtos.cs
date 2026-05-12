@@ -4,20 +4,6 @@ using System.Collections.Generic;
 
 namespace Shared.Common.Protos
 {
-    #region 地图错误码
-
-    public static class MapErrorCode
-    {
-        public const int Ok = 0;
-        public const int NotLoggedIn = 1;
-        public const int MapNotFound = 2;
-        public const int AlreadyInMap = 3;
-        public const int NotInMap = 4;
-        public const int InvalidPosition = 5;
-    }
-
-    #endregion
-
     #region 进入地图
 
     [ProtoContract]
@@ -32,11 +18,11 @@ namespace Shared.Common.Protos
     public class EnterMapAck : IMessage
     {
         public ushort MsgId => MsgIdConst.EnterMapAck;
-        [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int MapCfgId { get; set; }
         [ProtoMember(3)] public int Line { get; set; }
         [ProtoMember(4)] public int X { get; set; }
         [ProtoMember(5)] public int Y { get; set; }
+        [ProtoMember(6)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -53,7 +39,7 @@ namespace Shared.Common.Protos
     public class LeaveMapAck : IMessage
     {
         public ushort MsgId => MsgIdConst.LeaveMapAck;
-        [ProtoMember(1)] public int Code { get; set; }
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -74,11 +60,11 @@ namespace Shared.Common.Protos
     public class ChangeMapAck : IMessage
     {
         public ushort MsgId => MsgIdConst.ChangeMapAck;
-        [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int MapCfgId { get; set; }
         [ProtoMember(3)] public int Line { get; set; }
         [ProtoMember(4)] public int X { get; set; }
         [ProtoMember(5)] public int Y { get; set; }
+        [ProtoMember(6)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -97,9 +83,9 @@ namespace Shared.Common.Protos
     public class MapMoveAck : IMessage
     {
         public ushort MsgId => MsgIdConst.MapMoveAck;
-        [ProtoMember(1)] public int Code { get; set; }
         [ProtoMember(2)] public int X { get; set; }
         [ProtoMember(3)] public int Y { get; set; }
+        [ProtoMember(4)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion

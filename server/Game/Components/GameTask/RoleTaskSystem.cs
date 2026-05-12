@@ -51,17 +51,17 @@ public static class RoleTaskSystem
     public static TaskAcceptResult AcceptTask(this RoleTaskComponent self, int taskId)
     {
         if (self.GetByTaskId(taskId) != null)
-            return TaskAcceptResult.Fail(TaskErrorCode.TaskAlreadyAccepted);
+            return TaskAcceptResult.Fail("任务已接取");
 
         var activeCount = self.Tasks.Count(t => t.IsInProgress);
         if (activeCount >= MaxActiveTaskCount)
-            return TaskAcceptResult.Fail(TaskErrorCode.TaskFull);
+            return TaskAcceptResult.Fail("任务列表已满");
 
         var taskCfg = ConfigManager.Get<TaskConfig>(taskId);
         if (taskCfg == null)
         {
             Log.Warn($"任务配置不存在 TaskId:{taskId}");
-            return TaskAcceptResult.Fail(TaskErrorCode.TaskNotFound);
+            return TaskAcceptResult.Fail("任务不存在");
         }
 
         var goals = new List<TaskGoal>();
@@ -115,23 +115,23 @@ public static class RoleTaskSystem
     {
         var task = self.GetByTaskId(taskId);
         if (task == null)
-            return TaskSubmitResult.Fail(TaskErrorCode.TaskNotFound);
+            return TaskSubmitResult.Fail("任务不存在");
 
         if (!task.IsCompleted)
-            return TaskSubmitResult.Fail(TaskErrorCode.TaskNotCompleted);
+            return TaskSubmitResult.Fail("任务未完成");
 
         if (task.IsClaimed)
-            return TaskSubmitResult.Fail(TaskErrorCode.TaskAlreadyClaimed);
+            return TaskSubmitResult.Fail("任务已提交");
 
         var taskCfg = ConfigManager.Get<TaskConfig>(taskId);
         if (taskCfg == null)
         {
             Log.Warn($"任务配置不存在 TaskId:{taskId}");
-            return TaskSubmitResult.Fail(TaskErrorCode.TaskNotFound);
+            return TaskSubmitResult.Fail("任务不存在");
         }
 
         var player = Context.Players.GetByRoleId(roleId);
-        if (player == null) return TaskSubmitResult.Fail(TaskErrorCode.TaskNotFound);
+        if (player == null) return TaskSubmitResult.Fail("任务不存在");
 
         // 发放物品奖励
         if (!string.IsNullOrEmpty(taskCfg.RewardItems))
@@ -151,7 +151,7 @@ public static class RoleTaskSystem
                     }
                     else
                     {
-                        Log.Warn($"任务奖励发放失败 RoleId:{roleId} ItemId:{itemId} Code:{addResult.ErrorCode}");
+                        Log.Warn($"任务奖励发放失败 RoleId:{roleId} ItemId:{itemId} {addResult.ErrorMessage}");
                     }
                 }
             }
@@ -170,10 +170,10 @@ public static class RoleTaskSystem
     {
         var task = self.GetByTaskId(taskId);
         if (task == null)
-            return TaskGiveUpResult.Fail(TaskErrorCode.TaskNotFound);
+            return TaskGiveUpResult.Fail("任务不存在");
 
         if (task.IsCompleted)
-            return TaskGiveUpResult.Fail(TaskErrorCode.TaskCompleted);
+            return TaskGiveUpResult.Fail("任务已完成");
 
         self.Tasks.Remove(task);
         self.GetTaskMap().Remove(taskId);
@@ -262,34 +262,22 @@ public static class RoleTaskSystem
 
 #region 结果类型
 
-public record TaskAcceptResult(bool Success, int ErrorCode)
+public record TaskAcceptResult(bool Success, string ErrorMessage = "")
 {
-    public static TaskAcceptResult Ok() => new(true, 0);
-    public static TaskAcceptResult Fail(int error) => new(false, error);
+    public static TaskAcceptResult Ok() => new(true);
+    public static TaskAcceptResult Fail(string message) => new(false, message);
 }
 
-public record TaskSubmitResult(bool Success, int ErrorCode)
+public record TaskSubmitResult(bool Success, string ErrorMessage = "")
 {
-    public static TaskSubmitResult Ok() => new(true, 0);
-    public static TaskSubmitResult Fail(int error) => new(false, error);
+    public static TaskSubmitResult Ok() => new(true);
+    public static TaskSubmitResult Fail(string message) => new(false, message);
 }
 
-public record TaskGiveUpResult(bool Success, int ErrorCode)
+public record TaskGiveUpResult(bool Success, string ErrorMessage = "")
 {
-    public static TaskGiveUpResult Ok() => new(true, 0);
-    public static TaskGiveUpResult Fail(int error) => new(false, error);
-}
-
-public static class TaskErrorCode
-{
-    public const int Ok = 0;
-    public const int InvalidParam = 3001;
-    public const int TaskNotFound = 3002;
-    public const int TaskAlreadyAccepted = 3003;
-    public const int TaskFull = 3004;
-    public const int TaskNotCompleted = 3005;
-    public const int TaskAlreadyClaimed = 3006;
-    public const int TaskCompleted = 3007;
+    public static TaskGiveUpResult Ok() => new(true);
+    public static TaskGiveUpResult Fail(string message) => new(false, message);
 }
 
 #endregion

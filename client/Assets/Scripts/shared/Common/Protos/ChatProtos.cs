@@ -29,7 +29,7 @@ namespace Shared.Common.Protos
     public class ChatAck : IMessage
     {
         public ushort MsgId => MsgIdConst.ChatAck;
-        [ProtoMember(1)] public int Code { get; set; }
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion

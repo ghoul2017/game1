@@ -174,9 +174,9 @@ namespace Client.Game
 
         private void HandleQueryBagAck(QueryBagAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show("获取背包数据失败");
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             _items = ack.Items ?? new List<BagItemInfo>();
@@ -186,9 +186,9 @@ namespace Client.Game
 
         private void HandleBagTidyAck(BagTidyAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show("整理失败");
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             _items = ack.Items ?? new List<BagItemInfo>();
@@ -198,9 +198,9 @@ namespace Client.Game
 
         private void HandleBagUseItemAck(BagUseItemAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show(GetErrorText(ack.Code));
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             var cfg = ClientConfigManager.Instance.Get<ItemConfig>(ack.ConfigId);
@@ -305,17 +305,5 @@ namespace Client.Game
             }
         }
 
-        private static string GetErrorText(int code)
-        {
-            switch (code)
-            {
-                case 1001: return "参数错误";
-                case 1002: return "背包已满";
-                case 1003: return "物品不存在";
-                case 1004: return "物品数量不足";
-                case 1005: return "物品使用失败";
-                default: return "操作失败(" + code + ")";
-            }
-        }
     }
 }

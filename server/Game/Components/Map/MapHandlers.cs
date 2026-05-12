@@ -22,7 +22,6 @@ public static class MapHandlers
         if (currentPos != null)
         {
             var (mapId, line, px, py) = currentPos.Value;
-            res.Code = MapErrorCode.Ok;
             res.MapCfgId = mapId;
             res.Line = line;
             res.X = px;
@@ -40,7 +39,7 @@ public static class MapHandlers
         var map = Context.Map.GetMap(req.MapCfgId, req.Line);
         if (map == null)
         {
-            res.Code = MapErrorCode.MapNotFound;
+            res.ErrorMessage = "目标地图不存在";
             return Task.FromResult<IMessage>(res);
         }
 
@@ -49,11 +48,10 @@ public static class MapHandlers
 
         if (!Context.Map.EnterMap(player.Id, player.RoleData.Name, req.MapCfgId, req.Line, x, y, player))
         {
-            res.Code = MapErrorCode.MapNotFound;
+            res.ErrorMessage = "目标地图不存在";
             return Task.FromResult<IMessage>(res);
         }
 
-        res.Code = MapErrorCode.Ok;
         res.MapCfgId = req.MapCfgId;
         res.Line = req.Line;
         res.X = x;
@@ -78,11 +76,10 @@ public static class MapHandlers
     {
         if (!Context.Map.QuitMap(player.Id))
         {
-            res.Code = MapErrorCode.NotInMap;
+            res.ErrorMessage = "不在地图中";
             return Task.FromResult<IMessage>(res);
         }
 
-        res.Code = MapErrorCode.Ok;
         return Task.FromResult<IMessage>(res);
     }
 
@@ -92,7 +89,7 @@ public static class MapHandlers
         var targetMap = Context.Map.GetMap(req.TargetMapCfgId, req.TargetLine);
         if (targetMap == null)
         {
-            res.Code = MapErrorCode.MapNotFound;
+            res.ErrorMessage = "目标地图不存在";
             return Task.FromResult<IMessage>(res);
         }
 
@@ -101,11 +98,10 @@ public static class MapHandlers
 
         if (!Context.Map.ChangeMap(player.Id, player.RoleData.Name, req.TargetMapCfgId, req.TargetLine, x, y, player))
         {
-            res.Code = MapErrorCode.MapNotFound;
+            res.ErrorMessage = "目标地图不存在";
             return Task.FromResult<IMessage>(res);
         }
 
-        res.Code = MapErrorCode.Ok;
         res.MapCfgId = req.TargetMapCfgId;
         res.Line = req.TargetLine;
         res.X = x;
@@ -142,11 +138,10 @@ public static class MapHandlers
     {
         if (!Context.Map.Move(player.Id, req.X, req.Y))
         {
-            res.Code = MapErrorCode.NotInMap;
+            res.ErrorMessage = "不在地图中";
             return Task.FromResult<IMessage>(res);
         }
 
-        res.Code = MapErrorCode.Ok;
         res.X = req.X;
         res.Y = req.Y;
 

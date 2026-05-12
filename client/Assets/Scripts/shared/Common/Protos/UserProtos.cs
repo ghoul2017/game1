@@ -18,8 +18,7 @@ namespace Shared.Common.Protos
     public class LoginRes : IMessage
     {
         public ushort MsgId => MsgIdConst.LoginRes;
-        [ProtoMember(1)] public int Code { get; set; }
-        [ProtoMember(2)] public string Message { get; set; } = "";
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(3)] public long PlayerId { get; set; }
         [ProtoMember(4)] public string Token { get; set; } = "";
         [ProtoMember(5)] public List<RoleInfo> Roles { get; set; } = new List<RoleInfo>();
@@ -50,8 +49,7 @@ namespace Shared.Common.Protos
     public class CreateRoleRes : IMessage
     {
         public ushort MsgId => MsgIdConst.CreateRoleRes;
-        [ProtoMember(1)] public int Code { get; set; }
-        [ProtoMember(2)] public string Message { get; set; } = "";
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(3)] public RoleInfo Role { get; set; } = new RoleInfo();
     }
 
@@ -68,8 +66,7 @@ namespace Shared.Common.Protos
     public class EnterGameRes : IMessage
     {
         public ushort MsgId => MsgIdConst.EnterGameRes;
-        [ProtoMember(1)] public int Code { get; set; }
-        [ProtoMember(2)] public string Message { get; set; } = "";
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(3)] public string Token { get; set; } = "";
     }
 
@@ -87,8 +84,7 @@ namespace Shared.Common.Protos
     public class ReconnectRes : IMessage
     {
         public ushort MsgId => MsgIdConst.ReconnectRes;
-        [ProtoMember(1)] public int Code { get; set; }
-        [ProtoMember(2)] public string Message { get; set; } = "";
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(3)] public string Token { get; set; } = "";
     }
 

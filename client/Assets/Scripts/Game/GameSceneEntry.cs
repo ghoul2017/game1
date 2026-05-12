@@ -244,7 +244,7 @@ namespace Client.Game
 
         private void OnMapMoveAck(MapMoveAck ack)
         {
-            if (ack.Code != MapErrorCode.Ok)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
                 // 服务端校验失败，回退到服务端位置
                 if (PlayerController != null)
@@ -257,11 +257,10 @@ namespace Client.Game
 
         private void OnChangeMapAck(ChangeMapAck ack)
         {
-            if (ack.Code != MapErrorCode.Ok)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                string errMsg = GetMapErrorText(ack.Code);
-                UIToast.Show("传送失败: " + errMsg);
-                Debug.Log("[GameSceneEntry] 切图失败 Code=" + ack.Code);
+                UIToast.Show("传送失败: " + ack.ErrorMessage);
+                Debug.Log("[GameSceneEntry] 切图失败: " + ack.ErrorMessage);
                 return;
             }
 
@@ -307,19 +306,6 @@ namespace Client.Game
 
             Debug.Log(string.Format("[GameSceneEntry] 场景重建完成 Map={0} ({1}x{2})",
                 mapConfig.Name, mapConfig.Width, mapConfig.Height));
-        }
-
-        private static string GetMapErrorText(int code)
-        {
-            switch (code)
-            {
-                case 1: return "未登录";
-                case 2: return "目标地图不存在";
-                case 3: return "已在当前地图";
-                case 4: return "不在地图中";
-                case 5: return "无效坐标";
-                default: return "未知错误(" + code + ")";
-            }
         }
 
         // ==================== Reconnect Events ====================

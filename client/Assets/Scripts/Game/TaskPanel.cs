@@ -224,9 +224,9 @@ namespace Client.Game
 
         private void HandleQueryTaskListAck(QueryTaskListAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show("获取任务列表失败");
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             _tasks = ack.Tasks ?? new List<TaskInfo>();
@@ -237,9 +237,9 @@ namespace Client.Game
 
         private void HandleTaskAcceptAck(TaskAcceptAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show(GetTaskErrorText(ack.Code));
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             if (ack.Task != null)
@@ -252,9 +252,9 @@ namespace Client.Game
 
         private void HandleTaskSubmitAck(TaskSubmitAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show(GetTaskErrorText(ack.Code));
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             // Remove submitted task
@@ -279,9 +279,9 @@ namespace Client.Game
 
         private void HandleTaskGiveUpAck(TaskGiveUpAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show(GetTaskErrorText(ack.Code));
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             _tasks.RemoveAll(t => t.TaskId == ack.TaskId);
@@ -563,19 +563,5 @@ namespace Client.Game
             return dt.ToString("yyyy-MM-dd HH:mm");
         }
 
-        private static string GetTaskErrorText(int code)
-        {
-            switch (code)
-            {
-                case 3001: return "无效的参数";
-                case 3002: return "任务不存在";
-                case 3003: return "任务已接取";
-                case 3004: return "任务列表已满";
-                case 3005: return "任务未完成";
-                case 3006: return "任务已提交";
-                case 3007: return "任务已完成";
-                default: return "操作失败(" + code + ")";
-            }
-        }
     }
 }

@@ -360,11 +360,11 @@ namespace Client.Network
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleHandshakeRes(TcpSession session, HandshakeRes res)
         {
-            if (res.Code != 0)
+            if (!string.IsNullOrEmpty(res.ErrorMessage))
             {
-                Debug.LogWarning("[NetClient] Handshake failed: " + res.Message);
+                Debug.LogWarning("[NetClient] Handshake failed: " + res.ErrorMessage);
                 Instance._hadSession = false;
-                Instance.DisposeSession(LogoutReason.NetDisconnected, "Handshake rejected: " + res.Message);
+                Instance.DisposeSession(LogoutReason.NetDisconnected, "Handshake rejected: " + res.ErrorMessage);
                 return;
             }
 
@@ -391,7 +391,7 @@ namespace Client.Network
         {
             Instance._hadSession = false;
 
-            if (res.Code == 0)
+            if (string.IsNullOrEmpty(res.ErrorMessage))
             {
                 Debug.Log("[NetClient] Reconnect OK, sending EnterGameReq...");
                 GameData.Token = res.Token;
@@ -406,13 +406,13 @@ namespace Client.Network
             }
             else
             {
-                Debug.LogWarning("[NetClient] Reconnect failed: " + res.Message);
+                Debug.LogWarning("[NetClient] Reconnect failed: " + res.ErrorMessage);
                 GameData.Token = "";
                 GameData.CurrentRole = null;
                 GameData.CurrentMap = null;
 
                 Instance._state = ConnState.Connected;
-                Instance.OnReconnectFailed?.Invoke(res.Message);
+                Instance.OnReconnectFailed?.Invoke(res.ErrorMessage);
             }
         }
 

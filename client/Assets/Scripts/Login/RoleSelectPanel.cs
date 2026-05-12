@@ -159,7 +159,7 @@ namespace Client.Login
 
         private void HandleCreateRoleRes(CreateRoleRes res)
         {
-            if (res.Code == 0)
+            if (string.IsNullOrEmpty(res.ErrorMessage))
             {
                 var info = res.Role;
                 roles.Add(new RoleData
@@ -178,14 +178,14 @@ namespace Client.Login
             }
             else
             {
-                selectTip.text = res.Message;
+                selectTip.text = res.ErrorMessage;
                 selectTip.color = Color.red;
             }
         }
 
         private void HandleEnterGameRes(EnterGameRes res)
         {
-            if (res.Code == 0)
+            if (string.IsNullOrEmpty(res.ErrorMessage))
             {
                 GameData.Token = res.Token;
                 selectTip.text = "正在进入游戏...";
@@ -193,7 +193,7 @@ namespace Client.Login
             }
             else
             {
-                selectTip.text = res.Message;
+                selectTip.text = res.ErrorMessage;
                 selectTip.color = Color.red;
                 enterBtn.interactable = true;
             }
@@ -218,7 +218,7 @@ namespace Client.Login
 
         private void HandleEnterMapAck(EnterMapAck res)
         {
-            if (res.Code == MapErrorCode.Ok)
+            if (string.IsNullOrEmpty(res.ErrorMessage))
             {
                 Debug.Log(string.Format("[RoleSelectPanel] 进图成功: MapCfgId={0} Line={1} Spawn=({2},{3})",
                     res.MapCfgId, res.Line, res.X, res.Y));
@@ -237,8 +237,8 @@ namespace Client.Login
             }
             else
             {
-                Debug.LogError(string.Format("[RoleSelectPanel] 进图失败: Code={0}", res.Code));
-                selectTip.text = string.Format("进入地图失败 (错误码:{0})", res.Code);
+                Debug.LogError("[RoleSelectPanel] 进图失败: " + res.ErrorMessage);
+                selectTip.text = "进入地图失败: " + res.ErrorMessage;
                 selectTip.color = Color.red;
                 enterBtn.interactable = true;
             }

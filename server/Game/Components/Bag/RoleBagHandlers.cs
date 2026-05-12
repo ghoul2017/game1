@@ -17,7 +17,6 @@ public static class RoleBagHandlers
     public static async Task<IMessage> QueryBagHandler(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
         await Task.CompletedTask;
-        res.Code = ErrorCode.Ok;
         res.Capacity = player.RoleBag.Capacity;
         res.Items = player.RoleBag.Items.Select(ToInfo).ToList();
 
@@ -30,7 +29,6 @@ public static class RoleBagHandlers
         player.RoleBag.Tidy();
         await player.RoleBag.SaveBagAsync();
 
-        res.Code = ErrorCode.Ok;
         res.Items = player.RoleBag.Items.Select(ToInfo).ToList();
 
         return res;
@@ -41,8 +39,6 @@ public static class RoleBagHandlers
     {
         player.RoleBag.Swap(req.Index1, req.Index2);
         await player.RoleBag.SaveBagAsync();
-
-        res.Code = ErrorCode.Ok;
         return res;
     }
 
@@ -52,20 +48,20 @@ public static class RoleBagHandlers
         var bagItem = player.RoleBag.GetByIndex(req.Index);
         if (bagItem == null)
         {
-            res.Code = ErrorCode.ItemNotFound;
+            res.ErrorMessage = "物品不存在";
             return res;
         }
 
         if (bagItem.Count < req.Count)
         {
-            res.Code = ErrorCode.ItemNotEnough;
+            res.ErrorMessage = "物品数量不足";
             return res;
         }
 
         var configId = bagItem.ConfigId;
         if (configId < 2001 || configId > 2999)
         {
-            res.Code = ErrorCode.ItemUseFail;
+            res.ErrorMessage = "物品使用失败";
             Log.Warn($"非消耗品不能直接使用 RoleId:{player.Id} ConfigId:{configId}");
             return res;
         }
@@ -73,15 +69,13 @@ public static class RoleBagHandlers
         var useResult = player.RoleBag.UseItem(req.Index, req.Count);
         if (!useResult.Success)
         {
-            res.Code = useResult.ErrorCode;
+            res.ErrorMessage = useResult.ErrorMessage;
             return res;
         }
 
         await player.RoleBag.SaveBagAsync();
 
         var effectResult = await ItemEffectSystem.ApplyItemEffectAsync(player.Id, configId);
-
-        res.Code = ErrorCode.Ok;
         res.ConfigId = configId;
 
         Log.Info($"使用物品 RoleId:{player.Id} ConfigId:{configId} Count:{req.Count} EffectType:{effectResult.EffectType}");

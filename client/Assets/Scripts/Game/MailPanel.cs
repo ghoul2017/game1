@@ -232,9 +232,9 @@ namespace Client.Game
 
         private void HandleQueryMailListAck(QueryMailListAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show("获取邮件列表失败");
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             _mails = ack.Mails ?? new List<MailInfo>();
@@ -245,9 +245,9 @@ namespace Client.Game
 
         private void HandleMailReadAck(MailReadAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show("标记已读失败");
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             if (ack.ReadMailIds != null)
@@ -265,9 +265,9 @@ namespace Client.Game
 
         private void HandleMailGetItemAck(MailGetItemAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show("领取附件失败");
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             if (ack.ClaimedMailIds != null)
@@ -285,9 +285,9 @@ namespace Client.Game
 
         private void HandleMailDeleteAck(MailDeleteAck ack)
         {
-            if (ack.Code != 0)
+            if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                UIToast.Show("删除邮件失败");
+                UIToast.Show(ack.ErrorMessage);
                 return;
             }
             if (ack.DeletedMailIds != null)

@@ -52,8 +52,7 @@ public static class UserHandler
         // 已登录的会话不允许重复登录
         if (session.UserId != 0)
         {
-            res.Code = 1001;
-            res.Message = "已登录";
+            res.ErrorMessage = "已登录";
             return res;
         }
 
@@ -87,8 +86,7 @@ public static class UserHandler
         }
         else if (account.Password != req.Password)
         {
-            res.Code = 1002;
-            res.Message = "密码错误";
+            res.ErrorMessage = "密码错误";
             return res;
         }
 
@@ -111,8 +109,6 @@ public static class UserHandler
         // 查询角色列表
         var roles = await MongoDb.Instance.QueryAsync<UserRole>(r => r.UserId == account.Id);
 
-        res.Code = 0;
-        res.Message = "OK";
         res.PlayerId = account.Id;
         res.Token = token;
         res.Roles = roles.Select(r => new RoleInfo
@@ -135,8 +131,7 @@ public static class UserHandler
     {
         if (session.UserId == 0)
         {
-            res.Code = 1001;
-            res.Message = "未登录";
+            res.ErrorMessage = "未登录";
             return res;
         }
 
@@ -145,8 +140,7 @@ public static class UserHandler
         // 名称校验
         if (string.IsNullOrEmpty(name) || name.Length > 12)
         {
-            res.Code = 1002;
-            res.Message = "角色名长度不合法（1-12字符）";
+            res.ErrorMessage = "角色名长度不合法（1-12字符）";
             return res;
         }
 
@@ -154,16 +148,14 @@ public static class UserHandler
         var existing = await MongoDb.Instance.QueryAsync<UserRole>(r => r.UserId == session.UserId);
         if (existing.Count >= UserComponent.MaxRolesPerUser)
         {
-            res.Code = 1003;
-            res.Message = $"最多创建{UserComponent.MaxRolesPerUser}个角色";
+            res.ErrorMessage = $"最多创建{UserComponent.MaxRolesPerUser}个角色";
             return res;
         }
 
         // 名称唯一性
         if (await MongoDb.Instance.AnyAsync<UserRole>(r => r.Name == name))
         {
-            res.Code = 1004;
-            res.Message = "角色名已存在";
+            res.ErrorMessage = "角色名已存在";
             return res;
         }
 
@@ -180,8 +172,6 @@ public static class UserHandler
             Job = req.Job
         });
 
-        res.Code = 0;
-        res.Message = "OK";
         res.Role = new RoleInfo { RoleId = roleId, Name = name, Level = 1, Job = req.Job };
 
         Log.Info($"创建角色 UserId:{session.UserId} RoleId:{roleId} Name:{name}");
@@ -196,8 +186,7 @@ public static class UserHandler
     {
         if (session.UserId == 0)
         {
-            res.Code = 1001;
-            res.Message = "未登录";
+            res.ErrorMessage = "未登录";
             return res;
         }
 
@@ -206,8 +195,7 @@ public static class UserHandler
             r => r.RoleId == req.RoleId && r.UserId == session.UserId);
         if (userRole == null)
         {
-            res.Code = 1002;
-            res.Message = "角色不存在或不属于该账号";
+            res.ErrorMessage = "角色不存在或不属于该账号";
             return res;
         }
 
@@ -215,15 +203,12 @@ public static class UserHandler
         var result = await Context.Players.EnterGame(req.RoleId, session.UserId, session, userRole.Name, userRole.Level, userRole.Job);
         if (result == null)
         {
-            res.Code = 1003;
-            res.Message = "进入游戏失败";
+            res.ErrorMessage = "进入游戏失败";
             return res;
         }
 
         var (player, token) = result.Value;
 
-        res.Code = 0;
-        res.Message = "OK";
         res.Token = token;
 
         return res;
@@ -240,8 +225,7 @@ public static class UserHandler
         var parsed = TokenSigner.Instance.Validate(req.Token);
         if (parsed == null)
         {
-            res.Code = 1001;
-            res.Message = "Token无效或已过期";
+            res.ErrorMessage = "Token无效或已过期";
             return res;
         }
 
@@ -254,8 +238,7 @@ public static class UserHandler
             roleData = await Context.Players.LoadRoleDataAsync(roleId);
             if (roleData == null || roleData.LastToken != req.Token)
             {
-                res.Code = 1002;
-                res.Message = "Token已失效";
+                res.ErrorMessage = "Token已失效";
                 return res;
             }
         }
@@ -273,8 +256,6 @@ public static class UserHandler
             roleData.LastToken = newToken;
         }
 
-        res.Code = 0;
-        res.Message = "OK";
         res.Token = newToken;
 
         Log.Info($"重连成功 UserId:{userId}");

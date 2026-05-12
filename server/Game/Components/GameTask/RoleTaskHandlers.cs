@@ -19,7 +19,6 @@ public static class RoleTaskHandlers
         var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
         var tasks = player.RoleTask.GetTaskList();
 
-        res.Code = TaskErrorCode.Ok;
         res.Tasks = tasks.Select(player.RoleTask.ToTaskInfo).ToList();
 
         return res;
@@ -38,8 +37,10 @@ public static class RoleTaskHandlers
             res.Task = player.RoleTask.ToTaskInfo(task!);
             Log.Info($"接取任务 RoleId:{player.Id} TaskId:{req.TaskId}");
         }
-
-        res.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
+        else
+        {
+            res.ErrorMessage = result.ErrorMessage;
+        }
 
         return res;
     }
@@ -55,8 +56,11 @@ public static class RoleTaskHandlers
             await player.RoleTask.SaveTasksAsync();
             Log.Info($"提交任务领奖 RoleId:{player.Id} TaskId:{req.TaskId}");
         }
+        else
+        {
+            res.ErrorMessage = result.ErrorMessage;
+        }
 
-        res.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
         res.TaskId = req.TaskId;
 
         return res;
@@ -73,8 +77,11 @@ public static class RoleTaskHandlers
             await player.RoleTask.SaveTasksAsync();
             Log.Info($"放弃任务 RoleId:{player.Id} TaskId:{req.TaskId}");
         }
+        else
+        {
+            res.ErrorMessage = result.ErrorMessage;
+        }
 
-        res.Code = result.Success ? TaskErrorCode.Ok : result.ErrorCode;
         res.TaskId = req.TaskId;
 
         return res;

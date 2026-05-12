@@ -33,8 +33,6 @@ public static class MiscHandlers
         await Task.CompletedTask;
         Log.Info($"Session:{session.SessionId} Token:{req.Token}");
 
-        res.Code = 0;
-        res.Message = "OK";
         return res;
     }
 

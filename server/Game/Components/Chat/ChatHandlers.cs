@@ -15,12 +15,12 @@ public static class ChatHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static Task<IMessage> ChatHandler(PlayerEntity player, ChatReq req, ChatAck res)
     {
-        var (code, ntf, targetRoleId) = Context.Chat.HandleChat(
+        var (errorMessage, ntf, targetRoleId) = Context.Chat.HandleChat(
             player.Id, player.RoleData.Name, req.Channel, req.Content, req.TargetName);
 
-        res.Code = code;
+        res.ErrorMessage = errorMessage;
 
-        if (code == ChatErrorCode.Ok && ntf != null)
+        if (string.IsNullOrEmpty(errorMessage) && ntf != null)
         {
             switch (req.Channel)
             {
