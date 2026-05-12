@@ -28,6 +28,18 @@ FightComponent 索引层已删除。注册战斗单元用 `entity.RegisterUnit(a
 
 业务代码不再分别调用 AddObject+AddWatcher，统一用 `Aoi.AddAoiEntity(obj, viewRange)`。viewRange>0 时同时作为观察者。底层 API 仍可用但业务代码优先用一站式。
 
+## CfgId 上提到 IMapObject
+
+`CfgId` 已从 MonsterEntity 的普通属性上提到 `IMapObject` 接口和 `MapObjectEntity` 抽象类。MonsterEntity 返回 `Info.CfgId`，MapPlayerEntity 返回 0。MapAoiNotifier 和 MapHandlers 通过 `mapObj.CfgId` 统一访问，不再需要 `is MonsterEntity` 类型判断。
+
+## 掉落/经验/金币逻辑归 PlayerSystem
+
+MonsterSystem 的 `GrantExpToPlayer`/`GrantGoldToPlayer`/`GrantItemToPlayer` 已移到 PlayerSystem 作为 `GrantExpAsync`/`GrantGoldAsync`/`GrantItemAsync`。MonsterSystem 不再反向依赖 Player 模块的内部实现，通过 `Context.Players.GrantXxxAsync()` 调用。
+
+## MonsterComponent 共享 Random 实例
+
+MonsterComponent 持有 `Random` 字段，MonsterSystem 各处用 `self.Random.Next()` 而非 `new Random()`。避免频繁创建 Random 实例导致种子相近产生相同序列。
+
 ## MapPlayerEntity 是运行时投影，不是 PlayerEntity
 
 PlayerEntity 管理持久化数据（背包、邮件、属性），不进入地图。MapPlayerEntity 是玩家在地图上的运行时投影（Id=RoleId），通过 PlayerRefComponent 桥接回 PlayerEntity。不要在 MapPlayerEntity 上放持久化数据。

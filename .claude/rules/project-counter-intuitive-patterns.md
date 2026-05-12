@@ -34,11 +34,9 @@ FightComponent 索引层已删除，不再有 `Context.Fight`。所有战斗单�
 
 **原因**：怪物是纯运行时对象，不需要持久化 ID，服务器重启后重新从 100000 开始。不要对怪物 ID 做跨重启持久化假设。
 
-## 单线程模型下的 Interlocked.Increment
+## ~~单线程模型下的 Interlocked.Increment~~ [已解决]
 
-`RoleBagComponent._nextItemUid` 使用 `Interlocked.Increment(ref self._nextItemUid)`，但项目是单线程模型（GameSynchronizationContext），不存在并发访问。
-
-**原因**：可能是早期代码或防御性编程。不影响正确性，但不要因此推断背包操作有并发需求。
+MonsterSystem 的 `Interlocked.Increment(ref self.NextMonsterId)` 已改为 `self.NextMonsterId++`。RoleBagComponent 的 `_nextItemUid` 仍用 `Interlocked.Increment`，但项目是单线程模型，不影响正确性。
 
 ## Handler 上线加载直接拷贝字段，不走 System 的 LoadAsync
 

@@ -41,6 +41,7 @@ client/Assets/Scripts/
       ECS/              # Entity, Component, ComponentOfAttribute
       Network/          # IMessage, PacketCodec, MessageRouter, TcpSession, IMessageHandler
       Config/           # ConfigManager, ConfigTableAttribute, CsvLoader
+      Aoi/              # IAoiObject, IAoiEventListener, Tower, TowerAoi（灯塔AOI）
       Log/              # ILog, LogManager, Console/File Appender
       IdGenerator.cs    # 雪花算法 ID 生成
     Common/
@@ -109,7 +110,7 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
 
 - System 是纯静态扩展方法类（`public static class XxxSystem`），只有方法和常量，不持有字段
 - 通过 `this XxxComponent self` 访问 Component 数据
-- Module 级：`Context.Fight.RegisterUnit(...)` — Context 提供便利属性
+- Module 级：`Context.Players.GrantExpAsync(...)` — Context 提供便利属性
 - PlayerEntity 级：`player.Bag.AddItem(...)` — PlayerEntity 提供便利属性
 - 日志用 `LogManager.GetLogger(nameof(XxxSystem))`（静态类不能做泛型参数）
 
