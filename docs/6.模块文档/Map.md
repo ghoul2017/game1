@@ -19,7 +19,7 @@ Map 模块实现地图系统，包含地图实例管理、玩家进/出/切换�
 | `server/Game/Components/Map/PlayerRefComponent.cs` | 14 | 玩家引用桥接 Component |
 | `server/Game/Components/Map/MapAoiNotifier.cs` | 130 | AOI 事件 → 网络通知（按 ObjectType 分发） |
 | `server/Game/Components/Map/MapHandlers.cs` | 200 | 消息处理 + 事件订阅 |
-| `client/Assets/Scripts/shared/Core/Aoi/` | — | AOI 系统实现（TowerAoi/Tower/IAoiObject/IAoiEventListener） |
+| `server/Game/Core/Aoi/` | — | AOI 系统实现（TowerAoi/Tower/IAoiObject/IAoiEventListener，服务端专属） |
 | `client/Assets/Scripts/shared/Common/Protos/MapProtos.cs` | 207 | 消息定义 + 错误码 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10701-10800 段 |
 
@@ -309,7 +309,7 @@ public class GameMap
 
 ```
 Map 模块
-  ├── 依赖 → Shared.Core.Aoi（TowerAoi 视野系统，已迁移至 shared/）
+  ├── 依赖 → Game.Core.Aoi（TowerAoi 视野系统，服务端专属）
   ├── 依赖 → Player（Context.Players.SendToPlayer）
   ├── 依赖 → EventBus（PlayerEnterMapEvent 发布、PlayerOfflineEvent 订阅）
   ├── 依赖 → Fight（MapPlayerEntity.RegisterUnit/UnregisterUnit、BroadcastToAoiWatchers 广播战斗通知）
