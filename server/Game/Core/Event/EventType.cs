@@ -86,12 +86,4 @@ public static class EventType
         public long KillerId;
     }
 
-    /// <summary>怪物生成</summary>
-    public struct MonsterSpawnedEvent : IEvent
-    {
-        public long MonsterId;
-        public int CfgId;
-        public int MapId;
-        public int Line;
-    }
 }

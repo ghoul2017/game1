@@ -24,6 +24,9 @@ public interface IMapObject : IAoiObject
     /// <summary>对象名称</summary>
     string Name { get; }
 
+    /// <summary>配置ID（怪物返回配置ID，玩家返回0）</summary>
+    int CfgId { get; }
+
     /// <summary>所在地图ID（0 表示不在任何地图）</summary>
     int MapId { get; set; }
 

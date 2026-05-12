@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Game.Entities;
 using Shared.Core;
@@ -12,8 +13,9 @@ namespace Game.Components.Monster;
 [ComponentOf(typeof(Module))]
 public class MonsterComponent : Component
 {
-    public readonly Dictionary<long, Dictionary<long, MonsterEntity>> MapMonsters = new();  // MapKey → 怪物列表
-    public readonly Dictionary<string, long> SpawnTimers = new();                          // timerKey → 下次刷新时间
+    public readonly Dictionary<long, Dictionary<long, MonsterEntity>> MapMonsters = new();
+    public readonly Dictionary<string, long> SpawnTimers = new();
     public long NextMonsterId = 100000;
     public GameTimerHandle UpdateTimer;
+    public readonly Random Random = new();
 }

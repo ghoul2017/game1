@@ -27,18 +27,17 @@ namespace Client.Game
         private Color _headColor = new Color(0.6f, 0.35f, 0.25f);
 
         public long ObjectId { get; private set; }
-        public int NpcId { get; private set; }
+        public int CfgId { get; private set; }
         public bool IsMonster { get; private set; } = true;
 
-        public void Init(long objectId, int npcId, string name, int x, int y)
+        public void Init(long objectId, int cfgId, int objectType, string name, int x, int y)
         {
             ObjectId = objectId;
-            NpcId = npcId;
+            CfgId = cfgId;
             transform.position = MapData.GridToWorld(x, y);
             _targetPos = transform.position;
 
-            // 根据NPC ID判断是否为怪物（怪物ID 101+，NPC ID 1-10）
-            IsMonster = npcId >= 100;
+            IsMonster = objectType == MapObjectType.Monster;
 
             if (IsMonster)
             {
@@ -347,7 +346,7 @@ namespace Client.Game
             _container = container;
         }
 
-        public void Spawn(long objectId, int npcId, string name, int x, int y)
+        public void Spawn(long objectId, int cfgId, int objectType, string name, int x, int y)
         {
             if (_entities.ContainsKey(objectId)) return;
 
@@ -356,11 +355,11 @@ namespace Client.Game
                 obj.transform.parent = _container;
 
             var view = obj.AddComponent<MonsterView>();
-            view.Init(objectId, npcId, name, x, y);
+            view.Init(objectId, cfgId, objectType, name, x, y);
             _entities[objectId] = view;
 
-            Debug.Log(string.Format("[MonsterEntityManager] 实体进入视野 Id:{0} NpcId:{1} Name:{2} Pos:({3},{4})",
-                objectId, npcId, name, x, y));
+            Debug.Log(string.Format("[MonsterEntityManager] 实体进入视野 Id:{0} CfgId:{1} Name:{2} Pos:({3},{4})",
+                objectId, cfgId, name, x, y));
         }
 
         public void Remove(long objectId)

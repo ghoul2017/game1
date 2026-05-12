@@ -1,4 +1,3 @@
-using Game.Components.Fight;
 using Game.Components.Map;
 using Shared.Core.Event;
 using Shared.Core.Log;
@@ -8,13 +7,6 @@ namespace Game.Components.Monster;
 public static class MonsterHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(MonsterHandlers));
-
-    [EventSubscriber]
-    public static void OnMonsterKilled(EventType.MonsterKilledEvent e)
-    {
-        var monsterComp = Context.Monster;
-        monsterComp.OnMonsterKilled(e.MonsterId, e.KillerId);
-    }
 
     [EventSubscriber]
     public static void OnPlayerEnterMap(EventType.PlayerEnterMapEvent e)

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Game.Components.Bag;
+using Shared.Common.Protos;
 using Shared.Core;
 using Shared.Core.Database;
 using Game.Database;
@@ -206,4 +208,96 @@ public static class PlayerSystem
         self.PlayersByName.Clear();
         Log.Info($"清空所有在线玩家，共 {count} 人");
     }
+
+    #region 奖励发放
+
+    /// <summary>发放经验给玩家</summary>
+    public static async Task GrantExpAsync(this PlayerComponent self, long roleId, int exp)
+    {
+        if (exp <= 0) return;
+
+        var player = self.GetByRoleId(roleId);
+        if (player == null) return;
+
+        var roleAttr = player.RoleAttribute;
+        roleAttr.Exp += exp;
+
+        int newLevel = CalculateLevel(roleAttr.Exp);
+        if (newLevel > roleAttr.Level)
+        {
+            roleAttr.Level = newLevel;
+            roleAttr.MaxHp += 10;
+            roleAttr.MaxMp += 5;
+            roleAttr.Hp = roleAttr.MaxHp;
+            roleAttr.Mp = roleAttr.MaxMp;
+
+            self.SendToPlayer(roleId, new LevelUpNtf { Level = newLevel });
+            EventBus.Instance.Publish(new EventType.PlayerLevelUpEvent { RoleId = roleId, NewLevel = newLevel });
+            Log.Info($"玩家升级 RoleId:{roleId} Level:{newLevel}");
+        }
+
+        await roleAttr.SaveAsync();
+
+        self.SendToPlayer(roleId, new ExpChangedNtf { Exp = roleAttr.Exp, Level = roleAttr.Level });
+        EventBus.Instance.Publish(new EventType.PlayerExpChangedEvent { RoleId = roleId, Exp = roleAttr.Exp, Level = roleAttr.Level });
+    }
+
+    /// <summary>发放金币给玩家</summary>
+    public static async Task GrantGoldAsync(this PlayerComponent self, long roleId, int gold)
+    {
+        if (gold <= 0) return;
+
+        var player = self.GetByRoleId(roleId);
+        if (player == null) return;
+
+        var roleAttr = player.RoleAttribute;
+        roleAttr.Gold += gold;
+        await roleAttr.SaveAsync();
+
+        self.SendToPlayer(roleId, new GoldChangedNtf { Gold = roleAttr.Gold });
+        EventBus.Instance.Publish(new EventType.PlayerGoldChangedEvent { RoleId = roleId, Gold = roleAttr.Gold });
+    }
+
+    /// <summary>发放物品给玩家</summary>
+    public static async Task GrantItemAsync(this PlayerComponent self, long roleId, int configId, int count)
+    {
+        var player = self.GetByRoleId(roleId);
+        if (player == null) return;
+
+        var result = player.RoleBag.AddItem(configId, count);
+        if (result.Success)
+        {
+            await player.RoleBag.SaveBagAsync();
+
+            self.SendToPlayer(roleId, new ItemGainNtf
+            {
+                ConfigId = configId,
+                Count = result.AddedCount,
+            });
+            EventBus.Instance.Publish(new EventType.PlayerItemGainedEvent { RoleId = roleId, ConfigId = configId, Count = result.AddedCount });
+            Log.Info($"发放物品 RoleId:{roleId} ConfigId:{configId} Count:{result.AddedCount}");
+        }
+        else
+        {
+            Log.Warn($"背包已满，无法发放物品 RoleId:{roleId} ConfigId:{configId}");
+        }
+    }
+
+    /// <summary>根据经验计算等级（每级需100*level点经验）</summary>
+    public static int CalculateLevel(int exp)
+    {
+        int level = 1;
+        int totalExp = 0;
+        while (true)
+        {
+            int required = 100 * level;
+            if (totalExp + required > exp) break;
+            totalExp += required;
+            level++;
+            if (level >= 100) break;
+        }
+        return level;
+    }
+
+    #endregion
 }

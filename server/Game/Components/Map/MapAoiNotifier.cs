@@ -1,4 +1,3 @@
-using Game.Components.Monster;
 using Game.Components.Player;
 using System.Collections.Generic;
 using Shared.Core.Aoi;
@@ -9,8 +8,7 @@ namespace Game.Components.Map;
 
 /// <summary>
 /// AOI 事件通知器。将 AOI 事件转换为网络消息发送给客户端。
-/// 处理：OnObjectEnter → MapPlayerEnterNtf，OnObjectLeave → MapPlayerLeaveNtf，
-/// OnObjectMove → MapPlayerMoveNtf，OnWatcherUpdate → 视野变化自动推送。
+/// 按 ObjectType 分发：Player 走 MapPlayerXxxNtf，其他走 MapObjectXxxNtf。
 /// </summary>
 public class MapAoiNotifier : IAoiEventListener
 {
@@ -20,106 +18,130 @@ public class MapAoiNotifier : IAoiEventListener
     {
         if (obj is not IMapObject mapObj) return;
 
-        var ntf = new MapPlayerEnterNtf
-        {
-            Player = ToMapObjectInfo(mapObj)
-        };
-
         foreach (var watcher in watchers.Values)
         {
             if (watcher.ObjectId == obj.ObjectId) continue;
-            Context.Players.SendToPlayer(watcher.ObjectId, ntf);
+            SendEnterNotification(watcher.ObjectId, mapObj);
         }
     }
 
     public void OnObjectLeave(IAoiObject obj, IReadOnlyDictionary<long, IAoiObject> watchers)
     {
-        if (obj is not IMapObject) return;
-
-        var ntf = new MapPlayerLeaveNtf
-        {
-            RoleId = obj.ObjectId
-        };
+        if (obj is not IMapObject mapObj) return;
 
         foreach (var watcher in watchers.Values)
         {
             if (watcher.ObjectId == obj.ObjectId) continue;
-            Context.Players.SendToPlayer(watcher.ObjectId, ntf);
+            SendLeaveNotification(watcher.ObjectId, mapObj);
         }
     }
 
     public void OnObjectMove(IAoiObject obj, IReadOnlyDictionary<long, IAoiObject> oldWatchers,
         IReadOnlyDictionary<long, IAoiObject> updateWatchers, IReadOnlyDictionary<long, IAoiObject> newWatchers)
     {
-        if (obj is not IMapObject) return;
-
-        var ntf = new MapPlayerMoveNtf
-        {
-            RoleId = obj.ObjectId,
-            X = obj.X,
-            Y = obj.Y
-        };
+        if (obj is not IMapObject mapObj) return;
 
         foreach (var watcher in updateWatchers.Values)
         {
             if (watcher.ObjectId == obj.ObjectId) continue;
-            Context.Players.SendToPlayer(watcher.ObjectId, ntf);
+            SendMoveNotification(watcher.ObjectId, mapObj);
         }
     }
 
     public void OnWatcherUpdate(IAoiObject watcher, IReadOnlyList<IAoiObject> addedObjects, IReadOnlyList<IAoiObject> removedObjects)
     {
-        // 新视野中出现的对象
         foreach (var obj in addedObjects)
         {
             if (obj is not IMapObject mapObj) continue;
             if (mapObj.ObjectId == watcher.ObjectId) continue;
-
-            if (mapObj.ObjectType == MapObjectType.Player)
-            {
-                Context.Players.SendToPlayer(watcher.ObjectId, new MapPlayerEnterNtf
-                {
-                    Player = ToMapObjectInfo(mapObj)
-                });
-            }
-            else if (mapObj.ObjectType == MapObjectType.Monster && obj is MonsterEntity monster)
-            {
-                Context.Players.SendToPlayer(watcher.ObjectId, new MapNpcEnterNtf
-                {
-                    ObjectId = monster.ObjectId,
-                    NpcId = monster.CfgId,
-                    Name = monster.Name ?? "",
-                    X = monster.X,
-                    Y = monster.Y,
-                });
-            }
+            SendEnterNotification(watcher.ObjectId, mapObj);
         }
 
-        // 旧视野中消失的对象
         foreach (var obj in removedObjects)
         {
             if (obj.ObjectId == watcher.ObjectId) continue;
-            Context.Players.SendToPlayer(watcher.ObjectId, new MapPlayerLeaveNtf
+            if (obj is not IMapObject mapObj) continue;
+            SendLeaveNotification(watcher.ObjectId, mapObj);
+        }
+    }
+
+    #region 通知分发
+
+    private static void SendEnterNotification(long watcherId, IMapObject mapObj)
+    {
+        if (mapObj.ObjectType == MapObjectType.Player)
+        {
+            Context.Players.SendToPlayer(watcherId, new MapPlayerEnterNtf
             {
-                RoleId = obj.ObjectId
+                Player = ToMapObjectInfo(mapObj)
+            });
+        }
+        else
+        {
+            Context.Players.SendToPlayer(watcherId, new MapObjectEnterNtf
+            {
+                ObjectId = mapObj.ObjectId,
+                CfgId = mapObj.CfgId,
+                Name = mapObj.Name ?? "",
+                X = mapObj.X,
+                Y = mapObj.Y,
+                ObjectType = mapObj.ObjectType,
             });
         }
     }
 
+    private static void SendLeaveNotification(long watcherId, IMapObject mapObj)
+    {
+        if (mapObj.ObjectType == MapObjectType.Player)
+        {
+            Context.Players.SendToPlayer(watcherId, new MapPlayerLeaveNtf
+            {
+                RoleId = mapObj.ObjectId
+            });
+        }
+        else
+        {
+            Context.Players.SendToPlayer(watcherId, new MapObjectLeaveNtf
+            {
+                ObjectId = mapObj.ObjectId
+            });
+        }
+    }
+
+    private static void SendMoveNotification(long watcherId, IMapObject mapObj)
+    {
+        if (mapObj.ObjectType == MapObjectType.Player)
+        {
+            Context.Players.SendToPlayer(watcherId, new MapPlayerMoveNtf
+            {
+                RoleId = mapObj.ObjectId,
+                X = mapObj.X,
+                Y = mapObj.Y
+            });
+        }
+        else
+        {
+            Context.Players.SendToPlayer(watcherId, new MapObjectMoveNtf
+            {
+                ObjectId = mapObj.ObjectId,
+                X = mapObj.X,
+                Y = mapObj.Y
+            });
+        }
+    }
+
+    #endregion
+
     private static MapObjectInfo ToMapObjectInfo(IMapObject obj)
     {
-        var info = new MapObjectInfo
+        return new MapObjectInfo
         {
             ObjectId = obj.ObjectId,
             ObjectType = obj.ObjectType,
             Name = obj.Name ?? "",
             X = obj.X,
-            Y = obj.Y
+            Y = obj.Y,
+            CfgId = obj.CfgId,
         };
-
-        if (obj is MonsterEntity monster)
-            info.NpcId = monster.CfgId;
-
-        return info;
     }
 }

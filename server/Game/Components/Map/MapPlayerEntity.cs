@@ -13,6 +13,7 @@ public class MapPlayerEntity : MapObjectEntity
 {
     public override int ObjectType => MapObjectType.Player;
     public override string Name => Info.Name;
+    public override int CfgId => 0;
 
     public long RoleId => Id;
 

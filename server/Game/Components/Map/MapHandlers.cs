@@ -167,7 +167,7 @@ public static class MapHandlers
                     Name = o.Name,
                     X = o.X,
                     Y = o.Y,
-                    NpcId = GetMapObjectNpcId(o)
+                    CfgId = o.CfgId
                 }).ToList()
         };
 
@@ -175,13 +175,6 @@ public static class MapHandlers
         {
             Context.Players.SendToPlayer(roleId, ntf);
         }
-    }
-
-    private static int GetMapObjectNpcId(MapObjectEntity obj)
-    {
-        if (obj is MonsterEntity monster)
-            return monster.CfgId;
-        return 0;
     }
 
     #region 事件订阅

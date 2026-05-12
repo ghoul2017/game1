@@ -76,9 +76,9 @@ namespace Shared.Common
         public const ushort MapPlayerEnterNtf = 10710;
         public const ushort MapPlayerLeaveNtf = 10711;
         public const ushort MapPlayerMoveNtf = 10712;
-        public const ushort MapNpcEnterNtf = 10713;
-        public const ushort MapNpcLeaveNtf = 10714;
-        public const ushort MapNpcMoveNtf = 10715;
+        public const ushort MapObjectEnterNtf = 10713;
+        public const ushort MapObjectLeaveNtf = 10714;
+        public const ushort MapObjectMoveNtf = 10715;
         public const ushort MonsterDropNtf = 10716;
 
         // Fight 战斗 (10801-10900)

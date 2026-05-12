@@ -114,7 +114,7 @@ namespace Shared.Common.Protos
         [ProtoMember(3)] public string Name { get; set; } = "";
         [ProtoMember(4)] public int X { get; set; }
         [ProtoMember(5)] public int Y { get; set; }
-        [ProtoMember(6)] public int NpcId { get; set; }  // 怪物/NPC配置ID
+        [ProtoMember(6)] public int CfgId { get; set; }  // 怪物/NPC配置ID
     }
 
     #endregion
@@ -156,27 +156,28 @@ namespace Shared.Common.Protos
     #region NPC通知消息
 
     [ProtoContract]
-    public class MapNpcEnterNtf : IMessage
+    public class MapObjectEnterNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.MapNpcEnterNtf;
+        public ushort MsgId => MsgIdConst.MapObjectEnterNtf;
         [ProtoMember(1)] public long ObjectId { get; set; }
-        [ProtoMember(2)] public int NpcId { get; set; }
+        [ProtoMember(2)] public int CfgId { get; set; }
         [ProtoMember(3)] public string Name { get; set; } = "";
         [ProtoMember(4)] public int X { get; set; }
         [ProtoMember(5)] public int Y { get; set; }
+        [ProtoMember(6)] public int ObjectType { get; set; }
     }
 
     [ProtoContract]
-    public class MapNpcLeaveNtf : IMessage
+    public class MapObjectLeaveNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.MapNpcLeaveNtf;
+        public ushort MsgId => MsgIdConst.MapObjectLeaveNtf;
         [ProtoMember(1)] public long ObjectId { get; set; }
     }
 
     [ProtoContract]
-    public class MapNpcMoveNtf : IMessage
+    public class MapObjectMoveNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.MapNpcMoveNtf;
+        public ushort MsgId => MsgIdConst.MapObjectMoveNtf;
         [ProtoMember(1)] public long ObjectId { get; set; }
         [ProtoMember(2)] public int X { get; set; }
         [ProtoMember(3)] public int Y { get; set; }

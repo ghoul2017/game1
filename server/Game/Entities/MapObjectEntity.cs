@@ -13,6 +13,7 @@ public abstract class MapObjectEntity : Entity, IMapObject
     public long ObjectId => Id;
     public abstract int ObjectType { get; }
     public abstract string Name { get; }
+    public abstract int CfgId { get; }
 
     private MapPositionComponent? _pos;
     public MapPositionComponent Pos => _pos ??= GetComponent<MapPositionComponent>();

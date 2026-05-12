@@ -1,22 +1,20 @@
 using System;
 using System.Collections.Generic;
-using Game.Config;
 using Game.Components.Map;
 using Game.Components.Monster;
 using Game.Components.Player;
+using Game.Config;
 using Game.Entities;
 using Shared.Core;
 using Shared.Common.Config;
 using Shared.Common.Protos;
 using Shared.Core.Event;
 using Shared.Core.Log;
-using Shared.Core.Network;
 
 namespace Game.Components.Fight;
 
 /// <summary>
 /// 战斗系统。提供战斗单元管理、技能使用、死亡处理等核心战斗逻辑。
-/// 战斗单元通过 MapObjectEntity 上的 FightUnitComponent 访问。
 /// </summary>
 public static class FightSystem
 {
@@ -103,9 +101,9 @@ public static class FightSystem
     /// <summary>注销战斗单元（玩家/怪物离开地图时调用）</summary>
     public static void UnregisterUnit(this MapObjectEntity entity)
     {
-        if (entity.TryGetComponent<FightUnitComponent>(out _))
+        if (entity.TryGetComponent<FightUnitComponent>(out var fight))
         {
-            entity.RemoveComponent(entity.GetComponent<FightUnitComponent>());
+            entity.RemoveComponent(fight);
             Log.Debug($"注销战斗单元 ObjectId:{entity.ObjectId}");
         }
     }
@@ -123,7 +121,7 @@ public static class FightSystem
 
     #region 技能配置
 
-    /// <summary>获取技能配置（从 ConfigManager 加载的 CSV 数据）</summary>
+    /// <summary>获取技能配置</summary>
     public static SkillConfig? GetSkillConfig(int skillId)
     {
         return ConfigManager.Get<SkillConfig>(skillId);
@@ -250,10 +248,10 @@ public static class FightSystem
         Log.Info($"战斗死亡 Victim:{victimId} Killer:{killerId}");
 
         var mapObj = Context.Map.FindMapObject(victimId);
-        bool isMonster = mapObj is MonsterEntity;
+        bool isMonster = mapObj != null && mapObj.ObjectType == MapObjectType.Monster;
 
         // 通知被击杀者
-        SendToRole(victimId, new KilledByNtf
+        Context.Players.SendToPlayer(victimId, new KilledByNtf
         {
             KillerId = killerId,
             KillerName = killerFight != null ? Context.Map.FindMapObject(killerId)?.Name ?? "" : "",
@@ -261,7 +259,7 @@ public static class FightSystem
         });
 
         // 通知视野内其他玩家
-        BroadcastToWatchers(victimId, new HpChangedNtf
+        Context.Map.BroadcastToAoiWatchers(victimId, new HpChangedNtf
         {
             ObjectId = victimId,
             DeltaHp = -victimFight.Attr.Hp,
@@ -269,22 +267,25 @@ public static class FightSystem
             Reason = HpChangeReason.Killed,
         });
 
-        // 如果是怪物，发布击杀事件
-        if (isMonster && mapObj is MonsterEntity monster)
+        if (isMonster)
         {
-            int mapCfgId = monster.MapId;
-            int line = monster.Line;
+            // 直接调用 MonsterSystem 处理怪物死亡（掉落、刷新等）
+            Context.Monster.OnMonsterKilled(victimId, killerId);
 
-            EventBus.Instance.Publish(new EventType.MonsterKilledEvent
+            // 发布事件给 GameTask 等其他模块
+            if (mapObj != null)
             {
-                MonsterId = victimId,
-                KillerId = killerId,
-                MonsterCfgId = monster.CfgId,
-                MapId = mapCfgId,
-                Line = line,
-            });
+                EventBus.Instance.Publish(new EventType.MonsterKilledEvent
+                {
+                    MonsterId = victimId,
+                    KillerId = killerId,
+                    MonsterCfgId = mapObj.CfgId,
+                    MapId = mapObj.MapId,
+                    Line = mapObj.Line,
+                });
+            }
         }
-        else if (!isMonster)
+        else
         {
             // 玩家死亡事件
             EventBus.Instance.Publish(new EventType.PlayerDeathEvent
@@ -310,7 +311,7 @@ public static class FightSystem
         fight.KillerId = 0;
         fight.KillerSkillId = 0;
 
-        BroadcastToWatchers(objectId, new HpChangedNtf
+        Context.Map.BroadcastToAoiWatchers(objectId, new HpChangedNtf
         {
             ObjectId = objectId,
             DeltaHp = fight.Attr.Hp,
@@ -325,12 +326,6 @@ public static class FightSystem
     #endregion
 
     #region 消息发送
-
-    /// <summary>发送 IMessage 给指定角色</summary>
-    private static void SendToRole(long roleId, IMessage msg)
-    {
-        Context.Players.SendToPlayer(roleId, msg);
-    }
 
     private static void BroadcastSkillEffect(long attackerId, UseSkillResult skillResult)
     {
@@ -363,28 +358,10 @@ public static class FightSystem
         }
 
         // 发送给攻击者
-        SendToRole(attackerId, ack);
+        Context.Players.SendToPlayer(attackerId, ack);
 
         // 广播给视野内玩家
-        BroadcastToWatchers(attackerId, ack);
-    }
-
-    private static void BroadcastToWatchers(long objectId, IMessage msg)
-    {
-        var map = Context.Map.GetPlayerMap(objectId);
-        if (map == null) return;
-
-        var mapObj = map.GetObject(objectId);
-        if (mapObj == null) return;
-
-        var watchers = map.Aoi.GetObjectsByRange(mapObj.X, mapObj.Y, 1);
-        foreach (var watcher in watchers)
-        {
-            if (watcher.ObjectId != objectId)
-            {
-                SendToRole(watcher.ObjectId, msg);
-            }
-        }
+        Context.Map.BroadcastToAoiWatchers(attackerId, ack);
     }
 
     #endregion

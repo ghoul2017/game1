@@ -13,6 +13,7 @@ public class MonsterEntity : MapObjectEntity
 {
     public override int ObjectType => MapObjectType.Monster;
     public override string Name => Info.Name;
+    public override int CfgId => Info.CfgId;
 
     private MonsterInfoComponent? _info;
     public MonsterInfoComponent Info => _info ??= GetComponent<MonsterInfoComponent>();
@@ -22,8 +23,6 @@ public class MonsterEntity : MapObjectEntity
 
     private FightUnitComponent? _fight;
     public FightUnitComponent Fight => _fight ??= GetComponent<FightUnitComponent>();
-
-    public int CfgId => Info.CfgId;
 
     public static MonsterEntity Create(long monsterId, MonsterConfig config, int mapId, int line, int x, int y)
     {

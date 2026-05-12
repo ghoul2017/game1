@@ -7,6 +7,7 @@ using Game.Entities;
 using Shared.Common.Config;
 using Shared.Core.Entities;
 using Shared.Core.Log;
+using Shared.Core.Network;
 
 namespace Game.Components.Map;
 
@@ -80,25 +81,7 @@ public static class MapSystem
 
         var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity);
 
-        // 注册战斗单元
-        var roleAttr = playerEntity.RoleAttribute;
-        var fightAttr = new FightAttribute
-        {
-            MaxHp = roleAttr.MaxHp,
-            Hp = roleAttr.Hp,
-            PhyAttMin = roleAttr.PhyAttMin,
-            PhyAttMax = roleAttr.PhyAttMax,
-            PhyDefMin = roleAttr.PhyDef,
-            PhyDefMax = roleAttr.PhyDef,
-        };
-        mapPlayer.RegisterUnit(fightAttr);
-
-        // 添加技能（普通攻击）
-        var skillCfg = ConfigManager.Get<SkillConfig>(1);
-        if (skillCfg != null)
-        {
-            mapPlayer.Fight.AddSkill(new Skill(1));
-        }
+        RegisterPlayerFightUnit(mapPlayer, playerEntity);
 
         if (!map.AddObject(mapPlayer))
         {
@@ -144,25 +127,7 @@ public static class MapSystem
 
         var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity);
 
-        // 注册战斗单元
-        var roleAttr = playerEntity.RoleAttribute;
-        var fightAttr = new FightAttribute
-        {
-            MaxHp = roleAttr.MaxHp,
-            Hp = roleAttr.Hp,
-            PhyAttMin = roleAttr.PhyAttMin,
-            PhyAttMax = roleAttr.PhyAttMax,
-            PhyDefMin = roleAttr.PhyDef,
-            PhyDefMax = roleAttr.PhyDef,
-        };
-        mapPlayer.RegisterUnit(fightAttr);
-
-        // 添加技能（普通攻击）
-        var skillCfg = ConfigManager.Get<SkillConfig>(1);
-        if (skillCfg != null)
-        {
-            mapPlayer.Fight.AddSkill(new Skill(1));
-        }
+        RegisterPlayerFightUnit(mapPlayer, playerEntity);
 
         if (!map.AddObject(mapPlayer)) return false;
 
@@ -203,6 +168,25 @@ public static class MapSystem
         return map.GetAllPlayers().Where(p => p.RoleId != roleId).ToList();
     }
 
+    /// <summary>向指定对象的AOI视野内玩家广播消息</summary>
+    public static void BroadcastToAoiWatchers(this MapComponent self, long objectId, IMessage msg)
+    {
+        var map = self.GetPlayerMap(objectId);
+        if (map == null) return;
+
+        var mapObj = map.GetObject(objectId);
+        if (mapObj == null) return;
+
+        var watchers = map.Aoi.GetObjectsByRange(mapObj.X, mapObj.Y, 4);
+        foreach (var watcher in watchers)
+        {
+            if (watcher.ObjectId != objectId)
+            {
+                Context.Players.SendToPlayer(watcher.ObjectId, msg);
+            }
+        }
+    }
+
     #endregion
 
     #region 初始化
@@ -224,6 +208,17 @@ public static class MapSystem
         self.PlayerMapEntities.Clear();
         self.Maps.Clear();
         Log.Info("地图管理器已清空");
+    }
+
+    #endregion
+
+    #region 内部方法
+
+    /// <summary>注册玩家战斗单元（进入地图时调用）</summary>
+    private static void RegisterPlayerFightUnit(MapPlayerEntity mapPlayer, PlayerEntity playerEntity)
+    {
+        mapPlayer.RegisterUnit(playerEntity.RoleAttribute.ToFightAttribute());
+        mapPlayer.Fight.AddSkill(new Skill(1));
     }
 
     #endregion

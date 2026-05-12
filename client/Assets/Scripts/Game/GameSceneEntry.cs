@@ -170,13 +170,13 @@ namespace Client.Game
             dispatcher.Register<MapPlayerEnterNtf>(MsgIdConst.MapPlayerEnterNtf, OnMapPlayerEnterNtf);
             dispatcher.Register<MapPlayerLeaveNtf>(MsgIdConst.MapPlayerLeaveNtf, OnMapPlayerLeaveNtf);
             dispatcher.Register<MapPlayerMoveNtf>(MsgIdConst.MapPlayerMoveNtf, OnMapPlayerMoveNtf);
-            dispatcher.Register<MapNpcEnterNtf>(MsgIdConst.MapNpcEnterNtf, OnMapNpcEnterNtf);
-            dispatcher.Register<MapNpcLeaveNtf>(MsgIdConst.MapNpcLeaveNtf, OnMapNpcLeaveNtf);
-            dispatcher.Register<MapNpcMoveNtf>(MsgIdConst.MapNpcMoveNtf, OnMapNpcMoveNtf);
+            dispatcher.Register<MapObjectEnterNtf>(MsgIdConst.MapObjectEnterNtf, OnMapObjectEnterNtf);
+            dispatcher.Register<MapObjectLeaveNtf>(MsgIdConst.MapObjectLeaveNtf, OnMapObjectLeaveNtf);
+            dispatcher.Register<MapObjectMoveNtf>(MsgIdConst.MapObjectMoveNtf, OnMapObjectMoveNtf);
             dispatcher.Register<MapMoveAck>(MsgIdConst.MapMoveAck, OnMapMoveAck);
             dispatcher.Register<ChangeMapAck>(MsgIdConst.ChangeMapAck, OnChangeMapAck);
 
-            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步 + NPC/怪物 + 切图处理器已注册");
+            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步 + 地图对象 + 切图处理器已注册");
         }
 
         private void UnregisterAoiHandlers()
@@ -188,9 +188,9 @@ namespace Client.Game
             dispatcher.Unregister(MsgIdConst.MapPlayerEnterNtf);
             dispatcher.Unregister(MsgIdConst.MapPlayerLeaveNtf);
             dispatcher.Unregister(MsgIdConst.MapPlayerMoveNtf);
-            dispatcher.Unregister(MsgIdConst.MapNpcEnterNtf);
-            dispatcher.Unregister(MsgIdConst.MapNpcLeaveNtf);
-            dispatcher.Unregister(MsgIdConst.MapNpcMoveNtf);
+            dispatcher.Unregister(MsgIdConst.MapObjectEnterNtf);
+            dispatcher.Unregister(MsgIdConst.MapObjectLeaveNtf);
+            dispatcher.Unregister(MsgIdConst.MapObjectMoveNtf);
             dispatcher.Unregister(MsgIdConst.MapMoveAck);
             dispatcher.Unregister(MsgIdConst.ChangeMapAck);
         }
@@ -207,8 +207,7 @@ namespace Client.Game
                 }
                 else if (obj.ObjectType == MapObjectType.Monster || obj.ObjectType == MapObjectType.Npc)
                 {
-                    // NpcId 是怪物/NPC的配置ID，用于区分怪物和NPC以及显示名称
-                    MonsterEntityManager.Instance.Spawn(obj.ObjectId, obj.NpcId, obj.Name, obj.X, obj.Y);
+                    MonsterEntityManager.Instance.Spawn(obj.ObjectId, obj.CfgId, obj.ObjectType, obj.Name, obj.X, obj.Y);
                 }
             }
         }
@@ -228,17 +227,17 @@ namespace Client.Game
             OtherPlayerManager.Instance.MovePlayer(ntf.RoleId, ntf.X, ntf.Y);
         }
 
-        private void OnMapNpcEnterNtf(MapNpcEnterNtf ntf)
+        private void OnMapObjectEnterNtf(MapObjectEnterNtf ntf)
         {
-            MonsterEntityManager.Instance.Spawn(ntf.ObjectId, ntf.NpcId, ntf.Name, ntf.X, ntf.Y);
+            MonsterEntityManager.Instance.Spawn(ntf.ObjectId, ntf.CfgId, ntf.ObjectType, ntf.Name, ntf.X, ntf.Y);
         }
 
-        private void OnMapNpcLeaveNtf(MapNpcLeaveNtf ntf)
+        private void OnMapObjectLeaveNtf(MapObjectLeaveNtf ntf)
         {
             MonsterEntityManager.Instance.Remove(ntf.ObjectId);
         }
 
-        private void OnMapNpcMoveNtf(MapNpcMoveNtf ntf)
+        private void OnMapObjectMoveNtf(MapObjectMoveNtf ntf)
         {
             MonsterEntityManager.Instance.Move(ntf.ObjectId, ntf.X, ntf.Y);
         }

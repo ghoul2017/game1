@@ -1,19 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using Game.Components.Bag;
 using Game.Components.Fight;
 using Game.Components.Map;
 using Game.Components.Player;
 using Game.Config;
-using Game.Database;
 using Shared.Common.Config;
-using Shared.Common.Protos;
 using Shared.Core;
 using Shared.Core.Event;
 using Shared.Core.Log;
-using Shared.Core.Network;
 using Task = System.Threading.Tasks.Task;
 
 namespace Game.Components.Monster;
@@ -88,9 +83,8 @@ public static class MonsterSystem
         if (map == null) return null;
 
         // 随机位置
-        var random = new Random();
-        int x = random.Next(cfg.SpawnX1, cfg.SpawnX2 + 1);
-        int y = random.Next(cfg.SpawnY1, cfg.SpawnY2 + 1);
+        int x = self.Random.Next(cfg.SpawnX1, cfg.SpawnX2 + 1);
+        int y = self.Random.Next(cfg.SpawnY1, cfg.SpawnY2 + 1);
 
         return SpawnMonsterAt(self, mapId, line, cfg, x, y);
     }
@@ -112,7 +106,7 @@ public static class MonsterSystem
         if (currentCount >= cfg.MaxCount)
             return null;
 
-        long monsterId = Interlocked.Increment(ref self.NextMonsterId);
+        long monsterId = self.NextMonsterId++;
 
         var monster = MonsterEntity.Create(monsterId, cfg, mapId, line, x, y);
 
@@ -135,18 +129,6 @@ public static class MonsterSystem
 
         mapMonsters[monsterId] = monster;
 
-        // 广播给附近玩家
-        BroadcastMonsterAppear(mapId, line, monster);
-
-        // 发布怪物生成事件
-        EventBus.Instance.Publish(new EventType.MonsterSpawnedEvent
-        {
-            MonsterId = monsterId,
-            CfgId = cfg.Id,
-            MapId = mapId,
-            Line = line,
-        });
-
         Log.Debug($"生成怪物 MonsterId:{monsterId} CfgId:{cfg.Id} Pos:({x},{y})");
         return monster;
     }
@@ -166,12 +148,9 @@ public static class MonsterSystem
                 // 注销战斗单元
                 monster.UnregisterUnit();
 
-                // 广播死亡
+                // 从地图移除
                 int mapId = monster.MapId;
                 int line = monster.Line;
-                BroadcastMonsterDeath(mapId, line, monsterId);
-
-                // 从地图移除
                 var map = Context.Map.GetMap(mapId, line);
                 map?.RemoveObject(monsterId);
 
@@ -186,7 +165,7 @@ public static class MonsterSystem
                         + monster.Info.Config.SpawnInterval * 1000;
 
                     // 计算掉落
-                    CalculateAndGrantDrop(self, monster, killerId, mapId, line);
+                    _ = CalculateAndGrantDropAsync(self, monster, killerId);
                 }
 
                 Log.Info($"怪物死亡 MonsterId:{monsterId} KillerId:{killerId}");
@@ -196,7 +175,7 @@ public static class MonsterSystem
     }
 
     /// <summary>计算并发放掉落</summary>
-    private static async void CalculateAndGrantDrop(MonsterComponent self, MonsterEntity monster, long killerId, int mapId, int line)
+    private static async Task CalculateAndGrantDropAsync(MonsterComponent self, MonsterEntity monster, long killerId)
     {
         if (monster.Info.Config == null) return;
 
@@ -204,14 +183,13 @@ public static class MonsterSystem
         if (player == null) return;
 
         // 发放经验
-        await GrantExpToPlayer(killerId, monster.Info.Config.Exp);
+        await Context.Players.GrantExpAsync(killerId, monster.Info.Config.Exp);
 
         // 发放金币
-        var random = new Random();
-        int gold = random.Next(monster.Info.Config.GoldMin, monster.Info.Config.GoldMax + 1);
+        int gold = self.Random.Next(monster.Info.Config.GoldMin, monster.Info.Config.GoldMax + 1);
         if (gold > 0)
         {
-            await GrantGoldToPlayer(killerId, gold);
+            await Context.Players.GrantGoldAsync(killerId, gold);
         }
 
         // 计算物品掉落
@@ -222,118 +200,15 @@ public static class MonsterSystem
             {
                 if (int.TryParse(itemIdStr.Trim(), out int itemId))
                 {
-                    // 按掉落概率判定
-                    if (random.Next(1, 10001) <= monster.Info.Config.DropRate)
+                    if (self.Random.Next(1, 10001) <= monster.Info.Config.DropRate)
                     {
-                        await GrantItemToPlayer(killerId, itemId, 1);
+                        await Context.Players.GrantItemAsync(killerId, itemId, 1);
                     }
                 }
             }
         }
 
         Log.Info($"怪物掉落 KillerId:{killerId} Exp:{monster.Info.Config.Exp} Gold:{gold}");
-    }
-
-    /// <summary>发放经验给玩家</summary>
-    private static async Task GrantExpToPlayer(long roleId, int exp)
-    {
-        if (exp <= 0) return;
-
-        var player = Context.Players.GetByRoleId(roleId);
-        if (player == null) return;
-
-        var roleAttr = player.RoleAttribute;
-        roleAttr.Exp += exp;
-        // 检查升级
-        int newLevel = CalculateLevel(roleAttr.Exp);
-        if (newLevel > roleAttr.Level)
-        {
-            roleAttr.Level = newLevel;
-            roleAttr.MaxHp += 10;
-            roleAttr.MaxMp += 5;
-            roleAttr.Hp = roleAttr.MaxHp;
-            roleAttr.Mp = roleAttr.MaxMp;
-
-            // 发送升级通知
-            Context.Players.SendToPlayer(roleId, new LevelUpNtf { Level = newLevel });
-
-            // 发布升级事件
-            EventBus.Instance.Publish(new EventType.PlayerLevelUpEvent { RoleId = roleId, NewLevel = newLevel });
-
-            Log.Info($"玩家升级 RoleId:{roleId} Level:{newLevel}");
-        }
-
-        await roleAttr.SaveAsync();
-
-        // 发送经验变化通知
-        Context.Players.SendToPlayer(roleId, new ExpChangedNtf { Exp = roleAttr.Exp, Level = roleAttr.Level });
-
-        // 发布经验变化事件
-        EventBus.Instance.Publish(new EventType.PlayerExpChangedEvent { RoleId = roleId, Exp = roleAttr.Exp, Level = roleAttr.Level });
-    }
-
-    /// <summary>发放金币给玩家</summary>
-    private static async Task GrantGoldToPlayer(long roleId, int gold)
-    {
-        if (gold <= 0) return;
-
-        var player = Context.Players.GetByRoleId(roleId);
-        if (player == null) return;
-
-        var roleAttr = player.RoleAttribute;
-        roleAttr.Gold += gold;
-        await roleAttr.SaveAsync();
-
-        // 发送金币变化通知
-        Context.Players.SendToPlayer(roleId, new GoldChangedNtf { Gold = roleAttr.Gold });
-
-        // 发布金币变化事件
-        EventBus.Instance.Publish(new EventType.PlayerGoldChangedEvent { RoleId = roleId, Gold = roleAttr.Gold });
-    }
-
-    /// <summary>发放物品给玩家</summary>
-    private static async Task GrantItemToPlayer(long roleId, int configId, int count)
-    {
-        var player = Context.Players.GetByRoleId(roleId);
-        if (player == null) return;
-
-        var result = player.RoleBag.AddItem(configId, count);
-        if (result.Success)
-        {
-            await player.RoleBag.SaveBagAsync();
-
-            // 发送物品获得通知
-            Context.Players.SendToPlayer(roleId, new ItemGainNtf
-            {
-                ConfigId = configId,
-                Count = result.AddedCount,
-            });
-
-            // 发布物品获得事件
-            EventBus.Instance.Publish(new EventType.PlayerItemGainedEvent { RoleId = roleId, ConfigId = configId, Count = result.AddedCount });
-
-            Log.Info($"发放物品 RoleId:{roleId} ConfigId:{configId} Count:{result.AddedCount}");
-        }
-        else
-        {
-            Log.Warn($"背包已满，无法发放物品 RoleId:{roleId} ConfigId:{configId}");
-        }
-    }
-
-    /// <summary>根据经验计算等级（简化公式：每级需100*level点经验）</summary>
-    private static int CalculateLevel(int exp)
-    {
-        int level = 1;
-        int totalExp = 0;
-        while (true)
-        {
-            int required = 100 * level;
-            if (totalExp + required > exp) break;
-            totalExp += required;
-            level++;
-            if (level >= 100) break; // 封顶100级
-        }
-        return level;
     }
 
     #endregion
@@ -405,7 +280,7 @@ public static class MonsterSystem
         {
             // 主动或守卫AI，开始巡逻
             monster.Ai.AiState = AiState.Patrol;
-            monster.Ai.PatrolTarget = GetRandomPatrolPoint(monster);
+            monster.Ai.PatrolTarget = GetRandomPatrolPoint(self, monster);
         }
         else
         {
@@ -538,33 +413,19 @@ public static class MonsterSystem
     }
 
     /// <summary>获取随机巡逻点</summary>
-    private static (int X, int Y)? GetRandomPatrolPoint(MonsterEntity monster)
+    private static (int X, int Y)? GetRandomPatrolPoint(MonsterComponent self, MonsterEntity monster)
     {
         if (monster.Info.Config == null) return null;
 
-        var random = new Random();
-        int x = random.Next(monster.Info.Config.SpawnX1, monster.Info.Config.SpawnX2 + 1);
-        int y = random.Next(monster.Info.Config.SpawnY1, monster.Info.Config.SpawnY2 + 1);
+        int x = self.Random.Next(monster.Info.Config.SpawnX1, monster.Info.Config.SpawnX2 + 1);
+        int y = self.Random.Next(monster.Info.Config.SpawnY1, monster.Info.Config.SpawnY2 + 1);
         return (x, y);
     }
 
     /// <summary>尝试移动</summary>
     private static bool TryMove(MonsterComponent self, MonsterEntity monster, GameMap map, int x, int y)
     {
-        if (map.MoveObject(monster.ObjectId, x, y))
-        {
-            // 广播移动给附近玩家
-            var ntf = new MapNpcMoveNtf
-            {
-                ObjectId = monster.ObjectId,
-                X = x,
-                Y = y,
-            };
-            BroadcastToMap(monster.MapId, monster.Line, ntf);
-
-            return true;
-        }
-        return false;
+        return map.MoveObject(monster.ObjectId, x, y);
     }
 
     /// <summary>检查刷新计时器</summary>
@@ -590,48 +451,6 @@ public static class MonsterSystem
                     self.SpawnMonster(mapId, line, cfg);
                 }
             }
-        }
-    }
-
-    #endregion
-
-    #region 广播
-
-    /// <summary>广播怪物出现</summary>
-    private static void BroadcastMonsterAppear(int mapId, int line, MonsterEntity monster)
-    {
-        var ntf = new MapNpcEnterNtf
-        {
-            ObjectId = monster.ObjectId,
-            NpcId = monster.CfgId,
-            Name = monster.Name ?? "",
-            X = monster.X,
-            Y = monster.Y,
-        };
-
-        BroadcastToMap(mapId, line, ntf);
-    }
-
-    /// <summary>广播怪物死亡</summary>
-    private static void BroadcastMonsterDeath(int mapId, int line, long monsterId)
-    {
-        var ntf = new MapNpcLeaveNtf
-        {
-            ObjectId = monsterId,
-        };
-
-        BroadcastToMap(mapId, line, ntf);
-    }
-
-    /// <summary>广播消息给地图上所有玩家</summary>
-    private static void BroadcastToMap(int mapId, int line, IMessage msg)
-    {
-        var map = Context.Map.GetMap(mapId, line);
-        if (map == null) return;
-
-        foreach (var player in map.GetAllPlayers())
-        {
-            Context.Players.SendToPlayer(player.RoleId, msg);
         }
     }
 
