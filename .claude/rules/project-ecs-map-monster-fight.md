@@ -1,5 +1,13 @@
 # ECS 重构踩坑：Map/Monster/Fight
 
+## FightSystem.OnUnitKilled 直接调用 MonsterSystem
+
+`OnUnitKilled` 中直接调用 `Context.Monster.OnMonsterKilled()`，同时发布 `MonsterKilledEvent`（GameTask 的 RoleTaskHandlers 订阅）。不要再用事件中转调用 MonsterSystem——FightSystem 直接调用，事件只给其他需要通知的模块。
+
+## MapAoiNotifier 按 ObjectType 分发通知
+
+MapAoiNotifier 已按 `ObjectType` 分发通知：Player → MapPlayerEnterNtf/LeaveNtf/MoveNtf，非 Player → MapObjectEnterNtf/LeaveNtf/MoveNtf。不要在 MonsterSystem 等地方手动广播——AOI 一站式处理，手动广播会导致双通知。
+
 ## MapObjectEntity 子类需要 using Game.Components.Map
 
 MonsterEntity 继承 MapObjectEntity，需要 `using Game.Components.Map;` 才能访问 MapObjectType 和 MapPositionComponent。新建 Entity 子类时注意检查基类所在的命名空间是否已引入。
