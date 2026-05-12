@@ -292,9 +292,9 @@ public class GameMap
 | 10710 | MapPlayerEnterNtf | S→C | Player(MapObjectInfo) |
 | 10711 | MapPlayerLeaveNtf | S→C | RoleId |
 | 10712 | MapPlayerMoveNtf | S→C | RoleId, X, Y |
-| 10713 | MapNpcEnterNtf | S→C | ObjectId, NpcId, Name, X, Y |
-| 10714 | MapNpcLeaveNtf | S→C | ObjectId |
-| 10715 | MapNpcMoveNtf | S→C | ObjectId, X, Y |
+| 10713 | MapObjectEnterNtf | S→C | ObjectId, CfgId, Name, X, Y, ObjectType |
+| 10714 | MapObjectLeaveNtf | S→C | ObjectId |
+| 10715 | MapObjectMoveNtf | S→C | ObjectId, X, Y |
 | 10716 | MonsterDropNtf | S→C | MonsterId, Gold, Items(List\<DropItemInfo\>) |
 
 共享结构：

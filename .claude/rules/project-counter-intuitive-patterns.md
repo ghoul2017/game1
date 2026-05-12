@@ -2,21 +2,13 @@
 
 阅读各模块源码时发现的违反直觉的设计，新开发者容易踩坑。
 
-## MonsterProtos.cs 包含通用通知
+## ~~MonsterProtos.cs 包含通用通知~~ [已解决]
 
-`MonsterProtos.cs` 中定义了 `ExpChangedNtf`、`GoldChangedNtf`、`LevelUpNtf`、`ItemGainNtf`、`MpChangedNtf`，这些是通用属性变化通知，被 Bag/ItemEffectSystem、Fight、Monster 等多模块使用，跟"Monster"无关。
+通用通知（ExpChangedNtf、GoldChangedNtf、LevelUpNtf、ItemGainNtf、MpChangedNtf）已移到 FightProtos.cs，MonsterProtos.cs 已删除。
 
-**原因**：最初在怪物掉落时添加，后续其他模块复用了这些通知但没有移走。
+## ~~MapNpcEnterNtf 同时用于 NPC 和怪物~~ [已解决]
 
-**判断方法**：看到 `MonsterProtos.cs` 时，不要以为里面都是怪物相关消息。通用通知应按语义归属，后续重构时考虑移到通用 Protos 或各自所属模块。
-
-## MapNpcEnterNtf 同时用于 NPC 和怪物
-
-`MapNpcEnterNtf`/`MapNpcLeaveNtf`/`MapNpcMoveNtf` 三个通知同时用于 NPC 和怪物（Monster）。
-
-**原因**：历史遗留，ECS 重构后怪物已独立为 MonsterEntity（ObjectType=3），但通知消息名仍用 "Npc"。客户端需通过 ObjectType 字段区分。
-
-**判断方法**：看到 "MapNpc" 开头的通知时，不要以为只跟 NPC 有关，怪物也走这些通知。
+已重命名为 `MapObjectEnterNtf`/`MapObjectLeaveNtf`/`MapObjectMoveNtf`，新增 `ObjectType` 和 `CfgId` 字段，按 ObjectType 区分玩家/怪物/NPC。
 
 ## ErrorCode 是服务端专属，客户端只有 int
 
