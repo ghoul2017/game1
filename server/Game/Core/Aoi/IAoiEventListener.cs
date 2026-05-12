@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Shared.Core.Aoi;
+namespace Game.Core.Aoi;
 
 /// <summary>
 /// AOI 事件监听器接口

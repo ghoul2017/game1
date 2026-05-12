@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Shared.Core.Aoi;
+namespace Game.Core.Aoi;
 
 /// <summary>
 /// 单个灯塔，管理一定范围内的 AOI 对象和观察者

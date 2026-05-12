@@ -18,7 +18,7 @@ Assets/
 ├── Plugins/          # 第三方插件（protobuf-net）
 └── Scripts/
     ├── shared/       #   双端共享代码（服务端通过 csproj Compile Include 引用）
-    │   ├── Core/     #     ECS, Network, Config, Aoi, Log, IdGenerator
+    │   ├── Core/     #     ECS, Network, Config, Log, IdGenerator
     │   └── Common/   #     Protos（消息定义）, Config（配置表定义）, MsgIdConst
     ├── Core/         #   核心框架（Context, UIManager, UIPanel, UIBuilder, GameEntry, UIToast, UIMessageBox）
     ├── Config/       #   ClientConfigManager

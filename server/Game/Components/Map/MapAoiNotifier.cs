@@ -1,6 +1,6 @@
 using Game.Components.Player;
 using System.Collections.Generic;
-using Shared.Core.Aoi;
+using Game.Core.Aoi;
 using Shared.Core.Log;
 using Shared.Common.Protos;
 

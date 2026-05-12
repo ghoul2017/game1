@@ -1,4 +1,4 @@
-using Shared.Core.Aoi;
+using Game.Core.Aoi;
 
 namespace Game.Components.Map;
 

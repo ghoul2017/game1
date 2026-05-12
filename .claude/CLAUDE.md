@@ -41,7 +41,6 @@ client/Assets/Scripts/
       ECS/              # Entity, Component, ComponentOfAttribute
       Network/          # IMessage, PacketCodec, MessageRouter, TcpSession, IMessageHandler
       Config/           # ConfigManager, ConfigTableAttribute, CsvLoader
-      Aoi/              # IAoiObject, IAoiEventListener, Tower, TowerAoi（灯塔AOI）
       Log/              # ILog, LogManager, Console/File Appender
       IdGenerator.cs    # 雪花算法 ID 生成
     Common/
@@ -78,6 +77,7 @@ server/Game/
     GameTimer.cs        # 定时器（回调自动回主线程）
     ShutdownToken.cs    # 统一关闭信号
     TokenSigner.cs      # HMAC-SHA256 Token 签名器
+    Aoi/                # IAoiObject, IAoiEventListener, Tower, TowerAoi（灯塔AOI，服务端专属）
     Database/           # MongoDb (统一入口), IEntity, IEntityExtensions
     Entity/             # IEntity
     Event/              # EventBus, IEvent, IEventListener

@@ -28,6 +28,7 @@ server/Game/
 │   ├── GameTimer.cs      # 定时器（回调自动回主线程）
 │   ├── ShutdownToken.cs  # 统一关闭信号
 │   ├── TokenStore.cs     # 内存 Token 存储
+│   ├── Aoi/              # IAoiObject, IAoiEventListener, Tower, TowerAoi（灯塔AOI，服务端专属）
 │   ├── Database/         # MongoDb (统一入口), IEntity
 │   ├── Entity/           # IEntity
 │   ├── Event/            # EventBus, IEvent, IEventListener

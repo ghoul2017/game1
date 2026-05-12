@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Game.Components.Monster;
 using Game.Entities;
-using Shared.Core.Aoi;
+using Game.Core.Aoi;
 using Shared.Core.Log;
 
 namespace Game.Components.Map;

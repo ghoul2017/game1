@@ -1,5 +1,5 @@
 using Game.Components.Map;
-using Shared.Core.Aoi;
+using Game.Core.Aoi;
 using Shared.Core.ECS;
 
 namespace Game.Entities;
