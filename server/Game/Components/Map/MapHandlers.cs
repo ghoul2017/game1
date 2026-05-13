@@ -1,4 +1,3 @@
-using Game.Components.Monster;
 using Game.Components.Player;
 using Game.Entities;
 using System.Linq;
@@ -46,7 +45,7 @@ public static class MapHandlers
         int x = map.BirthX;
         int y = map.BirthY;
 
-        if (!Context.Map.EnterMap(player.Id, player.RoleData.Name, req.MapCfgId, req.Line, x, y, player))
+        if (!Context.Map.EnterMap(req.MapCfgId, req.Line, x, y, player))
         {
             res.ErrorMessage = "目标地图不存在";
             return Task.FromResult<IMessage>(res);
@@ -96,7 +95,7 @@ public static class MapHandlers
         int x = req.X > 0 ? req.X : targetMap.BirthX;
         int y = req.Y > 0 ? req.Y : targetMap.BirthY;
 
-        if (!Context.Map.ChangeMap(player.Id, player.RoleData.Name, req.TargetMapCfgId, req.TargetLine, x, y, player))
+        if (!Context.Map.ChangeMap(req.TargetMapCfgId, req.TargetLine, x, y, player))
         {
             res.ErrorMessage = "目标地图不存在";
             return Task.FromResult<IMessage>(res);

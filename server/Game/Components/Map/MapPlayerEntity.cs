@@ -28,20 +28,20 @@ public class MapPlayerEntity : MapObjectEntity
 
     public PlayerEntity? PlayerEntity => PlayerRef.PlayerEntity;
 
-    public static MapPlayerEntity Create(long roleId, string name, int mapId, int line, int x, int y, PlayerEntity playerEntity, FightAttribute fightAttr)
+    public static MapPlayerEntity Create(int mapId, int line, int x, int y, PlayerEntity playerEntity)
     {
-        var entity = CreateEntityById<MapPlayerEntity>(roleId);
+        var entity = CreateEntityById<MapPlayerEntity>(playerEntity.Id);
         var pos = entity.AddComponent<MapPositionComponent>();
         pos.MapId = mapId;
         pos.Line = line;
         pos.X = x;
         pos.Y = y;
         var info = entity.AddComponent<MapPlayerInfoComponent>();
-        info.Name = name;
+        info.Name = playerEntity.RoleData.Name;
         var playerRef = entity.AddComponent<PlayerRefComponent>();
         playerRef.PlayerEntity = playerEntity;
         var fight = entity.AddComponent<FightUnitComponent>();
-        fight.Attr = fightAttr;
+        fight.Attr = playerEntity.RoleAttribute.ToFightAttribute();
         fight.AddSkill(new Skill(1));
         return entity;
     }

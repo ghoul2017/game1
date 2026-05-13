@@ -58,7 +58,7 @@ public static class MapSystem
     public static List<GameMap> GetAllMaps(this MapComponent self) => new(self.Maps.Values);
 
     /// <summary>玩家进入地图</summary>
-    public static bool EnterMap(this MapComponent self, long roleId, string roleName, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
+    public static bool EnterMap(this MapComponent self, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
     {
         var map = self.GetMap(cfgId, line);
         if (map == null)
@@ -68,22 +68,22 @@ public static class MapSystem
         }
 
         // 如果玩家已在某张地图，先退出
-        if (self.PlayerMapEntities.ContainsKey(roleId))
+        if (self.PlayerMapEntities.ContainsKey(playerEntity.Id))
         {
-            QuitMapInternal(self, roleId);
+            QuitMapInternal(self, playerEntity.Id);
         }
 
-        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity, playerEntity.RoleAttribute.ToFightAttribute());
+        var mapPlayer = MapPlayerEntity.Create(cfgId, line, x, y, playerEntity);
 
         if (!map.AddObject(mapPlayer))
         {
-            Log.Warn($"玩家进入地图失败 RoleId:{roleId}");
+            Log.Warn($"玩家进入地图失败 RoleId:{playerEntity.Id}");
             return false;
         }
 
-        self.PlayerMapEntities[roleId] = mapPlayer;
+        self.PlayerMapEntities[playerEntity.Id] = mapPlayer;
 
-        Log.Info($"玩家进入地图 RoleId:{roleId} MapId:{cfgId} Line:{line} Pos:({x},{y})");
+        Log.Info($"玩家进入地图 RoleId:{playerEntity.Id} MapId:{cfgId} Line:{line} Pos:({x},{y})");
         return true;
     }
 
@@ -106,22 +106,22 @@ public static class MapSystem
     }
 
     /// <summary>玩家切图（从当前地图移动到新地图）</summary>
-    public static bool ChangeMap(this MapComponent self, long roleId, string roleName, int newCfgId, int newLine, int newX, int newY, PlayerEntity playerEntity)
+    public static bool ChangeMap(this MapComponent self, int newCfgId, int newLine, int newX, int newY, PlayerEntity playerEntity)
     {
-        QuitMapInternal(self, roleId);
-        return EnterMapInternal(self, roleId, roleName, newCfgId, newLine, newX, newY, playerEntity);
+        QuitMapInternal(self, playerEntity.Id);
+        return EnterMapInternal(self, newCfgId, newLine, newX, newY, playerEntity);
     }
 
-    private static bool EnterMapInternal(MapComponent self, long roleId, string roleName, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
+    private static bool EnterMapInternal(MapComponent self, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
     {
         var map = self.GetMap(cfgId, line);
         if (map == null) return false;
 
-        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity, playerEntity.RoleAttribute.ToFightAttribute());
+        var mapPlayer = MapPlayerEntity.Create(cfgId, line, x, y, playerEntity);
 
         if (!map.AddObject(mapPlayer)) return false;
 
-        self.PlayerMapEntities[roleId] = mapPlayer;
+        self.PlayerMapEntities[playerEntity.Id] = mapPlayer;
         return true;
     }
 
