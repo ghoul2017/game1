@@ -26,7 +26,7 @@ Assets/
     ├── Loading/      #   加载界面（LoadingPanel）
     ├── Login/        #   登录 & 角色选择（LoginPanel, RoleSelectPanel）
     ├── Game/         #   主界面 & 游戏场景（MainPanel, PlayerController, MapGround, BagPanel, MailPanel, TaskPanel, ChangeMapPanel, MonsterView, OtherPlayerManager, VirtualJoystick, CameraFollow, GameData, GameSceneEntry）
-    └── Network/      #   网络层（NetClient, MessageDispatcher, NetworkStatusPanel, NtfMethodHandler）
+    └── Network/      #   网络层（NetClient, NetworkStatusPanel, NtfMethodHandler）
 ```
 
 `Library/`、`Temp/`、`obj/` 为 Unity 自动生成，不要修改。
@@ -37,8 +37,7 @@ Assets/
 - **NetClient** — MonoBehaviour 单例，底层基于 `Context.Network.ConnectAsync()` + `TcpSession`
 - **NetworkComponent** — 共享网络组件，客户端复用其 `ConnectAsync` 连接远端服务器
 - **TcpSession** — 连接会话，通过 `PostToMainThread` 回调将消息投递到 Unity 主线程
-- **MessageRouter** — 自动扫描 `[MessageHandler]` 标记的静态方法（在 `NetworkComponent` 构造函数中自动注册）
-- **MessageDispatcher** — 手动注册的按 MsgId 分发器（`TcpSession.OnMessageReceived` 转发，后续弃用）
+- **MessageRouter** — 自动扫描 `[MessageHandler]` 标记的静态方法（在 `NetworkComponent` 构造函数中自动注册），客户端所有消息处理统一使用此机制
 
 ## UI 框架约定
 
