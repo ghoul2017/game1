@@ -18,11 +18,11 @@ namespace Shared.Common.Protos
     public class EnterMapAck : IMessage
     {
         public ushort MsgId => MsgIdConst.EnterMapAck;
-        [ProtoMember(1)] public int MapCfgId { get; set; }
-        [ProtoMember(2)] public int Line { get; set; }
-        [ProtoMember(3)] public int X { get; set; }
-        [ProtoMember(4)] public int Y { get; set; }
-        [ProtoMember(5)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(2)] public int MapCfgId { get; set; }
+        [ProtoMember(3)] public int Line { get; set; }
+        [ProtoMember(4)] public int X { get; set; }
+        [ProtoMember(5)] public int Y { get; set; }
     }
 
     #endregion
@@ -60,11 +60,11 @@ namespace Shared.Common.Protos
     public class ChangeMapAck : IMessage
     {
         public ushort MsgId => MsgIdConst.ChangeMapAck;
-        [ProtoMember(1)] public int MapCfgId { get; set; }
-        [ProtoMember(2)] public int Line { get; set; }
-        [ProtoMember(3)] public int X { get; set; }
-        [ProtoMember(4)] public int Y { get; set; }
-        [ProtoMember(5)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(2)] public int MapCfgId { get; set; }
+        [ProtoMember(3)] public int Line { get; set; }
+        [ProtoMember(4)] public int X { get; set; }
+        [ProtoMember(5)] public int Y { get; set; }
     }
 
     #endregion
@@ -83,9 +83,9 @@ namespace Shared.Common.Protos
     public class MapMoveAck : IMessage
     {
         public ushort MsgId => MsgIdConst.MapMoveAck;
-        [ProtoMember(1)] public int X { get; set; }
-        [ProtoMember(2)] public int Y { get; set; }
-        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(2)] public int X { get; set; }
+        [ProtoMember(3)] public int Y { get; set; }
     }
 
     #endregion

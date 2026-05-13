@@ -10,11 +10,9 @@
 
 已重命名为 `MapObjectEnterNtf`/`MapObjectLeaveNtf`/`MapObjectMoveNtf`，新增 `ObjectType` 和 `CfgId` 字段，按 ObjectType 区分玩家/怪物/NPC。
 
-## ErrorCode 是服务端专属，客户端只有 int
+## ~~ErrorCode 是服务端专属，客户端只有 int~~ [已解决]
 
-`Bag.ErrorCode`、`ChatErrorCode`、`MailErrorCode`、`TaskErrorCode`、`FightErrorCode` 等常量类定义在服务端 System 文件中，客户端通过 Protobuf 收到的 Code 是 `int`，没有对应的枚举/常量。
-
-**影响**：客户端需要硬编码或自行维护一套错误码映射，双端容易不同步。新增错误码时注意同步客户端。
+所有 ErrorCode 常量类已删除，Proto 中 `Code` 字段已删除，统一使用 `ErrorMessage`（`string`）。成功时 ErrorMessage 为空，失败时填中文错误文本。客户端直接显示 `ack.ErrorMessage`，无需维护错误码映射。
 
 ## ItemEffectSystem（Bag 模块）反向依赖 Fight 模块
 

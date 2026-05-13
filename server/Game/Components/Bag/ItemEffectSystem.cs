@@ -37,7 +37,7 @@ public static class ItemEffectSystem
         var player = Context.Players.GetByRoleId(roleId);
         if (player == null)
         {
-            result.Code = -1;
+            result.ErrorMessage = "玩家不在线";
             return result;
         }
 
@@ -45,7 +45,6 @@ public static class ItemEffectSystem
         var effectConfig = ConfigManager.Get<ItemEffectConfig>(configId);
         if (effectConfig == null)
         {
-            result.Code = 0;
             result.EffectType = 0;
             Log.Debug($"物品 {configId} 无效果配置");
             return result;
@@ -79,7 +78,6 @@ public static class ItemEffectSystem
                 break;
         }
 
-        result.Code = 0;
         Log.Info($"物品效果 RoleId:{roleId} ConfigId:{configId} EffectType:{effectConfig.EffectType} Value:{effectConfig.Value1}");
         return result;
     }
@@ -144,7 +142,7 @@ public static class ItemEffectSystem
 /// </summary>
 public class ItemUseResult
 {
-    public int Code { get; set; }
+    public string ErrorMessage { get; set; } = "";
     public int EffectType { get; set; }
     public int Value { get; set; }
 }
