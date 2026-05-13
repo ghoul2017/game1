@@ -5,7 +5,7 @@ using Game.Components.Map;
 using Game.Components.Monster;
 using Game.Components.Player;
 using Game.Components.User;
-using Game.Config;
+using Shared.Core.Config;
 using Shared.Core;
 using Game.Database;
 using Shared.Common.Enums;

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Game.Config;
+using Shared.Core.Config;
 using Shared.Core.Entities;
 using Shared.Core.ECS;
 

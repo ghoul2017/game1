@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -13,17 +14,25 @@ namespace Shared.Core.Config
     public static class SimpleCsvReader
     {
         /// <summary>
-        /// 从 CSV 文件加载配置列表。首行为表头，后续为数据行。
+        /// 泛型版本，供外部直接调用。
         /// </summary>
         public static List<T> Load<T>(string filePath) where T : class, new()
         {
-            var result = new List<T>();
+            return (List<T>)Load(typeof(T), filePath);
+        }
+
+        /// <summary>
+        /// 非泛型版本，供 ConfigManager 反射调用。
+        /// </summary>
+        public static IList Load(Type type, string filePath)
+        {
+            var listType = typeof(List<>).MakeGenericType(type);
+            var result = (IList)Activator.CreateInstance(listType)!;
             var lines = File.ReadAllLines(filePath);
             if (lines.Length == 0) return result;
 
             var headers = ParseLine(lines[0]);
             var propMap = new Dictionary<string, PropertyInfo>();
-            var type = typeof(T);
 
             for (int h = 0; h < headers.Count; h++)
             {
@@ -42,7 +51,7 @@ namespace Shared.Core.Config
                 if (string.IsNullOrEmpty(line)) continue;
 
                 var values = ParseLine(line);
-                var item = new T();
+                var item = Activator.CreateInstance(type)!;
 
                 for (int j = 0; j < headers.Count && j < values.Count; j++)
                 {

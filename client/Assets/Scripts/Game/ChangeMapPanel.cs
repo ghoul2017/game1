@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using Client.Core;
 using Client.Network;
 using Shared.Common.Protos;
+using Shared.Common.Config;
+using Shared.Core.Config;
 
 namespace Client.Game
 {
@@ -33,8 +35,8 @@ namespace Client.Game
 
             // Map buttons
             var currentMap = GameData.CurrentMap;
-            var maps = DefaultMapConfigs.Maps;
-            for (int i = 0; i < maps.Length; i++)
+            var maps = ConfigManager.GetAll<MapConfig>();
+            for (int i = 0; i < maps.Count; i++)
             {
                 CreateMapButton(panel.transform, maps[i], i,
                     currentMap != null && currentMap.MapCfgId == maps[i].Id);

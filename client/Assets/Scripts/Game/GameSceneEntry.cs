@@ -5,6 +5,8 @@ using Client.Network;
 using Shared.Common;
 using Shared.Core.Network;
 using Shared.Common.Protos;
+using Shared.Common.Config;
+using Shared.Core.Config;
 
 namespace Client.Game
 {
@@ -96,7 +98,7 @@ namespace Client.Game
             var mapData = GameData.CurrentMap;
             if (mapData != null)
             {
-                mapConfig = DefaultMapConfigs.GetById(mapData.MapCfgId);
+                mapConfig = ConfigManager.Get<MapConfig>(mapData.MapCfgId);
                 spawnX = mapData.SpawnX;
                 spawnY = mapData.SpawnY;
                 Debug.Log(string.Format("[GameSceneEntry] 使用服务端数据: Map={0} Spawn=({1},{2})",
@@ -105,7 +107,7 @@ namespace Client.Game
             else
             {
                 // 本地回退（开发/调试用）
-                mapConfig = DefaultMapConfigs.GetById(1);
+                mapConfig = ConfigManager.Get<MapConfig>(1);
                 spawnX = mapConfig.BirthX;
                 spawnY = mapConfig.BirthY;
                 Debug.Log("[GameSceneEntry] 无服务端数据，使用本地默认配置");
@@ -261,7 +263,7 @@ namespace Client.Game
             }
 
             // 创建新地图
-            var mapConfig = DefaultMapConfigs.GetById(mapCfgId);
+            var mapConfig = ConfigManager.Get<MapConfig>(mapCfgId);
             var mapObj = new GameObject("Map");
             var mapGround = mapObj.AddComponent<MapGround>();
             mapGround.Generate(mapConfig);

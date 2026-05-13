@@ -4,7 +4,7 @@ using System.Linq;
 using Game.Components.Fight;
 using Game.Components.Map;
 using Game.Components.Player;
-using Game.Config;
+using Shared.Core.Config;
 using Shared.Common.Config;
 using Shared.Core;
 using Shared.Core.Event;

@@ -3,9 +3,9 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using Client.Core;
 using Client.Network;
-using Client.Config;
 using Shared.Common.Protos;
 using Shared.Common.Config;
+using Shared.Core.Config;
 using Shared.Common;
 
 namespace Client.Game
@@ -404,7 +404,7 @@ namespace Client.Game
                 var parts = new List<string>();
                 foreach (var att in mail.Attachments)
                 {
-                    var cfg = ClientConfigManager.Instance.Get<ItemConfig>(att.ConfigId);
+                    var cfg = ConfigManager.Get<ItemConfig>(att.ConfigId);
                     string name = cfg != null ? cfg.Name : ("物品#" + att.ConfigId);
                     parts.Add(name + " x" + att.Count);
                 }

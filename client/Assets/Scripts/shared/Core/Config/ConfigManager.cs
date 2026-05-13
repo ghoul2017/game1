@@ -5,16 +5,16 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Shared.Common.Config;
-using Shared.Core.Log;
 using Shared.Core.Config;
+using Shared.Core.Log;
 
 #nullable enable
-namespace Game.Config
+namespace Shared.Core.Config
 {
     public class ConfigManager : IDisposable
     {
         private static readonly ILog Log = LogManager.GetLogger<ConfigManager>();
-        
+
         public static ConfigManager Instance { get; } = new();
 
         /// <summary>全表数据 Type → List&lt;T&gt;</summary>
@@ -23,18 +23,20 @@ namespace Game.Config
         /// <summary>索引字典 Type → Dictionary&lt;int, T&gt;（按主键）</summary>
         private readonly ConcurrentDictionary<Type, object> _dicts = new();
 
-        /// <summary>扫描到的配置元信息 Type → (FileName, KeyName, KeyProperty)</summary>
+        /// <summary>扫描到的配置元信息 Type → (FileName, KeyProperty)</summary>
         private readonly Dictionary<Type, (string fileName, PropertyInfo keyProp)> _configMeta = new();
 
         private FileSystemWatcher? _watcher;
-        
+
         public void Init(string directory)
         {
-            Instance.LoadAll(directory);
+            LoadAll(directory, true);
             Log.Info("配置表模块初始化完成");
         }
 
-        public void LoadAll(string tablesDirectory)
+        /// <param name="tablesDirectory">CSV 文件目录</param>
+        /// <param name="enableHotReload">是否启用文件监听热更新（服务端 true，客户端 false）</param>
+        public void LoadAll(string tablesDirectory, bool enableHotReload = false)
         {
             if (!Directory.Exists(tablesDirectory))
             {
@@ -44,7 +46,10 @@ namespace Game.Config
 
             ScanConfigs();
             LoadFromDirectory(tablesDirectory);
-            StartWatch(tablesDirectory);
+            if (enableHotReload)
+            {
+                StartWatch(tablesDirectory);
+            }
         }
 
         /// <summary>反射扫描程序集中所有 [ConfigTable] 标注的类</summary>
@@ -62,7 +67,7 @@ namespace Game.Config
                         $"配置表 {type.Name} 标注 KeyName=\"{attr.KeyName}\"，但未找到该属性");
 
                 var attrFileName = attr.FileName;
-                if ("".Equals(attrFileName))
+                if (string.IsNullOrEmpty(attrFileName))
                 {
                     attrFileName = type.Name + ".csv";
                 }
@@ -77,8 +82,6 @@ namespace Game.Config
         /// <summary>从目录加载所有已扫描的 CSV 文件</summary>
         private void LoadFromDirectory(string tablesDirectory)
         {
-            var loadMethod = typeof(CsvLoader).GetMethod("Load")!;
-
             foreach (var (type, (fileName, keyProp)) in _configMeta)
             {
                 var filePath = Path.Combine(tablesDirectory, fileName);
@@ -88,9 +91,7 @@ namespace Game.Config
                     continue;
                 }
 
-                var genericMethod = loadMethod.MakeGenericMethod(type);
-                var data = genericMethod.Invoke(null, new object[] { filePath })!;
-                var list = (System.Collections.IList)data;
+                var list = SimpleCsvReader.Load(type, filePath);
 
                 // 构建索引字典
                 var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(int), type);
@@ -101,7 +102,7 @@ namespace Game.Config
                     dict[key] = item;
                 }
 
-                _lists[type] = data;
+                _lists[type] = list;
                 _dicts[type] = dict;
                 Log.Info($"加载 {fileName}: {list.Count} 条");
             }
@@ -142,7 +143,6 @@ namespace Game.Config
             {
                 var fileName = Path.GetFileName(e.Name ?? "");
 
-                // 查找对应的配置类型
                 var type = _configMeta.FirstOrDefault(kv => kv.Value.fileName == fileName).Key;
                 if (type == null) return;
 
@@ -155,12 +155,8 @@ namespace Game.Config
                 try
                 {
                     var (_, keyProp) = _configMeta[type];
-                    var method = typeof(CsvLoader).GetMethod("Load")!;
-                    var genericMethod = method.MakeGenericMethod(type);
-                    var data = genericMethod.Invoke(null, new object[] { e.FullPath })!;
-                    var list = (System.Collections.IList)data;
+                    var list = SimpleCsvReader.Load(type, e.FullPath);
 
-                    // 重建索引字典
                     var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(int), type);
                     var dict = (System.Collections.IDictionary)Activator.CreateInstance(dictType)!;
                     foreach (var item in list)
@@ -169,7 +165,7 @@ namespace Game.Config
                         dict[key] = item;
                     }
 
-                    _lists[type] = data;
+                    _lists[type] = list;
                     _dicts[type] = dict;
                     OnTableReloaded?.Invoke(type);
                     Log.Info($"热更新完成: {fileName} ({list.Count} 条)");

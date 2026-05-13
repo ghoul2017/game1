@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Game.Components.Fight;
 using Game.Components.Player;
-using Game.Config;
+using Shared.Core.Config;
 using Game.Entities;
 using Shared.Common.Config;
 using Shared.Core.Entities;

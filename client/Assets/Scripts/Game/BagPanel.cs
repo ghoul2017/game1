@@ -3,9 +3,9 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using Client.Core;
 using Client.Network;
-using Client.Config;
 using Shared.Common.Protos;
 using Shared.Common.Config;
+using Shared.Core.Config;
 using Shared.Common;
 
 namespace Client.Game
@@ -181,7 +181,7 @@ namespace Client.Game
                 UIToast.Show(ack.ErrorMessage);
                 return;
             }
-            var cfg = ClientConfigManager.Instance.Get<ItemConfig>(ack.ConfigId);
+            var cfg = ConfigManager.Get<ItemConfig>(ack.ConfigId);
             string itemName = cfg != null ? cfg.Name : "物品";
             UIToast.Show("使用了 " + itemName);
         }
@@ -227,7 +227,7 @@ namespace Client.Game
 
                 if (hasItem)
                 {
-                    var cfg = ClientConfigManager.Instance.Get<ItemConfig>(item.ConfigId);
+                    var cfg = ConfigManager.Get<ItemConfig>(item.ConfigId);
                     string itemName = cfg != null ? cfg.Name : "?";
                     Color qc = GetQualityColor(cfg != null ? cfg.Quality : 0);
 
@@ -254,7 +254,7 @@ namespace Client.Game
             BagItemInfo item;
             if (!_itemMap.TryGetValue(slotIndex, out item)) return;
 
-            var cfg = ClientConfigManager.Instance.Get<ItemConfig>(item.ConfigId);
+            var cfg = ConfigManager.Get<ItemConfig>(item.ConfigId);
             string itemName = cfg != null ? cfg.Name : "物品";
 
             UIMessageBox.Show("使用物品", "使用 " + itemName + " x1 ?",

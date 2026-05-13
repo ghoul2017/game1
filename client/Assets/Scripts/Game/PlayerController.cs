@@ -1,5 +1,6 @@
 using UnityEngine;
 using Client.Network;
+using Shared.Common.Config;
 using Shared.Core.Network;
 using Shared.Common.Protos;
 

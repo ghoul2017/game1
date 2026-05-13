@@ -1,6 +1,6 @@
 using Game.Components.Bag;
 using Game.Components.Player;
-using Game.Config;
+using Shared.Core.Config;
 using Game.Database;
 using Shared.Common.Config;
 using Shared.Common.Protos;

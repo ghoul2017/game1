@@ -1,4 +1,5 @@
 using UnityEngine;
+using Shared.Common.Config;
 
 namespace Client.Game
 {
