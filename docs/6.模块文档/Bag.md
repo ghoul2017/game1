@@ -48,7 +48,6 @@ public class RoleBagComponent : Component, IEntity
     public int Capacity { get; set; } = 100;                 // 背包容量
     public List<BagItem> Items { get; set; } = [];           // 物品列表
 
-    [BsonIgnore] internal long _nextItemUid;                 // UID 生成器
     [BsonIgnore] private Dictionary<int, BagItem>? _indexMap; // 运行时索引
 
     internal void AfterDeserialize();

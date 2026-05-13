@@ -64,7 +64,6 @@ public class MonsterComponent : Component
 {
     public readonly Dictionary<long, Dictionary<long, MonsterEntity>> MapMonsters = new();  // MapKey → 怪物列表
     public readonly Dictionary<string, long> SpawnTimers = new();  // timerKey → 下次刷新时间
-    public long NextMonsterId = 100000;    // 怪物ID生成器（简单递增）
     public GameTimerHandle UpdateTimer;    // AI更新定时器
     public readonly Random Random = new(); // 共享Random实例
 }
@@ -122,7 +121,7 @@ public class MonsterAiComponent : Component
 
 生成流程：
 ```
-1. 分配 ObjectId（NextMonsterId++，非雪花算法）
+1. 分配 ObjectId（IdGenerator.Instance.NextId()，雪花算法）
 2. 在配置的刷新区域随机坐标（使用共享 Random 实例）
 3. MonsterEntity.Create() 创建实体
 4. 注册 FightUnitComponent（RegisterUnit）

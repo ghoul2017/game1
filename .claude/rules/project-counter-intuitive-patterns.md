@@ -14,11 +14,9 @@ FightComponent 索引层已删除，不再有 `Context.Fight`。所有战斗单�
 
 **影响**：不要写 `Context.Fight.xxx`，用 `FightSystem.GetFightUnit(roleId)?.xxx` 替代。
 
-## 怪物 ID 是简单递增，不是雪花算法
+## 所有 ID 统一使用雪花算法
 
-`MonsterComponent.NextMonsterId` 从 100000 开始递增，不像其他实体用 `IdGenerator.Instance.NextId()`（雪花算法）。
-
-**原因**：怪物是纯运行时对象，不需要持久化 ID，服务器重启后重新从 100000 开始。不要对怪物 ID 做跨重启持久化假设。
+所有实体/对象的 ID（怪物、邮件、背包物品、定时器、会话等）均使用 `IdGenerator.Instance.NextId()` 雪花算法生成，不再使用简单递增。全项目无例外。
 
 ## Handler 上线加载直接拷贝字段，不走 System 的 LoadAsync
 

@@ -63,7 +63,6 @@ public class RoleMailComponent : Component, IEntity
     [BsonId] public long Id { get; set; }                    // = RoleId
     public List<RoleMail> Mails = [];                        // 邮件列表
 
-    [BsonIgnore] public long NextMailId = 1;                 // 邮件ID生成器
     [BsonIgnore] private Dictionary<long, RoleMail>? _mailMap; // 运行时索引
 
     internal void AfterDeserialize();
@@ -74,7 +73,7 @@ public class RoleMailComponent : Component, IEntity
 ```
 
 - MongoDB 集合名：`role_mail_list`
-- NextMailId 递增生成邮件 ID
+- 邮件 ID 通过 `IdGenerator.Instance.NextId()` 雪花算法生成
 
 ## System 详解
 
