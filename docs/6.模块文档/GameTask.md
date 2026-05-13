@@ -10,7 +10,7 @@ GameTask 模块实现任务系统，支持任务接取、进度追踪、提交�
 |------|------|------|
 | `server/Game/Components/GameTask/RoleTask.cs` | 71 | 任务数据类 + 目标类 + 目标类型常量 |
 | `server/Game/Components/GameTask/RoleTaskComponent.cs` | 47 | PlayerEntity 级 Component（IEntity 持久化） |
-| `server/Game/Components/GameTask/RoleTaskSystem.cs` | 296 | 任务操作扩展方法 + 错误码 |
+| `server/Game/Components/GameTask/RoleTaskSystem.cs` | 296 | 任务操作扩展方法 |
 | `server/Game/Components/GameTask/RoleTaskHandlers.cs` | 160 | 消息处理 + 事件订阅 |
 | `client/Assets/Scripts/shared/Common/Protos/TaskProtos.cs` | 124 | 消息定义 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10601-10700 段 |
@@ -131,18 +131,9 @@ public class RoleTaskComponent : Component, IEntity
 5. 保存到 MongoDB
 ```
 
-### 错误码
+### 错误处理
 
-| Code | 常量 | 含义 |
-|------|------|------|
-| 0 | Ok | 成功 |
-| 3001 | InvalidParam | 参数无效 |
-| 3002 | TaskNotFound | 任务不存在 |
-| 3003 | TaskAlreadyAccepted | 任务已接取 |
-| 3004 | TaskFull | 任务栏已满 |
-| 3005 | TaskNotCompleted | 任务未完成 |
-| 3006 | TaskAlreadyClaimed | 任务已领奖 |
-| 3007 | TaskCompleted | 任务已完成（不能放弃） |
+所有 Ack 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "任务不存在"、"任务已接取" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败，直接显示 ErrorMessage 内容。
 
 ## Handler 详解
 
@@ -178,13 +169,13 @@ public class RoleTaskComponent : Component, IEntity
 | MsgId | 消息类 | 方向 | 关键字段 |
 |-------|--------|------|----------|
 | 10601 | QueryTaskListReq | C→S | （无） |
-| 10602 | QueryTaskListAck | S→C | Code, Tasks(List\<TaskInfo\>) |
+| 10602 | QueryTaskListAck | S→C | ErrorMessage, Tasks(List\<TaskInfo\>) |
 | 10603 | TaskAcceptReq | C→S | TaskId |
-| 10604 | TaskAcceptAck | S→C | Code, Task(TaskInfo) |
+| 10604 | TaskAcceptAck | S→C | ErrorMessage, Task(TaskInfo) |
 | 10605 | TaskSubmitReq | C→S | TaskId |
-| 10606 | TaskSubmitAck | S→C | Code, TaskId, Rewards(List\<TaskRewardInfo\>) |
+| 10606 | TaskSubmitAck | S→C | ErrorMessage, TaskId, Rewards(List\<TaskRewardInfo\>) |
 | 10607 | TaskGiveUpReq | C→S | TaskId |
-| 10608 | TaskGiveUpAck | S→C | Code, TaskId |
+| 10608 | TaskGiveUpAck | S→C | ErrorMessage, TaskId |
 | 10609 | TaskChangedNtf | S→C | Tasks(List\<TaskInfo\>) |
 
 共享结构：

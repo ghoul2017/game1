@@ -10,7 +10,7 @@ Mail 模块实现玩家邮件系统，支持邮件查询、已读标记、附件
 |------|------|------|
 | `server/Game/Components/Mail/RoleMail.cs` | 62 | 邮件数据类 + 附件类 |
 | `server/Game/Components/Mail/RoleMailComponent.cs` | 46 | PlayerEntity 级 Component（IEntity 持久化） |
-| `server/Game/Components/Mail/RoleMailSystem.cs` | 256 | 邮件操作扩展方法 + 错误码 |
+| `server/Game/Components/Mail/RoleMailSystem.cs` | 256 | 邮件操作扩展方法 |
 | `server/Game/Components/Mail/RoleMailHandlers.cs` | 101 | 消息处理 + 事件订阅 |
 | `client/Assets/Scripts/shared/Common/Protos/MailProtos.cs` | 118 | 消息定义 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10401-10500 段 |
@@ -105,15 +105,9 @@ public class RoleMailComponent : Component, IEntity
 5. 返回领取结果（邮件ID列表 + 物品列表）
 ```
 
-### 错误码
+### 错误处理
 
-| Code | 常量 | 含义 |
-|------|------|------|
-| 0 | Ok | 成功 |
-| 2001 | InvalidParam | 参数无效 |
-| 2002 | MailNotFound | 邮件不存在 |
-| 2003 | MailFull | 邮箱已满 |
-| 2004 | AttachmentNotClaimed | 附件未领取（不能删除） |
+所有 Ack 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "邮箱已满"、"邮件不存在" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败，直接显示 ErrorMessage 内容。
 
 ## Handler 详解
 
@@ -137,13 +131,13 @@ public class RoleMailComponent : Component, IEntity
 | MsgId | 消息类 | 方向 | 关键字段 |
 |-------|--------|------|----------|
 | 10401 | QueryMailListReq | C→S | （无） |
-| 10402 | QueryMailListAck | S→C | Code, Mails(List\<MailInfo\>) |
+| 10402 | QueryMailListAck | S→C | ErrorMessage, Mails(List\<MailInfo\>) |
 | 10403 | MailReadReq | C→S | MailIds(List\<long\>) |
-| 10404 | MailReadAck | S→C | Code, ReadMailIds(List\<long\>) |
+| 10404 | MailReadAck | S→C | ErrorMessage, ReadMailIds(List\<long\>) |
 | 10405 | MailGetItemReq | C→S | MailIds(List\<long\>) |
-| 10406 | MailGetItemAck | S→C | Code, ClaimedMailIds, Items(List\<MailAttachmentInfo\>) |
+| 10406 | MailGetItemAck | S→C | ErrorMessage, ClaimedMailIds, Items(List\<MailAttachmentInfo\>) |
 | 10407 | MailDeleteReq | C→S | MailIds(List\<long\>) |
-| 10408 | MailDeleteAck | S→C | Code, DeletedMailIds(List\<long\>) |
+| 10408 | MailDeleteAck | S→C | ErrorMessage, DeletedMailIds(List\<long\>) |
 | 10409 | MailNewNtf | S→C | Mail(MailInfo) |
 
 共享结构：

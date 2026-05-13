@@ -20,7 +20,7 @@ Map 模块实现地图系统，包含地图实例管理、玩家进/出/切换�
 | `server/Game/Components/Map/MapAoiNotifier.cs` | 130 | AOI 事件 → 网络通知（按 ObjectType 分发） |
 | `server/Game/Components/Map/MapHandlers.cs` | 200 | 消息处理 + 事件订阅 |
 | `server/Game/Core/Aoi/` | — | AOI 系统实现（TowerAoi/Tower/IAoiObject/IAoiEventListener，服务端专属） |
-| `client/Assets/Scripts/shared/Common/Protos/MapProtos.cs` | 207 | 消息定义 + 错误码 |
+| `client/Assets/Scripts/shared/Common/Protos/MapProtos.cs` | 207 | 消息定义 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10701-10800 段 |
 
 ## 实体体系
@@ -257,16 +257,9 @@ public class GameMap
 | ChangeMapHandler | 10705→10706 | ChangeMapReq(targetCfgId, targetLine, x, y) | ChangeMapAck | 切换地图 |
 | MapMoveHandler | 10707→10708 | MapMoveReq(x, y) | MapMoveAck(x, y) | 移动 |
 
-### 错误码
+### 错误处理
 
-| Code | 常量 | 含义 |
-|------|------|------|
-| 0 | Ok | 成功 |
-| 1 | NotLoggedIn | 未登录 |
-| 2 | MapNotFound | 地图不存在 |
-| 3 | AlreadyInMap | 已在该地图 |
-| 4 | NotInMap | 不在任何地图 |
-| 5 | InvalidPosition | 坐标越界 |
+所有 Ack 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "地图不存在"、"已在地图中" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败。
 
 ### 事件订阅
 
@@ -285,13 +278,13 @@ public class GameMap
 | MsgId | 消息类 | 方向 | 关键字段 |
 |-------|--------|------|----------|
 | 10701 | EnterMapReq | C→S | MapCfgId, Line |
-| 10702 | EnterMapAck | S→C | Code, MapCfgId, Line, X, Y |
+| 10702 | EnterMapAck | S→C | ErrorMessage, MapCfgId, Line, X, Y |
 | 10703 | LeaveMapReq | C→S | （无） |
-| 10704 | LeaveMapAck | S→C | Code |
+| 10704 | LeaveMapAck | S→C | ErrorMessage |
 | 10705 | ChangeMapReq | C→S | TargetMapCfgId, TargetLine, X, Y |
-| 10706 | ChangeMapAck | S→C | Code, MapCfgId, Line, X, Y |
+| 10706 | ChangeMapAck | S→C | ErrorMessage, MapCfgId, Line, X, Y |
 | 10707 | MapMoveReq | C→S | X, Y |
-| 10708 | MapMoveAck | S→C | Code, X, Y |
+| 10708 | MapMoveAck | S→C | ErrorMessage, X, Y |
 | 10709 | MapObjectsNtf | S→C | Objects(List\<MapObjectInfo\>) |
 | 10710 | MapPlayerEnterNtf | S→C | Player(MapObjectInfo) |
 | 10711 | MapPlayerLeaveNtf | S→C | RoleId |

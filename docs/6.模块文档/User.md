@@ -120,13 +120,9 @@ public static void KickUser(TcpSession session, LogoutReason reason)
   |<------------------------------|
 ```
 
-错误码：
+错误处理：
 
-| Code | 含义 |
-|------|------|
-| 0 | 成功 |
-| 1001 | 已登录，不允许重复登录 |
-| 1002 | 密码错误 |
+LoginRes 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "已登录，不允许重复登录"、"密码错误"）。
 
 特点：
 - **自动注册**：账号不存在时自动创建，无需单独注册接口
@@ -152,22 +148,16 @@ public static void KickUser(TcpSession session, LogoutReason reason)
   |<---------------------------|
 ```
 
-错误码：
+错误处理：
 
-| Code | 含义 |
-|------|------|
-| 0 | 成功 |
-| 1001 | 未登录 |
-| 1002 | 角色名长度不合法（1-12字符） |
-| 1003 | 角色数量已达上限（4个） |
-| 1004 | 角色名已存在 |
+CreateRoleRes 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "角色名长度不合法"、"角色数量已达上限"、"角色名已存在" 等）。
 
 只写入 `user_role` 集合。`role` 集合（RoleDataComponent）在首次 EnterGame 时按需创建。
 
 ### 进入游戏（EnterGame）
 
 **MsgId**: 10107 → 10108 + 10112(NTF)
-**消息**: `EnterGameReq(roleId)` → `EnterGameRes(code,message,token)` + `EnterGameNtf(roleId,name,level,job)`
+**消息**: `EnterGameReq(roleId)` → `EnterGameRes(errorMessage,token)` + `EnterGameNtf(roleId,name,level,job)`
 
 ```
 客户端                         服务端
@@ -181,31 +171,26 @@ public static void KickUser(TcpSession session, LogoutReason reason)
   |                               |    ├── AddPlayer
   |                               |    ├── 发送 EnterGameNtf（角色数据）
   |                               |    └── PublishAsync(PlayerOnlineEvent)
-  |  EnterGameRes(code,token)     |
+  |  EnterGameRes(errorMessage,token)     |
   |<------------------------------|
   |  EnterGameNtf(roleId,name,..) |
   |<------------------------------|
   |                               | ← 之后各模块的 Ntf 消息陆续到达
 ```
 
-错误码：
+错误处理：
 
-| Code | 含义 |
-|------|------|
-| 0 | 成功 |
-| 1001 | 未登录 |
-| 1002 | 角色不存在或不属于该账号 |
-| 1003 | 进入游戏失败 |
+EnterGameRes 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "角色不存在或不属于该账号"、"进入游戏失败" 等）。
 
 关键设计：
 - **UserRole 验证**：用轻量索引验证归属，不加载完整 RoleDataComponent
 - **EnterGameNtf 先于 PlayerOnlineEvent**：让客户端做好准备接收后续模块消息
-- **EnterGameRes 精简**：只含 Code/Message/Token，角色数据在 Ntf 中
+- **EnterGameRes 精简**：只含 ErrorMessage/Token，角色数据在 Ntf 中
 
 ### 断线重连（Reconnect）
 
 **MsgId**: 10109 → 10110
-**消息**: `ReconnectReq(token,roleId)` → `ReconnectRes(code,message,token)`
+**消息**: `ReconnectReq(token,roleId)` → `ReconnectRes(errorMessage,token)`
 
 ```
 客户端                       服务端
@@ -224,13 +209,9 @@ public static void KickUser(TcpSession session, LogoutReason reason)
   |----------------------------->|
 ```
 
-错误码：
+错误处理：
 
-| Code | 含义 |
-|------|------|
-| 0 | 成功 |
-| 1001 | Token无效或已过期 |
-| 1002 | Token已失效（LastToken不匹配） |
+ReconnectRes 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "Token无效或已过期"、"Token已失效" 等）。
 
 ### 踢人通知（KickNtf）
 
@@ -265,13 +246,13 @@ public class TokenSigner
 | MsgId | 消息类 | 方向 | 关键字段 |
 |-------|--------|------|----------|
 | 10101 | LoginReq | C→S | Username, Password |
-| 10102 | LoginRes | S→C | Code, Message, PlayerId, Token, Roles |
+| 10102 | LoginRes | S→C | ErrorMessage, PlayerId, Token, Roles |
 | 10105 | CreateRoleReq | C→S | Name, Job |
-| 10106 | CreateRoleRes | S→C | Code, Message, Role |
+| 10106 | CreateRoleRes | S→C | ErrorMessage, Role |
 | 10107 | EnterGameReq | C→S | RoleId |
-| 10108 | EnterGameRes | S→C | Code, Message, Token |
+| 10108 | EnterGameRes | S→C | ErrorMessage, Token |
 | 10109 | ReconnectReq | C→S | Token, RoleId |
-| 10110 | ReconnectRes | S→C | Code, Message, Token |
+| 10110 | ReconnectRes | S→C | ErrorMessage, Token |
 | 10111 | KickNtf | S→C | Reason |
 | 10112 | EnterGameNtf | S→C | RoleId, Name, Level, Job |
 

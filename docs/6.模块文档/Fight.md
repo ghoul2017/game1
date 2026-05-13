@@ -13,7 +13,6 @@ Fight 模块实现战斗系统，包含技能使用、伤害计算、命中/暴�
 | `server/Game/Components/Fight/FightCore.cs` | 158 | 伤害计算核心（纯函数） |
 | `server/Game/Components/Fight/FightUnitComponent.cs` | 30 | 战斗单元 Component |
 | `server/Game/Components/Fight/FightAttribute.cs` | 76 | 战斗属性（ProtoContract） |
-| `server/Game/Components/Fight/FightErrorCode.cs` | 19 | 错误码常量 |
 | `server/Game/Components/Fight/Skill.cs` | — | 技能数据类 |
 | `client/Assets/Scripts/shared/Common/Protos/FightProtos.cs` | 108 | 消息定义 + PK模式 + HP变化原因 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10801-10900 段 |
@@ -123,20 +122,9 @@ FightSystem 不再依赖 FightComponent，所有操作通过 MapObjectEntity 上
 | UseSkill | `UseSkill(FightUnitComponent attacker, long attackerId, FightUnitComponent target, long targetId, SkillConfig) → List<SkillHitResult>` | 单体技能执行 |
 | UseSkillAoe | `UseSkillAoe(FightUnitComponent attacker, List<FightUnitComponent> targets, SkillConfig) → List<SkillHitResult>` | AOE技能执行 |
 
-### 错误码
+### 错误处理
 
-| Code | 常量 | 含义 |
-|------|------|------|
-| 0 | Ok | 成功 |
-| 1 | NotInFight | 不在战斗中 |
-| 2 | AlreadyDead | 已死亡 |
-| 3 | SkillNotFound | 技能未学习 |
-| 4 | SkillConfigNotFound | 技能配置不存在 |
-| 5 | SkillInCd | 技能冷却中 |
-| 6 | TargetNotFound | 目标不存在 |
-| 7 | TargetDead | 目标已死亡 |
-| 8 | OutOfRange | 超出范围 |
-| 9 | NotEnoughMp | MP不足 |
+UseSkillAck 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "技能未学习"、"技能冷却中" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败。
 
 ## Handler 详解
 
@@ -166,7 +154,7 @@ FightSystem 不再依赖 FightComponent，所有操作通过 MapObjectEntity 上
 | MsgId | 消息类 | 方向 | 关键字段 |
 |-------|--------|------|----------|
 | 10801 | UseSkillReq | C→S | SkillId, X, Y, TargetId |
-| 10802 | UseSkillAck | S→C | Code, AttackerId, SkillId, MainTargetId, X, Y, MissedIds, IsCriticalIds, Targets(List\<SkillTargetInfo\>) |
+| 10802 | UseSkillAck | S→C | ErrorMessage, AttackerId, SkillId, MainTargetId, X, Y, MissedIds, IsCriticalIds, Targets(List\<SkillTargetInfo\>) |
 | 10803 | KilledByNtf | S→C | KillerId, KillerName, IsMonster |
 | 10804 | HpChangedNtf | S→C | ObjectId, DeltaHp, Hp, Reason |
 | 10805 | SetPkModeReq | C→S | PkMode |
@@ -203,4 +191,4 @@ Fight 模块
 1. **魔法攻击**：FightAttribute 有 MagicAtt 字段但 FightCore 仅使用物攻计算
 2. **BUFF/Debuff**：未实现
 3. **AOE 技能**：UseSkillAoe 已定义但未在 UseSkill 流程中调用
-4. **MP 消耗**：NotEnoughMp 错误码已定义但未校验
+4. **MP 消耗**：ErrorMessage "MP不足" 已定义但未校验

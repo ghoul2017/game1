@@ -9,7 +9,7 @@ Chat 模块实现聊天系统，支持世界频道、私聊和系统广播。世
 | 文件 | 行数 | 职责 |
 |------|------|------|
 | `server/Game/Components/Chat/ChatComponent.cs` | 15 | Module 级 Component，世界聊天冷却记录 |
-| `server/Game/Components/Chat/ChatSystem.cs` | 114 | 聊天逻辑扩展方法 + 错误码 |
+| `server/Game/Components/Chat/ChatSystem.cs` | 114 | 聊天逻辑扩展方法 |
 | `server/Game/Components/Chat/ChatHandlers.cs` | 51 | 消息处理 + 事件订阅 |
 | `client/Assets/Scripts/shared/Common/Protos/ChatProtos.cs` | 64 | 消息定义 + 频道常量 |
 | `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10501-10600 段 |
@@ -40,7 +40,7 @@ public class ChatComponent : Component
 
 | 方法 | 签名 | 说明 |
 |------|------|------|
-| HandleChat | `HandleChat(this ChatComponent, long senderRoleId, string senderName, int channel, string content, string targetName) → (int code, ChatNtf? ntf, long targetRoleId)` | 处理聊天请求 |
+| HandleChat | `HandleChat(this ChatComponent, long senderRoleId, string senderName, int channel, string content, string targetName) → (string errorMessage, ChatNtf? ntf, long targetRoleId)` | 处理聊天请求 |
 | SendSystemBroadcast | `SendSystemBroadcast(this ChatComponent, string content)` | 发送系统广播 |
 | CleanCooldown | `CleanCooldown(this ChatComponent, long roleId)` | 清除冷却（下线时） |
 
@@ -67,17 +67,9 @@ public static class ChatChannel
 }
 ```
 
-### 错误码
+### 错误处理
 
-| Code | 常量 | 含义 |
-|------|------|------|
-| 0 | Ok | 成功 |
-| 3001 | EmptyContent | 内容为空 |
-| 3002 | Cooldown | 世界聊天冷却中 |
-| 3003 | InvalidChannel | 无效频道 |
-| 3004 | InvalidTarget | 无效私聊目标 |
-| 3005 | TargetNotFound | 目标玩家不在线 |
-| 3006 | NotLoggedIn | 目标未登录 |
+ChatAck 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "内容为空"、"世界聊天冷却中" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败。
 
 ## Handler 详解
 
@@ -89,7 +81,7 @@ public static class ChatChannel
 ChatReq(channel, content, targetName)
     ↓
 1. 调用 Context.Chat.HandleChat()
-2. 设置 res.Code
+2. 设置 res.ErrorMessage
 3. 成功时：
    - 世界聊天 → Context.Players.Broadcast(ChatNtf)
    - 私聊 → Context.Players.SendToPlayer(targetRoleId, ChatNtf)
@@ -107,7 +99,7 @@ ChatReq(channel, content, targetName)
 | MsgId | 消息类 | 方向 | 关键字段 |
 |-------|--------|------|----------|
 | 10501 | ChatReq | C→S | Channel, Content, TargetName |
-| 10502 | ChatAck | S→C | Code |
+| 10502 | ChatAck | S→C | ErrorMessage |
 | 10503 | ChatNtf | S→C | Channel, SenderId, SenderName, Content, SendTime |
 | 10504 | SystemChatNtf | S→C | Content, SendTime |
 

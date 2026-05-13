@@ -10,7 +10,7 @@ Bag 模块实现玩家背包系统，支持物品的增删改查、整理、交�
 |------|------|------|
 | `server/Game/Components/Bag/BagItem.cs` | 26 | 物品数据类 |
 | `server/Game/Components/Bag/RoleBagComponent.cs` | 59 | PlayerEntity 级 Component（IEntity 持久化） |
-| `server/Game/Components/Bag/RoleBagSystem.cs` | 264 | 背包操作扩展方法 + 错误码 |
+| `server/Game/Components/Bag/RoleBagSystem.cs` | 264 | 背包操作扩展方法 |
 | `server/Game/Components/Bag/RoleBagHandlers.cs` | 128 | 消息处理 + 事件订阅 |
 | `server/Game/Components/Bag/ItemEffectSystem.cs` | 151 | 物品使用效果系统 |
 | `client/Assets/Scripts/shared/Common/Protos/BagProtos.cs` | 110 | 消息定义 |
@@ -141,29 +141,22 @@ public class RoleBagComponent : Component, IEntity
 3. 不存在则创建默认背包（Capacity=100）并 InsertAsync
 4. 拷贝字段到已挂载 Component，调用 RebuildIndex
 
-### 错误码
+### 错误处理
 
-| Code | 常量 | 含义 |
-|------|------|------|
-| 0 | Ok | 成功 |
-| 1001 | InvalidParam | 参数无效 |
-| 1002 | BagFull | 背包已满 |
-| 1003 | ItemNotFound | 物品不存在 |
-| 1004 | ItemNotEnough | 物品数量不足 |
-| 1005 | ItemUseFail | 物品使用失败 |
+所有 Ack 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "背包已满"、"物品不存在" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败，直接显示 ErrorMessage 内容。
 
 ## 协议汇总
 
 | MsgId | 消息类 | 方向 | 关键字段 |
 |-------|--------|------|----------|
 | 10301 | QueryBagReq | C→S | （无） |
-| 10302 | QueryBagAck | S→C | Code, Items(List\<BagItemInfo\>), Capacity |
+| 10302 | QueryBagAck | S→C | ErrorMessage, Items(List\<BagItemInfo\>), Capacity |
 | 10303 | BagTidyReq | C→S | （无） |
-| 10304 | BagTidyAck | S→C | Code, Items(List\<BagItemInfo\>) |
+| 10304 | BagTidyAck | S→C | ErrorMessage, Items(List\<BagItemInfo\>) |
 | 10305 | BagSwapReq | C→S | Index1, Index2 |
-| 10306 | BagSwapAck | S→C | Code |
+| 10306 | BagSwapAck | S→C | ErrorMessage |
 | 10307 | BagUseItemReq | C→S | Index, Count |
-| 10308 | BagUseItemAck | S→C | Code, ConfigId |
+| 10308 | BagUseItemAck | S→C | ErrorMessage, ConfigId |
 | 10309 | BagItemChangedNtf | S→C | ChangedItems, RemovedIndices |
 
 共享结构 `BagItemInfo`：Uid, ConfigId, Count, Index, Bind
