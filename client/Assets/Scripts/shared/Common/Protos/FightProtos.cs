@@ -29,15 +29,15 @@ namespace Shared.Common.Protos
     public class UseSkillAck : IMessage
     {
         public ushort MsgId => MsgIdConst.UseSkillAck;
-        [ProtoMember(2)] public long AttackerId { get; set; }
-        [ProtoMember(3)] public int SkillId { get; set; }
-        [ProtoMember(4)] public long MainTargetId { get; set; }
-        [ProtoMember(5)] public int X { get; set; }
-        [ProtoMember(6)] public int Y { get; set; }
-        [ProtoMember(7)] public List<long> MissedIds { get; set; } = new List<long>();
-        [ProtoMember(8)] public List<long> IsCriticalIds { get; set; } = new List<long>();
-        [ProtoMember(9)] public List<SkillTargetInfo> Targets { get; set; } = new List<SkillTargetInfo>();
-        [ProtoMember(10)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public long AttackerId { get; set; }
+        [ProtoMember(2)] public int SkillId { get; set; }
+        [ProtoMember(3)] public long MainTargetId { get; set; }
+        [ProtoMember(4)] public int X { get; set; }
+        [ProtoMember(5)] public int Y { get; set; }
+        [ProtoMember(6)] public List<long> MissedIds { get; set; } = new List<long>();
+        [ProtoMember(7)] public List<long> IsCriticalIds { get; set; } = new List<long>();
+        [ProtoMember(8)] public List<SkillTargetInfo> Targets { get; set; } = new List<SkillTargetInfo>();
+        [ProtoMember(9)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion

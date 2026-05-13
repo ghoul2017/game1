@@ -18,10 +18,10 @@ namespace Shared.Common.Protos
     public class LoginRes : IMessage
     {
         public ushort MsgId => MsgIdConst.LoginRes;
-        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
-        [ProtoMember(3)] public long PlayerId { get; set; }
-        [ProtoMember(4)] public string Token { get; set; } = "";
-        [ProtoMember(5)] public List<RoleInfo> Roles { get; set; } = new List<RoleInfo>();
+        [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(2)] public long PlayerId { get; set; }
+        [ProtoMember(3)] public string Token { get; set; } = "";
+        [ProtoMember(4)] public List<RoleInfo> Roles { get; set; } = new List<RoleInfo>();
     }
 
     // --- 角色信息（复用于列表/创建/选角） ---
@@ -49,8 +49,8 @@ namespace Shared.Common.Protos
     public class CreateRoleRes : IMessage
     {
         public ushort MsgId => MsgIdConst.CreateRoleRes;
-        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
-        [ProtoMember(3)] public RoleInfo Role { get; set; } = new RoleInfo();
+        [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(2)] public RoleInfo Role { get; set; } = new RoleInfo();
     }
 
     // --- 进入游戏 ---
@@ -66,8 +66,8 @@ namespace Shared.Common.Protos
     public class EnterGameRes : IMessage
     {
         public ushort MsgId => MsgIdConst.EnterGameRes;
-        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
-        [ProtoMember(3)] public string Token { get; set; } = "";
+        [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(2)] public string Token { get; set; } = "";
     }
 
     // --- 断线重连 ---
@@ -84,8 +84,8 @@ namespace Shared.Common.Protos
     public class ReconnectRes : IMessage
     {
         public ushort MsgId => MsgIdConst.ReconnectRes;
-        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
-        [ProtoMember(3)] public string Token { get; set; } = "";
+        [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(2)] public string Token { get; set; } = "";
     }
 
     // --- 踢人通知 ---

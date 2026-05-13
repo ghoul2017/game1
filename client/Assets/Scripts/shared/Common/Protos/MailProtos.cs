@@ -16,8 +16,8 @@ namespace Shared.Common.Protos
     public class QueryMailListAck : IMessage
     {
         public ushort MsgId => MsgIdConst.QueryMailListAck;
-        [ProtoMember(2)] public List<MailInfo> Mails { get; set; } = new List<MailInfo>();
-        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public List<MailInfo> Mails { get; set; } = new List<MailInfo>();
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -35,8 +35,8 @@ namespace Shared.Common.Protos
     public class MailReadAck : IMessage
     {
         public ushort MsgId => MsgIdConst.MailReadAck;
-        [ProtoMember(2)] public List<long> ReadMailIds { get; set; } = new List<long>();
-        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public List<long> ReadMailIds { get; set; } = new List<long>();
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -54,9 +54,9 @@ namespace Shared.Common.Protos
     public class MailGetItemAck : IMessage
     {
         public ushort MsgId => MsgIdConst.MailGetItemAck;
-        [ProtoMember(2)] public List<long> ClaimedMailIds { get; set; } = new List<long>();
-        [ProtoMember(3)] public List<MailAttachmentInfo> Items { get; set; } = new List<MailAttachmentInfo>();
-        [ProtoMember(4)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public List<long> ClaimedMailIds { get; set; } = new List<long>();
+        [ProtoMember(2)] public List<MailAttachmentInfo> Items { get; set; } = new List<MailAttachmentInfo>();
+        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -74,8 +74,8 @@ namespace Shared.Common.Protos
     public class MailDeleteAck : IMessage
     {
         public ushort MsgId => MsgIdConst.MailDeleteAck;
-        [ProtoMember(2)] public List<long> DeletedMailIds { get; set; } = new List<long>();
-        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public List<long> DeletedMailIds { get; set; } = new List<long>();
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion

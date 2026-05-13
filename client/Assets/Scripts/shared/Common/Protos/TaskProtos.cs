@@ -16,8 +16,8 @@ namespace Shared.Common.Protos
     public class QueryTaskListAck : IMessage
     {
         public ushort MsgId => MsgIdConst.QueryTaskListAck;
-        [ProtoMember(2)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
-        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -35,8 +35,8 @@ namespace Shared.Common.Protos
     public class TaskAcceptAck : IMessage
     {
         public ushort MsgId => MsgIdConst.TaskAcceptAck;
-        [ProtoMember(2)] public TaskInfo Task { get; set; } = new TaskInfo();
-        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public TaskInfo Task { get; set; } = new TaskInfo();
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -54,9 +54,9 @@ namespace Shared.Common.Protos
     public class TaskSubmitAck : IMessage
     {
         public ushort MsgId => MsgIdConst.TaskSubmitAck;
-        [ProtoMember(2)] public int TaskId { get; set; }
-        [ProtoMember(3)] public List<TaskRewardInfo> Rewards { get; set; } = new List<TaskRewardInfo>();
-        [ProtoMember(4)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public int TaskId { get; set; }
+        [ProtoMember(2)] public List<TaskRewardInfo> Rewards { get; set; } = new List<TaskRewardInfo>();
+        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
@@ -74,8 +74,8 @@ namespace Shared.Common.Protos
     public class TaskGiveUpAck : IMessage
     {
         public ushort MsgId => MsgIdConst.TaskGiveUpAck;
-        [ProtoMember(2)] public int TaskId { get; set; }
-        [ProtoMember(3)] public string ErrorMessage { get; set; } = "";
+        [ProtoMember(1)] public int TaskId { get; set; }
+        [ProtoMember(2)] public string ErrorMessage { get; set; } = "";
     }
 
     #endregion
