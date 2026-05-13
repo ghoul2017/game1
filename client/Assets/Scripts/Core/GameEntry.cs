@@ -12,7 +12,6 @@ namespace Client.Core
             Debug.Log("[GameEntry] 游戏启动");
 
             NetClient.EnsureCreated();
-            NetClient.Instance.SetDispatcher(new MessageDispatcher());
 
             UIManager.EnsureCreated();
             NetworkStatusPanel.EnsureCreated();

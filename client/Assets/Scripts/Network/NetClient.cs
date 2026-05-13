@@ -66,7 +66,6 @@ namespace Client.Network
 
         // --- Internals ---
         private TcpSession _session;
-        private MessageDispatcher _dispatcher;
         private readonly ConcurrentQueue<Action> _mainQueue = new ConcurrentQueue<Action>();
 
         // Timing
@@ -161,16 +160,6 @@ namespace Client.Network
 
         // ==================== Public API ====================
 
-        public MessageDispatcher Dispatcher
-        {
-            get { return _dispatcher; }
-        }
-
-        public void SetDispatcher(MessageDispatcher dispatcher)
-        {
-            _dispatcher = dispatcher;
-        }
-
         public void Connect(string host = null, int? port = null)
         {
             if (_state == ConnState.Connecting || _state == ConnState.Connected ||
@@ -242,7 +231,6 @@ namespace Client.Network
                 _lastRecvTime = Time.time;
                 action();
             });
-            _session.OnMessageReceived = (_, msgId, payload) => _dispatcher?.Dispatch(msgId, payload);
             _session.OnDisconnected += OnSessionDisconnected;
 
             _state = ConnState.Handshaking;
@@ -295,7 +283,6 @@ namespace Client.Network
             {
                 _session.OnDisconnected -= OnSessionDisconnected;
                 _session.PostToMainThread = null;
-                _session.OnMessageReceived = null;
                 _session.Disconnect(reason);
                 _session = null;
             }

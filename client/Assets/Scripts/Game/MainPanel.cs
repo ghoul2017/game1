@@ -58,16 +58,12 @@ namespace Client.Game
                 if (roleJobText != null) roleJobText.text = $"[ {role.Job} ]";
                 if (roleLevelText != null) roleLevelText.text = $"Lv.{role.Level}";
             }
-            RegisterChatHandlers();
-            RegisterFightHandlers();
             UpdateHpDisplay();
             UpdatePkModeDisplay();
         }
 
         public override void OnHide()
         {
-            UnregisterChatHandlers();
-            UnregisterFightHandlers();
         }
 
         private void Update()
@@ -383,25 +379,7 @@ namespace Client.Game
 
         // ==================== Chat Network Handlers ====================
 
-        private void RegisterChatHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<ChatAck>(MsgIdConst.ChatAck, HandleChatAck);
-            nc.Dispatcher.Register<ChatNtf>(MsgIdConst.ChatNtf, HandleChatNtf);
-            nc.Dispatcher.Register<SystemChatNtf>(MsgIdConst.SystemChatNtf, HandleSystemChatNtf);
-        }
-
-        private void UnregisterChatHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgIdConst.ChatAck);
-            nc.Dispatcher.Unregister(MsgIdConst.ChatNtf);
-            nc.Dispatcher.Unregister(MsgIdConst.SystemChatNtf);
-        }
-
-        private void HandleChatAck(ChatAck ack)
+        public void HandleChatAck(ChatAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -409,7 +387,7 @@ namespace Client.Game
             }
         }
 
-        private void HandleChatNtf(ChatNtf ntf)
+        public void HandleChatNtf(ChatNtf ntf)
         {
             string chTag = ntf.Channel == ChatChannel.World ? "世界" : "私聊";
             string line = string.Format("<color=#88CCFF>[{0}][{1}]</color> {2}",
@@ -417,7 +395,7 @@ namespace Client.Game
             AppendChatLine(line);
         }
 
-        private void HandleSystemChatNtf(SystemChatNtf ntf)
+        public void HandleSystemChatNtf(SystemChatNtf ntf)
         {
             string line = string.Format("<color=#FFD700>[系统]</color> {0}", ntf.Content);
             AppendChatLine(line);
@@ -651,27 +629,7 @@ namespace Client.Game
 
         // ==================== Fight Network Handlers ====================
 
-        private void RegisterFightHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<UseSkillAck>(MsgIdConst.UseSkillAck, HandleUseSkillAck);
-            nc.Dispatcher.Register<HpChangedNtf>(MsgIdConst.HpChangedNtf, HandleHpChangedNtf);
-            nc.Dispatcher.Register<KilledByNtf>(MsgIdConst.KilledByNtf, HandleKilledByNtf);
-            nc.Dispatcher.Register<PkModeChangedNtf>(MsgIdConst.PkModeChangedNtf, HandlePkModeChangedNtf);
-        }
-
-        private void UnregisterFightHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgIdConst.UseSkillAck);
-            nc.Dispatcher.Unregister(MsgIdConst.HpChangedNtf);
-            nc.Dispatcher.Unregister(MsgIdConst.KilledByNtf);
-            nc.Dispatcher.Unregister(MsgIdConst.PkModeChangedNtf);
-        }
-
-        private void HandleUseSkillAck(UseSkillAck ack)
+        public void HandleUseSkillAck(UseSkillAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -703,7 +661,7 @@ namespace Client.Game
                 ack.AttackerId, ack.SkillId, ack.MainTargetId, ack.Targets.Count));
         }
 
-        private void HandleHpChangedNtf(HpChangedNtf ntf)
+        public void HandleHpChangedNtf(HpChangedNtf ntf)
         {
             long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;
 
@@ -756,7 +714,7 @@ namespace Client.Game
             }
         }
 
-        private void HandleKilledByNtf(KilledByNtf ntf)
+        public void HandleKilledByNtf(KilledByNtf ntf)
         {
             string killerDesc = ntf.IsMonster ? "怪物" : ntf.KillerName;
             UIMessageBox.Show("阵亡", string.Format("你被 {0} 击杀了！", killerDesc),
@@ -774,7 +732,7 @@ namespace Client.Game
                 }, showCancel: false, confirmText: "回城复活");
         }
 
-        private void HandlePkModeChangedNtf(PkModeChangedNtf ntf)
+        public void HandlePkModeChangedNtf(PkModeChangedNtf ntf)
         {
             GameData.CurrentPkMode = ntf.PkMode;
             UpdatePkModeDisplay();

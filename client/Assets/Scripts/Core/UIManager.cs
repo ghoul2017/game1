@@ -211,6 +211,17 @@ namespace Client.Core
             }
         }
 
+        /// <summary>
+        /// 获取已打开的面板实例，未找到返回 null
+        /// </summary>
+        public T GetPanel<T>() where T : UIPanel
+        {
+            var type = typeof(T);
+            if (panels.TryGetValue(type, out var panel) && panel != null)
+                return (T)panel;
+            return null;
+        }
+
         private void OnDestroy()
         {
             if (instance == this) instance = null;

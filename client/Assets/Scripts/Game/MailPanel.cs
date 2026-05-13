@@ -197,40 +197,16 @@ namespace Client.Game
 
         public override void OnShow()
         {
-            RegisterHandlers();
             NetClient.Instance.Send(new QueryMailListReq());
         }
 
         public override void OnHide()
         {
-            UnregisterHandlers();
-        }
-
-        private void RegisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<QueryMailListAck>(MsgIdConst.QueryMailListAck, HandleQueryMailListAck);
-            nc.Dispatcher.Register<MailReadAck>(MsgIdConst.MailReadAck, HandleMailReadAck);
-            nc.Dispatcher.Register<MailGetItemAck>(MsgIdConst.MailGetItemAck, HandleMailGetItemAck);
-            nc.Dispatcher.Register<MailDeleteAck>(MsgIdConst.MailDeleteAck, HandleMailDeleteAck);
-            nc.Dispatcher.Register<MailNewNtf>(MsgIdConst.MailNewNtf, HandleMailNewNtf);
-        }
-
-        private void UnregisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgIdConst.QueryMailListAck);
-            nc.Dispatcher.Unregister(MsgIdConst.MailReadAck);
-            nc.Dispatcher.Unregister(MsgIdConst.MailGetItemAck);
-            nc.Dispatcher.Unregister(MsgIdConst.MailDeleteAck);
-            nc.Dispatcher.Unregister(MsgIdConst.MailNewNtf);
         }
 
         // ==================== Handlers ====================
 
-        private void HandleQueryMailListAck(QueryMailListAck ack)
+        public void HandleQueryMailListAck(QueryMailListAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -243,7 +219,7 @@ namespace Client.Game
             ClearDetail();
         }
 
-        private void HandleMailReadAck(MailReadAck ack)
+        public void HandleMailReadAck(MailReadAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -263,7 +239,7 @@ namespace Client.Game
             UIToast.Show("已标记为已读");
         }
 
-        private void HandleMailGetItemAck(MailGetItemAck ack)
+        public void HandleMailGetItemAck(MailGetItemAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -283,7 +259,7 @@ namespace Client.Game
             UIToast.Show("附件已领取");
         }
 
-        private void HandleMailDeleteAck(MailDeleteAck ack)
+        public void HandleMailDeleteAck(MailDeleteAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -303,7 +279,7 @@ namespace Client.Game
             UIToast.Show("邮件已删除");
         }
 
-        private void HandleMailNewNtf(MailNewNtf ntf)
+        public void HandleMailNewNtf(MailNewNtf ntf)
         {
             if (ntf.Mail != null)
             {

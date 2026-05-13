@@ -187,42 +187,16 @@ namespace Client.Game
 
         public override void OnShow()
         {
-            RegisterHandlers();
             NetClient.Instance.Send(new QueryTaskListReq());
         }
 
         public override void OnHide()
         {
-            UnregisterHandlers();
-        }
-
-        // ==================== Network ====================
-
-        private void RegisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<QueryTaskListAck>(MsgIdConst.QueryTaskListAck, HandleQueryTaskListAck);
-            nc.Dispatcher.Register<TaskAcceptAck>(MsgIdConst.TaskAcceptAck, HandleTaskAcceptAck);
-            nc.Dispatcher.Register<TaskSubmitAck>(MsgIdConst.TaskSubmitAck, HandleTaskSubmitAck);
-            nc.Dispatcher.Register<TaskGiveUpAck>(MsgIdConst.TaskGiveUpAck, HandleTaskGiveUpAck);
-            nc.Dispatcher.Register<TaskChangedNtf>(MsgIdConst.TaskChangedNtf, HandleTaskChangedNtf);
-        }
-
-        private void UnregisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgIdConst.QueryTaskListAck);
-            nc.Dispatcher.Unregister(MsgIdConst.TaskAcceptAck);
-            nc.Dispatcher.Unregister(MsgIdConst.TaskSubmitAck);
-            nc.Dispatcher.Unregister(MsgIdConst.TaskGiveUpAck);
-            nc.Dispatcher.Unregister(MsgIdConst.TaskChangedNtf);
         }
 
         // ==================== Handlers ====================
 
-        private void HandleQueryTaskListAck(QueryTaskListAck ack)
+        public void HandleQueryTaskListAck(QueryTaskListAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -235,7 +209,7 @@ namespace Client.Game
             ClearDetail();
         }
 
-        private void HandleTaskAcceptAck(TaskAcceptAck ack)
+        public void HandleTaskAcceptAck(TaskAcceptAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -250,7 +224,7 @@ namespace Client.Game
             }
         }
 
-        private void HandleTaskSubmitAck(TaskSubmitAck ack)
+        public void HandleTaskSubmitAck(TaskSubmitAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -277,7 +251,7 @@ namespace Client.Game
             }
         }
 
-        private void HandleTaskGiveUpAck(TaskGiveUpAck ack)
+        public void HandleTaskGiveUpAck(TaskGiveUpAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -294,7 +268,7 @@ namespace Client.Game
             UIToast.Show("已放弃任务");
         }
 
-        private void HandleTaskChangedNtf(TaskChangedNtf ntf)
+        public void HandleTaskChangedNtf(TaskChangedNtf ntf)
         {
             if (ntf.Tasks == null) return;
             foreach (var changed in ntf.Tasks)

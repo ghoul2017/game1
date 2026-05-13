@@ -151,27 +151,11 @@ namespace Client.Login
             errorText.text = "";
             isLoggingIn = false;
             SetButtonEnabled(true);
-            RegisterHandlers();
         }
 
         public override void OnHide()
         {
             CleanupConnectEvents();
-            UnregisterHandlers();
-        }
-
-        private void RegisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc != null && nc.Dispatcher != null)
-                nc.Dispatcher.Register<LoginRes>(MsgIdConst.LoginRes, HandleLoginRes);
-        }
-
-        private void UnregisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc != null && nc.Dispatcher != null)
-                nc.Dispatcher.Unregister(MsgIdConst.LoginRes);
         }
 
         private void SetButtonEnabled(bool enabled)
@@ -205,15 +189,13 @@ namespace Client.Login
             SetButtonEnabled(false);
 
             var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null)
+            if (nc == null)
             {
                 errorText.text = "网络未初始化";
                 isLoggingIn = false;
                 SetButtonEnabled(true);
                 return;
             }
-
-            RegisterHandlers();
 
             if (nc.IsConnected)
             {
@@ -267,7 +249,7 @@ namespace Client.Login
             NetClient.Instance.Send(new LoginReq { Username = username, Password = password });
         }
 
-        private void HandleLoginRes(LoginRes res)
+        public void HandleLoginRes(LoginRes res)
         {
             if (string.IsNullOrEmpty(res.ErrorMessage))
             {

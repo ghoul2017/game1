@@ -143,36 +143,14 @@ namespace Client.Game
 
         public override void OnShow()
         {
-            RegisterHandlers();
             NetClient.Instance.Send(new QueryBagReq());
         }
 
         public override void OnHide()
         {
-            UnregisterHandlers();
         }
 
-        private void RegisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Register<QueryBagAck>(MsgIdConst.QueryBagAck, HandleQueryBagAck);
-            nc.Dispatcher.Register<BagTidyAck>(MsgIdConst.BagTidyAck, HandleBagTidyAck);
-            nc.Dispatcher.Register<BagUseItemAck>(MsgIdConst.BagUseItemAck, HandleBagUseItemAck);
-            nc.Dispatcher.Register<BagItemChangedNtf>(MsgIdConst.BagItemChangedNtf, HandleBagItemChangedNtf);
-        }
-
-        private void UnregisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc == null || nc.Dispatcher == null) return;
-            nc.Dispatcher.Unregister(MsgIdConst.QueryBagAck);
-            nc.Dispatcher.Unregister(MsgIdConst.BagTidyAck);
-            nc.Dispatcher.Unregister(MsgIdConst.BagUseItemAck);
-            nc.Dispatcher.Unregister(MsgIdConst.BagItemChangedNtf);
-        }
-
-        private void HandleQueryBagAck(QueryBagAck ack)
+        public void HandleQueryBagAck(QueryBagAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -184,7 +162,7 @@ namespace Client.Game
             RefreshGrid();
         }
 
-        private void HandleBagTidyAck(BagTidyAck ack)
+        public void HandleBagTidyAck(BagTidyAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -196,7 +174,7 @@ namespace Client.Game
             UIToast.Show("整理完成");
         }
 
-        private void HandleBagUseItemAck(BagUseItemAck ack)
+        public void HandleBagUseItemAck(BagUseItemAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -208,7 +186,7 @@ namespace Client.Game
             UIToast.Show("使用了 " + itemName);
         }
 
-        private void HandleBagItemChangedNtf(BagItemChangedNtf ntf)
+        public void HandleBagItemChangedNtf(BagItemChangedNtf ntf)
         {
             if (ntf.RemovedIndices != null)
             {

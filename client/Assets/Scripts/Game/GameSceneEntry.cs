@@ -22,14 +22,12 @@ namespace Client.Game
             UIManager.EnsureCreated();
 
             InitializeScene();
-            RegisterAoiHandlers();
             RegisterReconnectEvents();
             _mainPanel = UIManager.Instance.ShowPanel<MainPanel>();
         }
 
         private void OnDestroy()
         {
-            UnregisterAoiHandlers();
             UnregisterReconnectEvents();
             OtherPlayerManager.Instance.ClearAll();
             MonsterEntityManager.Instance.ClearAll();
@@ -157,45 +155,8 @@ namespace Client.Game
             }
         }
 
-        private void RegisterAoiHandlers()
-        {
-            var dispatcher = NetClient.Instance != null ? NetClient.Instance.Dispatcher : null;
-            if (dispatcher == null)
-            {
-                Debug.LogWarning("[GameSceneEntry] NetClient 或 Dispatcher 不可用，跳过 AOI 注册");
-                return;
-            }
-
-            dispatcher.Register<MapObjectsNtf>(MsgIdConst.MapObjectsNtf, OnMapObjectsNtf);
-            dispatcher.Register<MapPlayerEnterNtf>(MsgIdConst.MapPlayerEnterNtf, OnMapPlayerEnterNtf);
-            dispatcher.Register<MapPlayerLeaveNtf>(MsgIdConst.MapPlayerLeaveNtf, OnMapPlayerLeaveNtf);
-            dispatcher.Register<MapPlayerMoveNtf>(MsgIdConst.MapPlayerMoveNtf, OnMapPlayerMoveNtf);
-            dispatcher.Register<MapObjectEnterNtf>(MsgIdConst.MapObjectEnterNtf, OnMapObjectEnterNtf);
-            dispatcher.Register<MapObjectLeaveNtf>(MsgIdConst.MapObjectLeaveNtf, OnMapObjectLeaveNtf);
-            dispatcher.Register<MapObjectMoveNtf>(MsgIdConst.MapObjectMoveNtf, OnMapObjectMoveNtf);
-            dispatcher.Register<MapMoveAck>(MsgIdConst.MapMoveAck, OnMapMoveAck);
-            dispatcher.Register<ChangeMapAck>(MsgIdConst.ChangeMapAck, OnChangeMapAck);
-
-            Debug.Log("[GameSceneEntry] AOI 视野同步 + 移动同步 + 地图对象 + 切图处理器已注册");
-        }
-
-        private void UnregisterAoiHandlers()
-        {
-            var dispatcher = NetClient.Instance != null ? NetClient.Instance.Dispatcher : null;
-            if (dispatcher == null) return;
-
-            dispatcher.Unregister(MsgIdConst.MapObjectsNtf);
-            dispatcher.Unregister(MsgIdConst.MapPlayerEnterNtf);
-            dispatcher.Unregister(MsgIdConst.MapPlayerLeaveNtf);
-            dispatcher.Unregister(MsgIdConst.MapPlayerMoveNtf);
-            dispatcher.Unregister(MsgIdConst.MapObjectEnterNtf);
-            dispatcher.Unregister(MsgIdConst.MapObjectLeaveNtf);
-            dispatcher.Unregister(MsgIdConst.MapObjectMoveNtf);
-            dispatcher.Unregister(MsgIdConst.MapMoveAck);
-            dispatcher.Unregister(MsgIdConst.ChangeMapAck);
-        }
-
-        private void OnMapObjectsNtf(MapObjectsNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapObjectsNtf(TcpSession session, MapObjectsNtf ntf)
         {
             if (ntf.Objects == null) return;
             foreach (var obj in ntf.Objects)
@@ -212,37 +173,44 @@ namespace Client.Game
             }
         }
 
-        private void OnMapPlayerEnterNtf(MapPlayerEnterNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapPlayerEnterNtf(TcpSession session, MapPlayerEnterNtf ntf)
         {
             OtherPlayerManager.Instance.SpawnPlayer(ntf.Player);
         }
 
-        private void OnMapPlayerLeaveNtf(MapPlayerLeaveNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapPlayerLeaveNtf(TcpSession session, MapPlayerLeaveNtf ntf)
         {
             OtherPlayerManager.Instance.RemovePlayer(ntf.RoleId);
         }
 
-        private void OnMapPlayerMoveNtf(MapPlayerMoveNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapPlayerMoveNtf(TcpSession session, MapPlayerMoveNtf ntf)
         {
             OtherPlayerManager.Instance.MovePlayer(ntf.RoleId, ntf.X, ntf.Y);
         }
 
-        private void OnMapObjectEnterNtf(MapObjectEnterNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapObjectEnterNtf(TcpSession session, MapObjectEnterNtf ntf)
         {
             MonsterEntityManager.Instance.Spawn(ntf.ObjectId, ntf.CfgId, ntf.ObjectType, ntf.Name, ntf.X, ntf.Y);
         }
 
-        private void OnMapObjectLeaveNtf(MapObjectLeaveNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapObjectLeaveNtf(TcpSession session, MapObjectLeaveNtf ntf)
         {
             MonsterEntityManager.Instance.Remove(ntf.ObjectId);
         }
 
-        private void OnMapObjectMoveNtf(MapObjectMoveNtf ntf)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapObjectMoveNtf(TcpSession session, MapObjectMoveNtf ntf)
         {
             MonsterEntityManager.Instance.Move(ntf.ObjectId, ntf.X, ntf.Y);
         }
 
-        private void OnMapMoveAck(MapMoveAck ack)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnMapMoveAck(TcpSession session, MapMoveAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -255,7 +223,8 @@ namespace Client.Game
             }
         }
 
-        private void OnChangeMapAck(ChangeMapAck ack)
+        [MessageHandler(typeof(NtfMethodHandler))]
+        public static void OnChangeMapAck(TcpSession session, ChangeMapAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -278,7 +247,7 @@ namespace Client.Game
             RebuildScene(ack.MapCfgId, ack.X, ack.Y);
         }
 
-        private void RebuildScene(int mapCfgId, int spawnX, int spawnY)
+        private static void RebuildScene(int mapCfgId, int spawnX, int spawnY)
         {
             // 清除其他玩家和怪物
             OtherPlayerManager.Instance.ClearAll();
@@ -287,7 +256,7 @@ namespace Client.Game
             // 销毁旧地图
             if (MapGround != null)
             {
-                Destroy(MapGround.gameObject);
+                Object.Destroy(MapGround.gameObject);
                 MapGround = null;
             }
 

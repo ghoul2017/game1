@@ -111,38 +111,12 @@ namespace Client.Login
 
         public override void OnShow()
         {
-            RegisterHandlers();
             LoadRolesFromCache();
         }
 
         public override void OnHide()
         {
-            UnregisterHandlers();
             HideCreateDialog();
-        }
-
-        private void RegisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc != null && nc.Dispatcher != null)
-            {
-                nc.Dispatcher.Register<CreateRoleRes>(MsgIdConst.CreateRoleRes, HandleCreateRoleRes);
-                nc.Dispatcher.Register<EnterGameRes>(MsgIdConst.EnterGameRes, HandleEnterGameRes);
-                nc.Dispatcher.Register<EnterGameNtf>(MsgIdConst.EnterGameNtf, HandleEnterGameNtf);
-                nc.Dispatcher.Register<EnterMapAck>(MsgIdConst.EnterMapAck, HandleEnterMapAck);
-            }
-        }
-
-        private void UnregisterHandlers()
-        {
-            var nc = NetClient.Instance;
-            if (nc != null && nc.Dispatcher != null)
-            {
-                nc.Dispatcher.Unregister(MsgIdConst.CreateRoleRes);
-                nc.Dispatcher.Unregister(MsgIdConst.EnterGameRes);
-                nc.Dispatcher.Unregister(MsgIdConst.EnterGameNtf);
-                nc.Dispatcher.Unregister(MsgIdConst.EnterMapAck);
-            }
         }
 
         private void LoadRolesFromCache()
@@ -157,7 +131,7 @@ namespace Client.Login
 
         // --- Network Handlers ---
 
-        private void HandleCreateRoleRes(CreateRoleRes res)
+        public void HandleCreateRoleRes(CreateRoleRes res)
         {
             if (string.IsNullOrEmpty(res.ErrorMessage))
             {
@@ -183,7 +157,7 @@ namespace Client.Login
             }
         }
 
-        private void HandleEnterGameRes(EnterGameRes res)
+        public void HandleEnterGameRes(EnterGameRes res)
         {
             if (string.IsNullOrEmpty(res.ErrorMessage))
             {
@@ -199,7 +173,7 @@ namespace Client.Login
             }
         }
 
-        private void HandleEnterGameNtf(EnterGameNtf ntf)
+        public void HandleEnterGameNtf(EnterGameNtf ntf)
         {
             GameData.CurrentRole = new RoleData
             {
@@ -216,7 +190,7 @@ namespace Client.Login
             NetClient.Instance.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
         }
 
-        private void HandleEnterMapAck(EnterMapAck res)
+        public void HandleEnterMapAck(EnterMapAck res)
         {
             if (string.IsNullOrEmpty(res.ErrorMessage))
             {
