@@ -162,6 +162,7 @@ Context.Players.AddPlayer(player);
 - **坐标**: 1格=1世界单位，服务端Y → Unity Z
 - **引用规则**: 服务端通过 csproj Compile Include 引用客户端 shared/；客户端禁止引用 server/ 业务代码
 - **新增消息**: 在 `shared/Common/Protos/` 添加 Proto 类 + 在 `MsgIdConst.cs` 分配 ID，双端自动生效
+- **错误处理**: Ack/Res 使用 `ErrorMessage`（`string`，ProtoMember 编号 1），成功时为空字符串，失败时填中文错误文本。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败并直接显示
 
 ## 用户偏好
 
