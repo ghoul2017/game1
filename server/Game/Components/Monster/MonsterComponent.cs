@@ -15,7 +15,6 @@ public class MonsterComponent : Component
 {
     public readonly Dictionary<long, Dictionary<long, MonsterEntity>> MapMonsters = new();
     public readonly Dictionary<string, long> SpawnTimers = new();
-    public long NextMonsterId = 100000;
     public GameTimerHandle UpdateTimer;
     public readonly Random Random = new();
 }

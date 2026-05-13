@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Concurrent;
-using System.Threading;
+using Shared.Core;
 using Shared.Core.Log;
 
 namespace Shared.Core;
@@ -12,7 +12,6 @@ public static class GameTimer
 {
     private static readonly ILog Log = LogManager.GetLogger("GameTimer");
     private static readonly ConcurrentDictionary<long, TimerEntry> _timers = new();
-    private static long _nextId;
 
     /// <summary>启动一个定时器</summary>
     /// <param name="intervalMs">间隔毫秒</param>
@@ -20,7 +19,7 @@ public static class GameTimer
     /// <returns>句柄，用于停止</returns>
     public static GameTimerHandle Start(int intervalMs, Action callback)
     {
-        var id = Interlocked.Increment(ref _nextId);
+        var id = IdGenerator.Instance.NextId();
         var entry = new TimerEntry(callback);
         entry.Timer = new Timer(
             _ => OnTick(id, entry),

@@ -2,6 +2,7 @@ using Game.Components.Bag;
 using Game.Components.Player;
 using Game.Database;
 using Shared.Common.Protos;
+using Shared.Core;
 using Shared.Core.Log;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,6 @@ public static class RoleMailSystem
         // 把数据库加载的数据拷贝到当前 Component
         self.Id = mailList.Id;
         self.Mails = mailList.Mails;
-        self.NextMailId = mailList.NextMailId;
         self.RebuildIndex();
 
         // 清理过期邮件
@@ -58,7 +58,7 @@ public static class RoleMailSystem
 
         var mail = new RoleMail
         {
-            Id = Interlocked.Increment(ref self.NextMailId),
+            Id = IdGenerator.Instance.NextId(),
             RoleId = self.Id,
             Sender = sender,
             Title = title,

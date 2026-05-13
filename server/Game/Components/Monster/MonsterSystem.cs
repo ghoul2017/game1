@@ -106,7 +106,7 @@ public static class MonsterSystem
         if (currentCount >= cfg.MaxCount)
             return null;
 
-        long monsterId = self.NextMonsterId++;
+        long monsterId = IdGenerator.Instance.NextId();
 
         var monster = MonsterEntity.Create(monsterId, cfg, mapId, line, x, y);
 

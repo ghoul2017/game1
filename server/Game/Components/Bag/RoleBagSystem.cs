@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Game.Database;
+using Shared.Core;
 using Shared.Core.Log;
 
 namespace Game.Components.Bag;
@@ -61,7 +61,7 @@ public static class RoleBagSystem
             var addCount = Math.Min(remaining, maxStack);
             var newItem = new BagItem
             {
-                Uid = Interlocked.Increment(ref self._nextItemUid),
+                Uid = IdGenerator.Instance.NextId(),
                 ConfigId = configId,
                 Count = addCount,
                 Index = emptyIndex,
@@ -162,7 +162,7 @@ public static class RoleBagSystem
             var totalCount = group.Sum(i => i.Count);
             self.Items.Add(new BagItem
             {
-                Uid = Interlocked.Increment(ref self._nextItemUid),
+                Uid = IdGenerator.Instance.NextId(),
                 ConfigId = group.Key,
                 Count = totalCount,
                 Index = index,

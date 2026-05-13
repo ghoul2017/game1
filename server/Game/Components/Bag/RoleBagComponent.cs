@@ -21,10 +21,6 @@ public class RoleBagComponent : Component, IEntity
     /// <summary>物品列表</summary>
     public List<BagItem> Items { get; set; } = [];
 
-    /// <summary>物品UID生成器</summary>
-    [BsonIgnore]
-    internal long _nextItemUid;
-
     /// <summary>运行时索引：index → BagItem（不序列化）</summary>
     [BsonIgnore]
     private Dictionary<int, BagItem>? _indexMap;

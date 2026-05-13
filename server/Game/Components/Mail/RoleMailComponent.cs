@@ -18,10 +18,6 @@ public class RoleMailComponent : Component, IEntity
     /// <summary>邮件列表</summary>
     public List<RoleMail> Mails { get; set; } = [];
 
-    /// <summary>邮件ID生成器</summary>
-    [BsonIgnore]
-    public long NextMailId = 1;
-
     /// <summary>运行时索引：mailId → RoleMail（不序列化）</summary>
     [BsonIgnore]
     private Dictionary<long, RoleMail>? _mailMap;

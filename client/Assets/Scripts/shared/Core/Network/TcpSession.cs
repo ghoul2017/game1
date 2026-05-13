@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Shared.Common.Enums;
 using Shared.Core.Network;
@@ -46,13 +45,11 @@ namespace Shared.Core.Network
         /// <summary>收到消息时的回调（在 RouteAsync 之前调用）</summary>
         public Action<TcpSession, ushort, byte[]>? OnMessageReceived { get; set; }
 
-        private static long _nextSessionId;
-
         public TcpSession(Socket socket, MessageRouter router)
         {
             _socket = socket;
             _router = router;
-            SessionId = Interlocked.Increment(ref _nextSessionId);
+            SessionId = IdGenerator.Instance.NextId();
             IsConnected = true;
         }
 
