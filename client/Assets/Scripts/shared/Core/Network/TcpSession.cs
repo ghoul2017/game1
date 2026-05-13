@@ -41,10 +41,7 @@ namespace Shared.Core.Network
 
         /// <summary>可选的调度器，用于将消息处理投递到主线程（客户端设置，服务端为 null）</summary>
         public Action<Action>? PostToMainThread { get; set; }
-
-        /// <summary>收到消息时的回调（在 RouteAsync 之前调用）</summary>
-        public Action<TcpSession, ushort, byte[]>? OnMessageReceived { get; set; }
-
+        
         public TcpSession(Socket socket, MessageRouter router)
         {
             _socket = socket;
@@ -173,13 +170,11 @@ namespace Shared.Core.Network
                     var self = this;
                     PostToMainThread(() =>
                     {
-                        OnMessageReceived?.Invoke(self, msgId, payload);
                         _ = _router.RouteAsync(self, msgId, payload);
                     });
                 }
                 else
                 {
-                    OnMessageReceived?.Invoke(this, result.MsgId, result.Payload);
                     _ = _router.RouteAsync(this, result.MsgId, result.Payload);
                 }
             }
