@@ -163,11 +163,11 @@ namespace Shared.Core.Network
                 // 收到任何消息都更新活跃时间
                 UpdateActiveTime();
 
+                var msgId = result.MsgId;
+                var payload = result.Payload;
+                var self = this;
                 if (PostToMainThread != null)
                 {
-                    var msgId = result.MsgId;
-                    var payload = result.Payload;
-                    var self = this;
                     PostToMainThread(() =>
                     {
                         _ = _router.RouteAsync(self, msgId, payload);
@@ -175,7 +175,7 @@ namespace Shared.Core.Network
                 }
                 else
                 {
-                    _ = _router.RouteAsync(this, result.MsgId, result.Payload);
+                    _ = _router.RouteAsync(self, msgId, payload);
                 }
             }
 
