@@ -23,3 +23,11 @@ FightComponent 索引层已删除，不再有 `Context.Fight`。所有战斗单�
 `RoleBagHandlers.OnPlayerOnline` 直接调用 `MongoDb.Instance.LoadAsync<RoleBagComponent>()` 然后逐字段拷贝到已挂载的 Component，而不是调用 `RoleBagSystem` 的方法。
 
 **原因**：`LoadAsync<T>` 返回新实例，`_parent` 为 null，不能直接替代已挂载的 Component。必须拷贝字段 + RebuildIndex。详见 `project-component-ientity-persistence.md` 规则。
+
+## MonoBehaviour 方法改 static 时 Destroy 仍可用
+
+`UnityEngine.Object.Destroy(Object)` 是静态方法，在 static 上下文中可以直接调用 `Object.Destroy(gameObject)`。不要误以为是实例方法而删除调用。
+
+## 客户端 Handler 类模式
+
+客户端 Handler 类（`XxxHandlers.cs`）是 static 类 + `[MessageHandler(typeof(NtfMethodHandler))]`，通过 `UIManager.Instance?.GetPanel<T>()` 获取面板实例。面板的 handler 方法从 private 改为 public，逻辑不变。GameSceneEntry 因 handler 只用静态引用，直接在方法上加 [MessageHandler] 属性，无需单独 Handler 类。

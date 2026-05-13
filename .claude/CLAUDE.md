@@ -147,7 +147,7 @@ Context.Players.AddPlayer(player);
 - **命名空间**: `Client.Core`, `Client.Login`, `Client.Game`
 - **UI**: UIPanel 基类 + UIManager 栈式管理 + UIBuilder 代码构建（无预制体）
 - **面板流程**: LoadingPanel → LoginPanel → RoleSelectPanel → GameScene → MainPanel
-- **消息路由**: MessageRouter（自动扫描 [MessageHandler]）+ MessageDispatcher（手动注册）并存
+- **消息路由**: MessageRouter（自动扫描 `[MessageHandler]` 属性），双端统一。客户端 Handler 类通过 `UIManager.GetPanel<T>()` 访问面板
 - **配色**: RPG 风格，深蓝/紫底色 + 金色强调色
 - **材质**: `Shader.Find("Universal Render Pipeline/Lit")`
 - **.meta 文件**: Unity 资源跟踪文件，不要删除
