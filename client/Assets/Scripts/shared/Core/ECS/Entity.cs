@@ -40,6 +40,7 @@ namespace Shared.Core.ECS
             _components.Add(type, component);
             return component;
         }
+
         public void AddComponent<T>(T component) where T : Component, new()
         {
             Type type = typeof(T);
@@ -52,33 +53,22 @@ namespace Shared.Core.ECS
             _components.Add(type, component);
         }
 
-        public T GetComponent<T>() where T : Component
+        public T? GetComponent<T>() where T : Component
         {
             Type type = typeof(T);
-            return (T)_components[type];
+            return _components.GetValueOrDefault(type) as T;
         }
 
         /// <summary>按类型获取组件（非泛型，用于反射调用）</summary>
-        public Component GetComponent(Type type)
+        public Component? GetComponent(Type type)
         {
-            return _components[type];
+            return _components.GetValueOrDefault(type);
         }
 
         public void RemoveComponent(Component component)
         {
             component.SetParent(null);
             _components.Remove(component.GetType());
-        }
-
-        public bool TryGetComponent<T>(out T? component) where T : Component
-        {
-            if (_components.TryGetValue(typeof(T), out var c))
-            {
-                component = (T)c;
-                return true;
-            }
-            component = null;
-            return false;
         }
 
         public bool HasComponent<T>() where T : Component

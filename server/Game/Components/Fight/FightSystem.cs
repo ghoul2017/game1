@@ -60,6 +60,7 @@ public static class FightSystem
                 targetId = kv.Key;
             }
         }
+
         return targetId;
     }
 
@@ -101,7 +102,8 @@ public static class FightSystem
     /// <summary>注销战斗单元（玩家/怪物离开地图时调用）</summary>
     public static void UnregisterUnit(this MapObjectEntity entity)
     {
-        if (entity.TryGetComponent<FightUnitComponent>(out var fight))
+        var fight = entity.GetComponent<FightUnitComponent>();
+        if (fight != null)
         {
             entity.RemoveComponent(fight);
             Log.Debug($"注销战斗单元 ObjectId:{entity.ObjectId}");
@@ -112,9 +114,7 @@ public static class FightSystem
     public static FightUnitComponent? GetFightUnit(long objectId)
     {
         var mapObj = Context.Map.FindMapObject(objectId);
-        if (mapObj != null && mapObj.TryGetComponent<FightUnitComponent>(out var fight))
-            return fight;
-        return null;
+        return mapObj?.GetComponent<FightUnitComponent>();
     }
 
     #endregion
