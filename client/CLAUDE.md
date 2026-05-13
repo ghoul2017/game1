@@ -21,7 +21,6 @@ Assets/
     │   ├── Core/     #     ECS, Network, Config, Log, IdGenerator
     │   └── Common/   #     Protos（消息定义）, Config（配置表定义）, MsgIdConst
     ├── Core/         #   核心框架（Context, UIManager, UIPanel, UIBuilder, GameEntry, UIToast, UIMessageBox）
-    ├── Config/       #   ClientConfigManager
     ├── Editor/       #   编辑器工具（SceneCreator）
     ├── Loading/      #   加载界面（LoadingPanel）
     ├── Login/        #   登录 & 角色选择（LoginPanel, RoleSelectPanel）
@@ -58,3 +57,11 @@ Assets/
 - **场景入口** — `GameSceneEntry` 初始化场景，提供静态引用 `PlayerController`/`MapGround`
 - **UI叠加** — `UIManager` Canvas（ScreenSpaceOverlay + DontDestroyOnLoad）自然叠加在3D场景上
 - **所有程序化材质** 必须使用 `Shader.Find("Universal Render Pipeline/Lit")`
+
+## 配置表
+
+- **ConfigManager** — 共享 `Shared.Core.Config.ConfigManager`，双端统一 API：`ConfigManager.Get<T>(id)` / `GetAll<T>()` / `GetDict<T>()`
+- **初始化** — `GameEntry.Start()` 中调用 `ConfigManager.Instance.LoadAll(tablesDir)`，开发环境指向 `server/Game/Data/Tables/`
+- **CSV 读取** — 使用 `SimpleCsvReader`（纯 .NET，无外部依赖），不用 CsvHelper
+- **配置类** — `shared/Common/Config/` 下标注 `[ConfigTable]` 的类，双端共享
+- **热更新** — 客户端不启用，仅服务端通过 `FileSystemWatcher` 热更新

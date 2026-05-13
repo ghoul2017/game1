@@ -23,7 +23,7 @@ scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 |---|---|
 | 协议 | TCP `[MsgId:2B][Length:4B][Payload]`，小端序 |
 | 序列化 | protobuf-net (`[ProtoContract]`/`[ProtoMember]`) |
-| 读表 | CsvHelper + `[ConfigTable]` 自动扫描 |
+| 读表 | SimpleCsvReader + `[ConfigTable]` 自动扫描（双端共享） |
 | 数据库 | MongoDB（BSON 文档存储） |
 | 实体 | Entity + Component + System（ECS 风格：E 节点 / C 放数据 / S 负责方法） |
 | 事件 | EventBus 发布订阅（类型安全） |
@@ -40,7 +40,7 @@ client/Assets/Scripts/
     Core/
       ECS/              # Entity, Component, ComponentOfAttribute
       Network/          # IMessage, PacketCodec, MessageRouter, TcpSession, IMessageHandler
-      Config/           # ConfigManager, ConfigTableAttribute, CsvLoader
+      Config/           # ConfigManager, ConfigTableAttribute, SimpleCsvReader（双端共享，SimpleCsvReader 兼容 .NET 4.7.1+）
       Log/              # ILog, LogManager, Console/File Appender
       IdGenerator.cs    # 雪花算法 ID 生成
     Common/
@@ -50,8 +50,7 @@ client/Assets/Scripts/
   Loading/              # 加载界面（LoadingPanel）
   Login/                # 登录 & 角色选择（LoginPanel, RoleSelectPanel）
   Game/                 # MainPanel, PlayerController, MapGround, BagPanel, MailPanel 等
-  Network/              # NetClient, MessageDispatcher, NetworkStatusPanel, NtfMethodHandler
-  Config/               # ClientConfigManager
+  Network/              # NetClient, NetworkStatusPanel, NtfMethodHandler
   Editor/               # SceneCreator
 
 server/Game/
