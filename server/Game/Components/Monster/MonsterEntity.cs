@@ -24,7 +24,7 @@ public class MonsterEntity : MapObjectEntity
     private FightUnitComponent? _fight;
     public FightUnitComponent Fight => _fight ??= GetComponent<FightUnitComponent>();
 
-    public static MonsterEntity Create(long monsterId, MonsterConfig config, int mapId, int line, int x, int y)
+    public static MonsterEntity Create(long monsterId, MonsterConfig config, int mapId, int line, int x, int y, FightAttribute fightAttr)
     {
         var entity = CreateEntityById<MonsterEntity>(monsterId);
         var pos = entity.AddComponent<MapPositionComponent>();
@@ -38,7 +38,9 @@ public class MonsterEntity : MapObjectEntity
         var ai = entity.AddComponent<MonsterAiComponent>();
         ai.AiState = AiState.Idle;
         ai.LastUpdateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        // FightUnitComponent 在 RegisterUnit 时添加
+        var fight = entity.AddComponent<FightUnitComponent>();
+        fight.Attr = fightAttr;
+        fight.AddSkill(new Skill(1));
         return entity;
     }
 }

@@ -22,8 +22,6 @@ public static class MapSystem
     /// <summary>默认地图配置ID</summary>
     private const int DefaultMapCfgId = 1;
 
-    #region 地图管理
-
     /// <summary>创建地图实例</summary>
     public static GameMap CreateMap(this MapComponent self, int cfgId, int line, string name, int width, int height, int birthX, int birthY)
     {
@@ -59,10 +57,6 @@ public static class MapSystem
     /// <summary>获取所有地图</summary>
     public static List<GameMap> GetAllMaps(this MapComponent self) => new(self.Maps.Values);
 
-    #endregion
-
-    #region 玩家进入/离开/切图
-
     /// <summary>玩家进入地图</summary>
     public static bool EnterMap(this MapComponent self, long roleId, string roleName, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
     {
@@ -79,9 +73,7 @@ public static class MapSystem
             QuitMapInternal(self, roleId);
         }
 
-        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity);
-
-        RegisterPlayerFightUnit(mapPlayer, playerEntity);
+        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity, playerEntity.RoleAttribute.ToFightAttribute());
 
         if (!map.AddObject(mapPlayer))
         {
@@ -125,9 +117,7 @@ public static class MapSystem
         var map = self.GetMap(cfgId, line);
         if (map == null) return false;
 
-        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity);
-
-        RegisterPlayerFightUnit(mapPlayer, playerEntity);
+        var mapPlayer = MapPlayerEntity.Create(roleId, roleName, cfgId, line, x, y, playerEntity, playerEntity.RoleAttribute.ToFightAttribute());
 
         if (!map.AddObject(mapPlayer)) return false;
 
@@ -187,17 +177,20 @@ public static class MapSystem
         }
     }
 
-    #endregion
-
-    #region 初始化
-
     /// <summary>初始化默认地图（服务器启动时调用）</summary>
     public static void InitDefaultMaps(this MapComponent self)
     {
-        // 创建默认的新手村地图
+        // 创建默认地图
         self.CreateMap(1, 1, "新手村", 200, 200, 100, 100);
         self.CreateMap(2, 1, "主城", 300, 300, 150, 150);
         self.CreateMap(3, 1, "野外", 500, 500, 250, 250);
+
+        // 初始化每张地图的怪物和 AI 定时器
+        foreach (var map in self.Maps.Values)
+        {
+            map.InitMonsters();
+            map.StartAiTimer();
+        }
 
         Log.Info("默认地图初始化完成");
     }
@@ -205,21 +198,12 @@ public static class MapSystem
     /// <summary>移除所有玩家（服务器关闭时调用）</summary>
     public static void RemoveAll(this MapComponent self)
     {
+        foreach (var map in self.Maps.Values)
+        {
+            map.StopAiTimer();
+        }
         self.PlayerMapEntities.Clear();
         self.Maps.Clear();
         Log.Info("地图管理器已清空");
     }
-
-    #endregion
-
-    #region 内部方法
-
-    /// <summary>注册玩家战斗单元（进入地图时调用）</summary>
-    private static void RegisterPlayerFightUnit(MapPlayerEntity mapPlayer, PlayerEntity playerEntity)
-    {
-        mapPlayer.RegisterUnit(playerEntity.RoleAttribute.ToFightAttribute());
-        mapPlayer.Fight.AddSkill(new Skill(1));
-    }
-
-    #endregion
 }

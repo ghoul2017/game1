@@ -1,236 +1,185 @@
-# Monster 模块文档
+# Monster 模块
 
-## 概述
+## 定位
 
-Monster 模块实现怪物系统，包含怪物生成、刷新、AI 状态机、战斗、掉落。AI 采用有限状态机（Idle/Patrol/Chase/Attack），每秒更新一次。怪物为纯运行时对象，不持久化到数据库。ECS 重构后，怪物为 MonsterEntity（继承 MapObjectEntity），AI/信息/战斗数据分散到独立 Component。
+Monster 模块负责管理游戏中所有怪物的生命周期——从生成到战斗到死亡再到刷新。它是服务端核心战斗循环的一环：玩家击杀怪物 → 获得奖励 → 怪物定时重生，形成持续的游戏节奏。
 
-## 文件清单
+怪物是**纯运行时对象**，不持久化到数据库。服务重启后，怪物随地图创建重新生成。
 
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| `server/Game/Components/Monster/MonsterEntity.cs` | 45 | 怪物实体（继承 MapObjectEntity） |
-| `server/Game/Components/Monster/MonsterComponent.cs` | 20 | Module 级 Component，怪物集合+刷新计时+共享Random |
-| `server/Game/Components/Monster/MonsterSystem.cs` | 460 | 怪物系统核心（生成/AI/掉落） |
-| `server/Game/Components/Monster/MonsterHandlers.cs` | 36 | 事件订阅 |
-| `server/Game/Components/Monster/MonsterInfoComponent.cs` | 20 | 怪物信息 Component |
-| `server/Game/Components/Monster/MonsterAiComponent.cs` | 18 | 怪物AI Component |
-| `server/Game/Components/Monster/AiState.cs` | 13 | AI 状态枚举 |
+## 核心设计
 
-## 实体体系
+### 怪物是地图对象
 
-### MonsterEntity
+怪物继承 `MapObjectEntity`，天然拥有坐标、AOI 可见性、地图广播等能力。进入地图时自动通知周围玩家，离开时自动移除——这些全部由 Map 模块的 AOI 系统处理。
 
-```csharp
-public class MonsterEntity : MapObjectEntity
-{
-    public override int ObjectType => MapObjectType.Monster;  // 值=3
-    public override string Name => Info.Name;
+### 刷怪和 AI 属于地图
 
-    // 组件访问
-    private MonsterInfoComponent? _info;
-    public MonsterInfoComponent Info => _info ??= GetComponent<MonsterInfoComponent>();
-
-    private MonsterAiComponent? _ai;
-    public MonsterAiComponent Ai => _ai ??= GetComponent<MonsterAiComponent>();
-
-    private FightUnitComponent? _fight;
-    public FightUnitComponent Fight => _fight ??= GetComponent<FightUnitComponent>();
-
-    public override int CfgId => Info.CfgId;  // 上提到 IMapObject
-
-    public static MonsterEntity Create(long monsterId, MonsterConfig config, int mapId, int line, int x, int y);
-}
-```
-
-### AiState（AI 状态枚举）
-
-```csharp
-public enum AiState
-{
-    Idle = 0,      // 待机
-    Patrol = 1,    // 巡逻
-    Chase = 2,     // 追击
-    Attack = 3,    // 攻击
-}
-```
-
-## Component
-
-### MonsterComponent（Module 级）
-
-```csharp
-[ComponentOf(typeof(Module))]
-public class MonsterComponent : Component
-{
-    public readonly Dictionary<long, Dictionary<long, MonsterEntity>> MapMonsters = new();  // MapKey → 怪物列表
-    public readonly Dictionary<string, long> SpawnTimers = new();  // timerKey → 下次刷新时间
-    public GameTimerHandle UpdateTimer;    // AI更新定时器
-    public readonly Random Random = new(); // 共享Random实例
-}
-```
-
-- 挂载目标：`Context.Server`
-- Context 便利属性：`Context.Monster`
-- MapKey = mapCfgId × 1000 + line
-- TimerKey = $"{mapCfgId}_{line}_{cfgId}"
-
-### MonsterInfoComponent
-
-```csharp
-[ComponentOf(typeof(MonsterEntity))]
-public class MonsterInfoComponent : Component
-{
-    public MonsterConfig? Config;
-    public string Name = "";
-    public int CfgId => Config?.Id ?? 0;
-}
-```
-
-### MonsterAiComponent
-
-```csharp
-[ComponentOf(typeof(MonsterEntity))]
-public class MonsterAiComponent : Component
-{
-    public AiState AiState = AiState.Idle;
-    public (int X, int Y)? PatrolTarget;
-    public long? ChaseTarget;
-    public long LastAttackTime;
-    public long LastUpdateTime;
-}
-```
-
-## System 详解
-
-### MonsterSystem
-
-#### 生命周期
-
-| 方法 | 签名 | 说明 |
-|------|------|------|
-| Start | `Start(this MonsterComponent)` | 启动 1 秒 AI 更新定时器 |
-| Stop | `Stop(this MonsterComponent)` | 停止定时器，清除所有怪物 |
-
-#### 初始化与生成
-
-| 方法 | 签名 | 说明 |
-|------|------|------|
-| InitMapMonsters | `InitMapMonsters(this MonsterComponent, int mapCfgId, int line)` | 按配置初始化地图怪物 |
-| SpawnMonster | `SpawnMonster(this MonsterComponent, int mapId, int line, MonsterConfig cfg)` | 随机位置生成怪物 |
-| SpawnMonsterAt | `SpawnMonsterAt(this MonsterComponent, int mapId, int line, MonsterConfig cfg, int x, int y)` | 指定位置生成 |
-
-生成流程：
-```
-1. 分配 ObjectId（IdGenerator.Instance.NextId()，雪花算法）
-2. 在配置的刷新区域随机坐标（使用共享 Random 实例）
-3. MonsterEntity.Create() 创建实体
-4. 注册 FightUnitComponent（RegisterUnit）
-5. 加入 GameMap（AddObject，自动注册 AOI + 广播进入视野）
-6. 加入 MapMonsters 索引
-```
-
-#### AI 状态机
+刷怪、AI 更新、死亡处理、掉落发放、刷新计时——这些逻辑全部由 `GameMap` 承载。每张地图独立管理自己的怪物和 AI 定时器，无需全局 MonsterComponent 做中转。
 
 ```
-             ┌──────────────────────────────┐
-             │                              │
-             ▼                              │
-          Idle ──(主动/守卫AI)──→ Patrol    │
-           │                        │       │
-           │ (被动AI发现目标)        │ (发现目标)
-           │                        │       │
-           ▼                        ▼       │
-         Chase ←───────────────────┘       │
-           │                                │
-           │ (进入攻击范围)                   │ (目标丢失)
-           ▼                                │
-        Attack ─────────────────────────────┘
+GameMap
+├── _monsters          // 怪物字典
+├── _spawnTimers       // 刷新计时器
+├── _random            // 共享随机数
+├── _aiTimer           // 1秒 AI 定时器
+├── InitMonsters()     // 初始化刷怪
+├── SpawnMonster()     // 生成怪物
+├── OnMonsterKilled()  // 死亡+掉落+刷新
+└── UpdateAllMonsters()// AI 状态机
 ```
 
-AI 类型（MonsterConfig.AiType）：
-- **被动(1)**：Idle 状态，不巡逻，玩家进入视野才 Chase
-- **主动(2)**：Idle → Patrol 巡逻，发现玩家 Chase
-- **守卫(3)**：同主动，巡逻 + 主动追击
+### 三层 Component 分离
 
-#### 攻击机制
+一只怪物的数据分散在三个 Component 中，各司其职：
 
-- 技能ID=1（普通攻击）
-- 攻击间隔：2秒
-- 通过 `FightSystem.UseSkill(monster.ObjectId, 1, ...)` 执行攻击
+| Component | 职责 | 生命周期 |
+|-----------|------|---------|
+| MonsterInfoComponent | 静态配置（名称、CfgId） | 创建时赋值，不再变化 |
+| MonsterAiComponent | 运行时 AI 状态（当前状态、追击目标、攻击冷却） | 每秒更新 |
+| FightUnitComponent | 战斗属性和技能（常驻，创建时挂载） | 受击/攻击时变化 |
 
-#### 死亡与掉落
+FightUnitComponent 在 `MonsterEntity.Create` 时直接创建，不再需要 RegisterUnit/UnregisterUnit。怪物死亡后整个实体废弃，无需逐个拆 Component。
 
-| 方法 | 签名 | 说明 |
-|------|------|------|
-| OnMonsterKilled | `OnMonsterKilled(this MonsterComponent, long monsterId, long killerId)` | 处理怪物死亡 |
+### 保留的文件
 
-死亡掉落流程：
-```
-1. 从 MapMonsters 移除
-2. 注销 FightUnitComponent（UnregisterUnit）
-3. 从 GameMap 移除（RemoveObject，自动移除 AOI + 广播离开视野）
-4. 计算并发放奖励（委托 PlayerSystem）：
-   ├── 经验 → Context.Players.GrantExpAsync → LevelUpNtf + ExpChangedNtf
-   ├── 金币 → Context.Players.GrantGoldAsync → GoldChangedNtf
-   └── 物品 → Context.Players.GrantItemAsync → ItemGainNtf
-5. 设置刷新定时器（按 SpawnInterval）
-```
+| 文件 | 职责 |
+|------|------|
+| `MonsterEntity.cs` | 怪物实体（Create 中创建所有 Component） |
+| `MonsterInfoComponent.cs` | 怪物静态信息 |
+| `MonsterAiComponent.cs` | AI 运行时状态 |
+| `AiState.cs` | AI 状态枚举 |
 
-#### 刷新机制
+已删除：`MonsterComponent.cs`、`MonsterSystem.cs`、`MonsterHandlers.cs`（逻辑迁入 GameMap）。
 
-AI 更新循环（1秒/次）同时检查刷新计时器：
-- 每个 timerKey 有独立的刷新间隔
-- 到时间后按 MaxCount 限制补充怪物
+## 怪物生命周期
 
-## Handler 详解
+### 1. 地图创建时刷怪
 
-### 事件订阅
-
-| 事件 | 方法 | 说明 |
-|------|------|------|
-| PlayerEnterMapEvent | OnPlayerEnterMap | 初始化地图怪物 |
-| PlayerOfflineEvent | OnPlayerOffline | 清除以该玩家为追击目标的仇恨 |
-
-> 注意：MonsterKilledEvent 的 Handler 已从 MonsterHandlers 移除。FightSystem.OnUnitKilled 直接调用 Context.Monster.OnMonsterKilled()，不再通过事件中转。MonsterKilledEvent 仅用于 GameTask 等其他模块订阅。
-
-## MonsterConfig 配置
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| Id | int | 配置ID |
-| Name | string | 怪物名称 |
-| MapId | int | 所属地图 |
-| MaxHp | int | 最大HP |
-| Attack | int | 攻击力 |
-| Defense | int | 防御力 |
-| Exp | int | 经验奖励 |
-| GoldMin/GoldMax | int | 金币奖励范围 |
-| DropItems | string | 掉落物品（逗号分隔 ConfigId） |
-| DropRate | int | 掉落率（0-10000） |
-| SpawnInterval | int | 刷新间隔（秒） |
-| MaxCount | int | 地图最大同时存在数 |
-| SpawnX1/X2/Y1/Y2 | int | 刷新区域 |
-| SightRange | int | 视野范围（格） |
-| AttackRange | int | 攻击范围（格） |
-| AiType | int | AI类型（1=被动, 2=主动, 3=守卫） |
-
-## 模块依赖
+怪物不再由玩家进入地图触发，而是在**地图创建时自动初始化**：
 
 ```
-Monster 模块
-  ├── 依赖 → Config（MonsterConfig 配置表）
-  ├── 依赖 → Map（GameMap.AddObject/RemoveObject、FindMapObject）
-  ├── 依赖 → Fight（FightUnitComponent 注册/注销、FightSystem.UseSkill 攻击）
-  ├── 依赖 → Player（Context.Players.GrantExpAsync/GrantGoldAsync/GrantItemAsync 奖励发放）
-  ├── 依赖 → GameTimer（1秒 AI 更新定时器）
-  ├── 依赖 → EventBus（PlayerEnterMapEvent/PlayerOfflineEvent 订阅）
-  │
-  └── 被依赖 ←
-       ├── Fight（FightSystem.OnUnitKilled 直接调用 Context.Monster.OnMonsterKilled）
-       └── GameTask（MonsterKilledEvent 驱动 KillMonster 任务进度）
+AppStart.RunServerAsync → MapSystem.InitDefaultMaps
+→ 每张地图 CreateMap → map.InitMonsters() + map.StartAiTimer()
+→ 读取该地图所有 MonsterConfig → 按 MaxCount 生成
 ```
 
-## 已知待办
+### 2. 创建实例
 
-1. **巡逻路径**：PatrolTarget 为随机点，无固定巡逻路径
-2. **仇恨系统**：ChaseTarget 仅记录一个目标，FightUnitComponent.ThreatMap 未被 AI 使用
+生成一只怪物的核心步骤：
+
+```
+分配雪花ID → MonsterEntity.Create（含 FightUnitComponent）
+→ map.AddObject → AOI 注册 + 广播进入视野
+```
+
+`MonsterEntity.Create` 接收 `FightAttribute` 参数，内部完成所有 Component 的创建，外部不需要再调 RegisterUnit。
+
+### 3. AI 行为
+
+每张地图有独立的 1 秒 GameTimer，驱动本地图所有怪物的 AI 更新。
+
+#### 状态机
+
+```
+             ┌──────────────────────────────────┐
+             │                                  │
+             ▼                                  │
+          Idle ──(主动/守卫AI)──→ Patrol         │
+           │                        │           │
+           │ (被动AI发现目标)        │ (发现目标) │
+           │                        │           │
+           ▼                        ▼           │
+         Chase ←───────────────────┘           │
+           │                                    │
+           │ (进入攻击范围)            (目标丢失) │
+           ▼                                    │
+        Attack ─────────────────────────────────┘
+```
+
+#### AI 类型决定初始行为
+
+| AiType | 名称 | Idle 行为 | 巡逻 | 说明 |
+|--------|------|-----------|------|------|
+| 1 | 被动 | 原地等待，视野内发现玩家才追击 | 不巡逻 | 适合鹿、兔子等无害生物 |
+| 2 | 主动 | 立即开始巡逻 | 刷新区域内随机点 | 适合野狼、哥布林等 |
+| 3 | 守卫 | 立即开始巡逻 | 刷新区域内随机点 | 同主动，数值上区分用途 |
+
+#### 追击与攻击
+
+- **发现目标**：遍历地图所有玩家，切比雪夫距离 ≤ `SightRange` 则锁定
+- **追击**：每步向目标移动 1 格（曼哈顿方向），超出视野则丢失目标回到 Idle
+- **攻击**：进入 `AttackRange` 后切换到 Attack 状态，2 秒冷却，使用技能 ID=1（普通攻击）
+- **攻击后**：当前实现中，攻击完立即回到 Idle（重新评估目标）
+- **目标丢失**：玩家下线后 GetPlayer 返回 null，AI 自动丢失目标回到 Idle，无需显式清除仇恨
+
+### 4. 死亡与奖励
+
+怪物死亡由 FightSystem 检测（HP ≤ 0），直接调用 `map.OnMonsterKilled()`：
+
+```
+从地图移除 → map.RemoveObject（AOI 移除 + 广播离开视野）
+→ 计算并发放奖励（经验/金币/物品）
+→ 设置刷新定时器
+```
+
+奖励计算：
+
+- **经验**：固定值，`Config.Exp`
+- **金币**：`Random.Next(GoldMin, GoldMax + 1)` 范围随机
+- **物品掉落**：遍历 `DropItems`（逗号分隔的 ConfigId 列表），每件独立判定 `Random.Next(1, 10001) ≤ DropRate`
+
+所有奖励通过 `PlayerSystem.GrantXxxAsync` 发放，GameMap 不直接操作背包或玩家数据。
+
+### 5. 定时刷新
+
+每种怪物有独立的刷新间隔（`SpawnInterval` 秒）。死亡时设置定时器，下次 AI 更新循环检查是否到期，到期则补充一只（不超过 `MaxCount`）。
+
+## 跨模块协作
+
+```
+                    ┌─────────────┐
+                    │   Config    │ 提供怪物配置表
+                    └──────┬──────┘
+                           │
+┌──────────┐    ┌──────────▼──────────┐    ┌──────────┐
+│   Map    │◄──►│      GameMap        │◄──►│  Fight   │
+│ AOI/移动  │    │  刷怪/AI/掉落/刷新   │    │ 伤害/死亡 │
+└──────────┘    └──────────┬──────────┘    └──────────┘
+                           │
+                    ┌──────▼──────┐
+                    │   Player    │ 经验/金币/物品发放
+                    └─────────────┘
+```
+
+| 交互方 | 方向 | 内容 |
+|--------|------|------|
+| Map | 双向 | GameMap 本身属于 Map 模块，内部使用 AOI 广播和玩家查询 |
+| Fight | 双向 | 怪物 FightUnitComponent 常驻；FightSystem 检测死亡后调用 `map.OnMonsterKilled()` |
+| Player | 单向 | 怪物死亡后通过 `GrantExpAsync/GrantGoldAsync/GrantItemAsync` 发放奖励 |
+| Config | 单向 | 读取 `MonsterConfig` 驱动所有行为参数 |
+| GameTask | 被动 | `MonsterKilledEvent` 驱动击杀任务进度 |
+
+**关键设计决策**：Fight → GameMap 的死亡通知走直接方法调用而非事件。原因：FightSystem 明确知道怪物死亡后的处理逻辑，事件只用于需要通知多个模块的场景（如任务进度）。
+
+## 配置驱动
+
+怪物的一切行为参数都在 `MonsterConfig` 中定义，策划通过配置表控制：
+
+| 配置项 | 控制什么 |
+|--------|---------|
+| MapId | 怪物出现在哪张地图 |
+| SpawnX1/X2/Y1/Y2 | 刷新区域范围（怪物只在此区域内生成和巡逻） |
+| MaxCount | 地图同种怪物上限，控制密度 |
+| SpawnInterval | 死亡后多少秒刷新，控制节奏感 |
+| SightRange / AttackRange | AI 视野和攻击距离，决定追击距离和攻击触发 |
+| AiType | 行为模式：被动/主动/守卫 |
+| MaxHp / Attack / Defense | 战斗属性，传入 FightAttribute |
+| Exp / GoldMin/GoldMax | 死亡奖励 |
+| DropItems / DropRate | 物品掉落列表和掉率（万分比） |
+
+## 已知局限
+
+1. **单目标仇恨**：AI 只追踪一个目标，`ThreatMap` 未接入，无法实现仇恨转移
+2. **巡逻无路径**：`PatrolTarget` 为随机点，无固定巡逻路线
+3. **攻击后回 Idle**：攻击完立即重置状态而非持续攻击，行为略显机械
+4. **无脱战回血**：怪物脱离战斗后不会回血，下次被攻击时仍是残血

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Game.Components.Map;
 using Game.Components.Monster;
 using Game.Components.Player;
@@ -10,6 +11,7 @@ using Shared.Common.Config;
 using Shared.Common.Protos;
 using Shared.Core.Event;
 using Shared.Core.Log;
+using Task = System.Threading.Tasks.Task;
 
 namespace Game.Components.Fight;
 
@@ -19,8 +21,6 @@ namespace Game.Components.Fight;
 public static class FightSystem
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(FightSystem));
-
-    #region FightUnitComponent 扩展方法
 
     /// <summary>受伤，返回实际扣血量</summary>
     public static int TakeDamage(this FightUnitComponent self, int damage)
@@ -86,30 +86,6 @@ public static class FightSystem
         self.KillerSkillId = 0;
     }
 
-    #endregion
-
-    #region 战斗单元管理
-
-    /// <summary>注册战斗单元（玩家/怪物进入地图时调用）</summary>
-    public static FightUnitComponent RegisterUnit(this MapObjectEntity entity, FightAttribute attr)
-    {
-        var fight = entity.AddComponent<FightUnitComponent>();
-        fight.Attr = attr;
-        Log.Debug($"注册战斗单元 ObjectId:{entity.ObjectId} Name:{entity.Name}");
-        return fight;
-    }
-
-    /// <summary>注销战斗单元（玩家/怪物离开地图时调用）</summary>
-    public static void UnregisterUnit(this MapObjectEntity entity)
-    {
-        var fight = entity.GetComponent<FightUnitComponent>();
-        if (fight != null)
-        {
-            entity.RemoveComponent(fight);
-            Log.Debug($"注销战斗单元 ObjectId:{entity.ObjectId}");
-        }
-    }
-
     /// <summary>获取战斗单元（通过全局查找）</summary>
     public static FightUnitComponent? GetFightUnit(long objectId)
     {
@@ -117,19 +93,11 @@ public static class FightSystem
         return mapObj?.GetComponent<FightUnitComponent>();
     }
 
-    #endregion
-
-    #region 技能配置
-
     /// <summary>获取技能配置</summary>
     public static SkillConfig? GetSkillConfig(int skillId)
     {
         return ConfigManager.Get<SkillConfig>(skillId);
     }
-
-    #endregion
-
-    #region 技能使用
 
     /// <summary>
     /// 使用技能。核心战斗入口。
@@ -233,10 +201,6 @@ public static class FightSystem
         return result;
     }
 
-    #endregion
-
-    #region 死亡处理
-
     /// <summary>战斗单元死亡回调</summary>
     private static void OnUnitKilled(long victimId, long killerId)
     {
@@ -269,12 +233,13 @@ public static class FightSystem
 
         if (isMonster)
         {
-            // 直接调用 MonsterSystem 处理怪物死亡（掉落、刷新等）
-            Context.Monster.OnMonsterKilled(victimId, killerId);
-
-            // 发布事件给 GameTask 等其他模块
+            // 直接调用 GameMap 处理怪物死亡（掉落、刷新等）
             if (mapObj != null)
             {
+                var map = Context.Map.GetMap(mapObj.MapId, mapObj.Line);
+                map?.OnMonsterKilled(victimId, killerId);
+
+                // 发布事件给 GameTask 等其他模块
                 EventBus.Instance.Publish(new EventType.MonsterKilledEvent
                 {
                     MonsterId = victimId,
@@ -295,10 +260,6 @@ public static class FightSystem
             });
         }
     }
-
-    #endregion
-
-    #region 复活
 
     /// <summary>复活战斗单元</summary>
     public static bool Revive(long objectId, int hpPercent = 100)
@@ -322,10 +283,6 @@ public static class FightSystem
         Log.Info($"战斗复活 ObjectId:{objectId} Hp:{fight.Attr.Hp}");
         return true;
     }
-
-    #endregion
-
-    #region 消息发送
 
     private static void BroadcastSkillEffect(long attackerId, UseSkillResult skillResult)
     {
@@ -363,8 +320,6 @@ public static class FightSystem
         // 广播给视野内玩家
         Context.Map.BroadcastToAoiWatchers(attackerId, ack);
     }
-
-    #endregion
 }
 
 /// <summary>技能使用结果</summary>

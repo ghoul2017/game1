@@ -172,8 +172,6 @@ public static class MapHandlers
         }
     }
 
-    #region 事件订阅
-
     [EventSubscriber]
     public static void OnPlayerOffline(EventType.PlayerOfflineEvent e)
     {
@@ -186,6 +184,4 @@ public static class MapHandlers
         Context.Map.QuitMap(e.RoleId);
         Log.Info($"玩家下线退出地图 RoleId:{e.RoleId} MapId:{map.CfgId}");
     }
-
-    #endregion
 }

@@ -28,7 +28,7 @@ public class MapPlayerEntity : MapObjectEntity
 
     public PlayerEntity? PlayerEntity => PlayerRef.PlayerEntity;
 
-    public static MapPlayerEntity Create(long roleId, string name, int mapId, int line, int x, int y, PlayerEntity playerEntity)
+    public static MapPlayerEntity Create(long roleId, string name, int mapId, int line, int x, int y, PlayerEntity playerEntity, FightAttribute fightAttr)
     {
         var entity = CreateEntityById<MapPlayerEntity>(roleId);
         var pos = entity.AddComponent<MapPositionComponent>();
@@ -40,7 +40,9 @@ public class MapPlayerEntity : MapObjectEntity
         info.Name = name;
         var playerRef = entity.AddComponent<PlayerRefComponent>();
         playerRef.PlayerEntity = playerEntity;
-        // FightUnitComponent 在 RegisterUnit 时添加
+        var fight = entity.AddComponent<FightUnitComponent>();
+        fight.Attr = fightAttr;
+        fight.AddSkill(new Skill(1));
         return entity;
     }
 }

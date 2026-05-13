@@ -1,8 +1,7 @@
-﻿using Game.Components.Bag;
+using Game.Components.Bag;
 using Game.Components.Chat;
 using Game.Components.Mail;
 using Game.Components.Map;
-using Game.Components.Monster;
 using Game.Components.Player;
 using Game.Components.User;
 using Shared.Core.Config;
@@ -55,11 +54,9 @@ public static class AppStart
         Context.Server.AddComponent<PlayerComponent>();
         Context.Server.AddComponent<ChatComponent>();
         Context.Server.AddComponent<MapComponent>();
-        Context.Server.AddComponent<MonsterComponent>();
 
-        // 初始化有实质逻辑的子系统
+        // 初始化地图（含刷怪和 AI 定时器）
         Context.Map.InitDefaultMaps();
-        Context.Monster.Start();
 
         try
         {
@@ -74,7 +71,6 @@ public static class AppStart
             // 停服清理
             await Context.Players.SaveAllRolesAsync();
             Context.Map.RemoveAll();
-            Context.Monster.Stop();
         }
     }
 
