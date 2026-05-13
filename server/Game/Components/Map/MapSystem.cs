@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Game.Components.Fight;
+using Game.Components.Monster;
 using Game.Components.Player;
 using Shared.Core.Config;
 using Game.Entities;

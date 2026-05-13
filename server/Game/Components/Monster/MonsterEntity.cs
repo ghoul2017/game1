@@ -12,7 +12,6 @@ namespace Game.Components.Monster;
 public class MonsterEntity : MapObjectEntity
 {
     public override int ObjectType => MapObjectType.Monster;
-    public override string Name => Info.Name;
     public override int CfgId => Info.CfgId;
 
     private MonsterInfoComponent? _info;
@@ -27,14 +26,13 @@ public class MonsterEntity : MapObjectEntity
     public static MonsterEntity Create(long monsterId, MonsterConfig config, int mapId, int line, int x, int y, FightAttribute fightAttr)
     {
         var entity = CreateEntityById<MonsterEntity>(monsterId);
-        var pos = entity.AddComponent<MapPositionComponent>();
-        pos.MapId = mapId;
-        pos.Line = line;
-        pos.X = x;
-        pos.Y = y;
+        entity.MapId = mapId;
+        entity.Line = line;
+        entity.X = x;
+        entity.Y = y;
+        entity.SetName(config.Name);
         var info = entity.AddComponent<MonsterInfoComponent>();
         info.Config = config;
-        info.Name = config.Name;
         var ai = entity.AddComponent<MonsterAiComponent>();
         ai.AiState = AiState.Idle;
         ai.LastUpdateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

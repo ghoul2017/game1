@@ -12,14 +12,24 @@ public abstract class MapObjectEntity : Entity, IMapObject
 {
     public long ObjectId => Id;
     public abstract int ObjectType { get; }
-    public abstract string Name { get; }
     public abstract int CfgId { get; }
 
-    private MapPositionComponent? _pos;
-    public MapPositionComponent Pos => _pos ??= GetComponent<MapPositionComponent>();
+    /// <summary>对象名称（地图上展示用）</summary>
+    private string _name = "";
+    public string Name => _name;
 
-    public int MapId { get => Pos.MapId; set => Pos.MapId = value; }
-    public int Line { get => Pos.Line; set => Pos.Line = value; }
-    public int X { get => Pos.X; set => Pos.X = value; }
-    public int Y { get => Pos.Y; set => Pos.Y = value; }
+    /// <summary>所在地图ID（0 表示不在任何地图）</summary>
+    public int MapId { get; set; }
+
+    /// <summary>所在地图分线</summary>
+    public int Line { get; set; }
+
+    /// <summary>X 坐标（格子单位）</summary>
+    public int X { get; set; }
+
+    /// <summary>Y 坐标（格子单位）</summary>
+    public int Y { get; set; }
+
+    /// <summary>设置名称（Create 时调用一次）</summary>
+    protected void SetName(string name) => _name = name;
 }
