@@ -61,13 +61,13 @@ server/Game/
   Components/
     User/               # UserComponent + UserComponentSystem + UserHandler
     Player/             # PlayerComponent + PlayerSystem + PlayerEntity + PlayerOnlineComponent + RoleDataComponent + RoleAttributeComponent + RoleAttribute
-    Bag/                # BagComponent + BagSystem + ItemEffectSystem + BagHandlers + RoleBag + BagItem
-    Mail/               # MailComponent + MailSystem + MailHandlers + RoleMail
+    Bag/                # RoleBagComponent + RoleBagSystem + ItemEffectSystem + RoleBagHandlers + BagItem
+    Mail/               # RoleMailComponent + RoleMailSystem + RoleMailHandlers + RoleMail
     Chat/               # ChatComponent + ChatSystem + ChatHandlers
-    GameTask/            # TaskComponent + TaskSystem + TaskHandlers + RoleTaskList
+    GameTask/            # RoleTaskComponent + RoleTaskSystem + RoleTaskHandlers + RoleTask
     Fight/              # FightSystem + FightHandlers + FightCore + FightUnitComponent + FightAttribute + Skill
-    Map/                # MapComponent + MapSystem + MapHandlers + GameMap + MapPlayerEntity + MapPositionComponent + MapAoiNotifier + IMapObject
-    Monster/            # MonsterComponent + MonsterSystem + MonsterEntity + MonsterInfoComponent + MonsterAiComponent + AiState
+    Map/                # MapComponent + MapSystem + MapHandlers + GameMap + MapPlayerEntity + MapAoiNotifier + IMapObject
+    Monster/            # MonsterEntity + MonsterInfoComponent + MonsterAiComponent + AiState（刷怪/AI逻辑在 GameMap 扩展方法中）
     Misc/               # MiscHandlers（握手+心跳）
   Core/
     AppConfig.cs        # 配置根（Server, MongoDb, Tables, Log）
@@ -102,7 +102,7 @@ MsgId → shared/Common/MsgIdConst.cs（双端共享）
 
 | 级别 | 挂载目标 | 用途 | 示例 |
 |------|---------|------|------|
-| Module 级 | Context.Server | 全局数据集合 | PlayerComponent, MapComponent, MonsterComponent, ChatComponent |
+| Module 级 | Context.Server | 全局数据集合 | PlayerComponent, MapComponent, ChatComponent |
 | PlayerEntity 级 | PlayerEntity | 玩家数据 | BagComponent, MailComponent, TaskComponent, RoleAttributeComponent, PlayerOnlineComponent, RoleDataComponent |
 
 ### System 规则

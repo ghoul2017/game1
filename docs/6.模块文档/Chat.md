@@ -1,114 +1,56 @@
-# Chat 模块文档
+# Chat 模块
 
-## 概述
+## 定位
 
-Chat 模块实现聊天系统，支持世界频道、私聊和系统广播。世界聊天有冷却时间限制，私聊需指定目标玩家名。Module 级 Component，无数据库持久化。
+Chat 模块提供玩家间文字通信——世界频道、私聊、系统广播。它是 Module 级组件，无数据库持久化，纯内存操作。作为最简单的业务模块，也是唯一不被其他模块依赖的独立模块。
 
-## 文件清单
+## 核心设计
 
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| `server/Game/Components/Chat/ChatComponent.cs` | 15 | Module 级 Component，世界聊天冷却记录 |
-| `server/Game/Components/Chat/ChatSystem.cs` | 114 | 聊天逻辑扩展方法 |
-| `server/Game/Components/Chat/ChatHandlers.cs` | 51 | 消息处理 + 事件订阅 |
-| `client/Assets/Scripts/shared/Common/Protos/ChatProtos.cs` | 64 | 消息定义 + 频道常量 |
-| `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10501-10600 段 |
+### Module 级、无状态
 
-## Component
+ChatComponent 挂载在 `Context.Server` 上，只维护世界聊天冷却记录（`Dictionary<long, long>`），不需要持久化。玩家下线时清除冷却。
 
-### ChatComponent（Module 级）
+### 两种频道，两种分发
 
-```csharp
-[ComponentOf(typeof(Module))]
-public class ChatComponent : Component
-{
-    public readonly Dictionary<long, long> LastWorldChatTime = new();  // roleId → 上次世界聊天时间（Unix毫秒）
-}
-```
+| 频道 | 常量 | 分发方式 | 特殊规则 |
+|------|------|---------|---------|
+| World | 1 | `Context.Players.Broadcast` | 3 秒冷却 |
+| Private | 3 | `Context.Players.SendToPlayer` | 不能私聊自己 |
 
-- 挂载目标：`Context.Server`
-- Context 便利属性：`Context.Chat`
-- 仅维护世界聊天冷却，不持久化
+系统广播（Channel=2）只能由服务端发起，不通过玩家请求。
 
-## System 详解
+### 保留的文件
 
-### ChatSystem
+| 文件 | 职责 |
+|------|------|
+| `ChatComponent.cs` | Module 级 Component，世界聊天冷却记录 |
+| `ChatSystem.cs` | 聊天逻辑扩展方法 |
+| `ChatHandlers.cs` | 消息处理 + PlayerOfflineEvent 订阅 |
 
-常量：
-- `WorldChatCooldownMs = 3000`（3秒冷却）
-- `MaxContentLength = 500`（最大消息长度）
-
-| 方法 | 签名 | 说明 |
-|------|------|------|
-| HandleChat | `HandleChat(this ChatComponent, long senderRoleId, string senderName, int channel, string content, string targetName) → (string errorMessage, ChatNtf? ntf, long targetRoleId)` | 处理聊天请求 |
-| SendSystemBroadcast | `SendSystemBroadcast(this ChatComponent, string content)` | 发送系统广播 |
-| CleanCooldown | `CleanCooldown(this ChatComponent, long roleId)` | 清除冷却（下线时） |
-
-#### HandleChat 逻辑
-
-```
-1. 校验内容非空
-2. 截断超长内容
-3. 按频道分发：
-   - World(1)：检查冷却 → 更新冷却时间 → 构造 ChatNtf
-   - Private(3)：校验目标名非空且不是自己 → 查找目标玩家 → 构造 ChatNtf
-   - 其他：返回 InvalidChannel
-4. 返回 (code, ntf, targetRoleId)
-```
-
-### 频道常量
-
-```csharp
-public static class ChatChannel
-{
-    public const int World = 1;    // 世界频道
-    public const int System = 2;   // 系统广播
-    public const int Private = 3;  // 私聊
-}
-```
-
-### 错误处理
-
-ChatAck 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "内容为空"、"世界聊天冷却中" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败。
-
-## Handler 详解
-
-### 消息处理
-
-**ChatHandler**（MsgId 10501→10502）
+## 聊天处理
 
 ```
 ChatReq(channel, content, targetName)
-    ↓
-1. 调用 Context.Chat.HandleChat()
-2. 设置 res.ErrorMessage
-3. 成功时：
-   - 世界聊天 → Context.Players.Broadcast(ChatNtf)
-   - 私聊 → Context.Players.SendToPlayer(targetRoleId, ChatNtf)
-4. 返回 ChatAck
-```
-
-### 事件订阅
-
-| 事件 | 方法 | 说明 |
-|------|------|------|
-| PlayerOfflineEvent | OnPlayerOffline | 清除世界聊天冷却 |
-
-## 协议汇总
-
-| MsgId | 消息类 | 方向 | 关键字段 |
-|-------|--------|------|----------|
-| 10501 | ChatReq | C→S | Channel, Content, TargetName |
-| 10502 | ChatAck | S→C | ErrorMessage |
-| 10503 | ChatNtf | S→C | Channel, SenderId, SenderName, Content, SendTime |
-| 10504 | SystemChatNtf | S→C | Content, SendTime |
-
-## 模块依赖
-
-```
-Chat 模块
-  ├── 依赖 → Player（Context.Players.Broadcast / SendToPlayer / GetByRoleName）
-  ├── 依赖 → EventBus（PlayerOfflineEvent 订阅）
   │
-  └── 无被依赖（独立模块，其他模块不调用 Chat）
+  ├── 1. 校验内容非空
+  ├── 2. 截断超长内容（MaxContentLength=500）
+  ├── 3. 按频道分发：
+  │     ├── World：检查冷却 → 更新冷却时间 → 构造 ChatNtf → Broadcast
+  │     └── Private：校验目标名非空且不是自己 → 查找目标 → 构造 ChatNtf → SendToPlayer
+  └── 4. 返回 (errorMessage, ntf, targetRoleId)
 ```
+
+## 跨模块协作
+
+| 交互方 | 方向 | 内容 |
+|--------|------|------|
+| Player | 单向 | Broadcast / SendToPlayer / GetByRoleName 查找私聊目标 |
+| EventBus | 单向 | PlayerOfflineEvent → 清除世界聊天冷却 |
+
+Chat 不被任何其他业务模块依赖——它是终端模块。
+
+## 已知局限
+
+1. **无聊天记录**：消息不持久化，离线玩家收不到历史消息
+2. **无频道扩展**：缺少队伍频道、公会频道等
+3. **无内容过滤**：没有敏感词屏蔽

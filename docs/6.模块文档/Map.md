@@ -1,237 +1,91 @@
-# Map 模块文档
+# Map 模块
 
-## 概述
+## 定位
 
-Map 模块实现地图系统，包含地图实例管理、玩家进/出/切换地图、移动同步、AOI 视野管理。使用 TowerAoi（九宫格）实现视野广播，玩家进入视野范围时自动推送对象信息。地图为纯内存对象，不持久化。ECS 重构后，地图对象为 MapObjectEntity 体系（MapPlayerEntity / MonsterEntity）。
+Map 模块管理游戏地图——地图实例、玩家进/出/切换地图、移动同步、AOI 视野广播。它是所有空间概念的载体：玩家和怪物通过地图获得坐标，通过 AOI 获得视野可见性。
 
-## 文件清单
+地图是**纯内存对象**，不持久化。服务重启后从配置重建。
 
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| `server/Game/Entities/MapObjectEntity.cs` | 30 | 地图对象实体基类（实现 IMapObject） |
-| `server/Game/Components/Map/IMapObject.cs` | 14 | 地图对象接口 + 对象类型常量 |
-| `server/Game/Components/Map/MapComponent.cs` | 35 | Module 级 Component，地图集合 + 全局查找 |
-| `server/Game/Components/Map/MapSystem.cs` | 230 | 地图操作扩展方法 |
-| `server/Game/Components/Map/GameMap.cs` | 188 | 地图实例（含 AOI） |
-| `server/Game/Components/Map/MapPlayerEntity.cs` | 45 | 玩家地图投影实体 |
-| `server/Game/Components/Map/MapPositionComponent.cs` | 15 | 地图位置 Component |
-| `server/Game/Components/Map/MapPlayerInfoComponent.cs` | 12 | 玩家地图信息 Component |
-| `server/Game/Components/Map/PlayerRefComponent.cs` | 14 | 玩家引用桥接 Component |
-| `server/Game/Components/Map/MapAoiNotifier.cs` | 130 | AOI 事件 → 网络通知（按 ObjectType 分发） |
-| `server/Game/Components/Map/MapHandlers.cs` | 200 | 消息处理 + 事件订阅 |
-| `server/Game/Core/Aoi/` | — | AOI 系统实现（TowerAoi/Tower/IAoiObject/IAoiEventListener，服务端专属） |
-| `client/Assets/Scripts/shared/Common/Protos/MapProtos.cs` | 207 | 消息定义 |
-| `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10701-10800 段 |
+## 核心设计
 
-## 实体体系
+### 地图对象继承体系
 
-### MapObjectEntity（抽象基类）
-
-```csharp
-public abstract class MapObjectEntity : Entity, IMapObject
-{
-    public long ObjectId => Id;
-    public abstract int ObjectType { get; }
-    public abstract string Name { get; }
-    public abstract int CfgId { get; }
-
-    // 便利属性，代理到 MapPositionComponent
-    public int MapId { get => Pos.MapId; set => Pos.MapId = value; }
-    public int Line { get => Pos.Line; set => Pos.Line = value; }
-    public int X { get => Pos.X; set => Pos.X = value; }
-    public int Y { get => Pos.Y; set => Pos.Y = value; }
-
-    // 组件访问
-    private MapPositionComponent? _pos;
-    public MapPositionComponent Pos => _pos ??= GetComponent<MapPositionComponent>();
-}
+```
+MapObjectEntity（抽象基类，实现 IMapObject）
+  ├── MapPlayerEntity    玩家地图投影
+  └── MonsterEntity      怪物实体
 ```
 
-### MapPlayerEntity
+`MapObjectEntity` 直接持有坐标（MapId/Line/X/Y）和名称（Name），不再通过 Component 中转。ECS 重构后已删除 `MapPositionComponent`、`MapPlayerInfoComponent`。
 
-```csharp
-public class MapPlayerEntity : MapObjectEntity
-{
-    public override int ObjectType => MapObjectType.Player;
-    public override string Name => Info.Name;
-    public override int CfgId => 0;
-    public long RoleId => Id;
+### MapPlayerEntity 是玩家在地图上的投影
 
-    // 组件访问
-    public MapPlayerInfoComponent Info => ...;
-    public PlayerRefComponent PlayerRef => ...;
-    public FightUnitComponent Fight => ...;
+`MapPlayerEntity` 不存持久化数据，Id=RoleId，通过 `PlayerEntity` 字段直接引用持久化实体。ECS 重构后已删除 `PlayerRefComponent`，改为直接字段引用。
 
-    // 桥接到 PlayerEntity
-    public PlayerEntity? PlayerEntity => PlayerRef.PlayerEntity;
-}
+### AOI 一站式管理
+
+TowerAoi（九宫格灯塔）提供一站式 API：`AddAoiEntity` / `RemoveAoiEntity` / `UpdateAoiEntity`。业务代码不需要分别调 AddObject + AddWatcher，AOI 内部根据 viewRange 决定是否同时注册观察者。
+
+- 玩家：viewRange=4（既被看到，也看到别人）
+- 怪物：viewRange=0（只被看到，不观察）
+
+### MapAoiNotifier 按类型分发
+
+AOI 事件回调到 `MapAoiNotifier`，按 `ObjectType` 自动分发通知：
+- Player → `MapPlayerEnterNtf` / `MapPlayerLeaveNtf` / `MapPlayerMoveNtf`
+- Monster → `MapObjectEnterNtf` / `MapObjectLeaveNtf` / `MapObjectMoveNtf`
+
+业务代码不要手动广播，否则导致双通知。
+
+### 保留的文件
+
+| 文件 | 职责 |
+|------|------|
+| `MapComponent.cs` | Module 级 Component，地图集合 + 全局查找 |
+| `MapSystem.cs` | 地图操作扩展方法 |
+| `GameMap.cs` | 地图实例（含 AOI + 怪物管理） |
+| `MapPlayerEntity.cs` | 玩家地图投影实体 |
+| `MapAoiNotifier.cs` | AOI 事件 → 网络通知（按 ObjectType 分发） |
+| `MapHandlers.cs` | 消息处理 + 事件订阅 |
+| `IMapObject.cs` | 地图对象接口 + 对象类型常量 |
+
+已删除：`MapPositionComponent.cs`（坐标直接放在 MapObjectEntity）、`MapPlayerInfoComponent.cs`（Name 直接放在 MapObjectEntity）、`PlayerRefComponent.cs`（直接字段引用 PlayerEntity）。
+
+## 地图操作
+
+### 进入地图
+
+```
+EnterMap(roleId, cfgId, line, playerEntity)
+  │
+  ├── 1. MapPlayerEntity.Create（创建地图投影，含 FightUnitComponent）
+  ├── 2. map.AddObject → AOI 注册 + 广播进入视野
+  ├── 3. PlayerMapEntities 索引注册
+  ├── 4. SendVisibleObjects → 推送视野内所有对象快照
+  └── 5. PublishAsync(PlayerEnterMapEvent)
 ```
 
-- Id = RoleId，是玩家在地图上的运行时投影
-- PlayerRefComponent 桥接回 PlayerEntity（持久化数据）
+### 移动
 
-### IMapObject 接口
-
-```csharp
-public static class MapObjectType
-{
-    public const int Player = 1;
-    public const int Npc = 2;      // 保留，非怪物NPC后续用
-    public const int Monster = 3;
-}
-
-public interface IMapObject : IAoiObject
-{
-    int ObjectType { get; }
-    string Name { get; }
-    int CfgId { get; }
-    int MapId { get; set; }
-    int Line { get; set; }
-}
+```
+MapMove(roleId, newX, newY)
+  │
+  ├── 1. 边界校验
+  ├── 2. map.MoveObject → 更新坐标 + AOI UpdateAoiEntity
+  └── 3. AOI 自动触发 OnObjectMove + OnWatcherUpdate（视野差集推送）
 ```
 
-## Component
+### 离开地图
 
-### MapComponent（Module 级）
-
-```csharp
-[ComponentOf(typeof(Module))]
-public class MapComponent : Component
-{
-    public readonly Dictionary<long, GameMap> Maps = new();                        // MapKey → GameMap
-    public readonly Dictionary<long, MapPlayerEntity> PlayerMapEntities = new();   // roleId → MapPlayerEntity
-}
 ```
-
-- 挂载目标：`Context.Server`
-- Context 便利属性：`Context.Map`
-- MapKey = CfgId × 1000 + Line
-- `FindMapObject(long objectId)` — 全局查找，先查 PlayerMapEntities 再遍历地图
-
-### MapPositionComponent
-
-```csharp
-[ComponentOf(typeof(MapObjectEntity))]
-public class MapPositionComponent : Component
-{
-    public int X;
-    public int Y;
-    public int MapId;
-    public int Line;
-}
+QuitMap(roleId)
+  │
+  ├── 1. map.RemoveObject → AOI 移除 + 广播离开视野
+  ├── 2. PlayerMapEntities 索引移除
+  └── 3. PublishAsync(PlayerLeaveMapEvent) → Fight 注销战斗单元
 ```
-
-### MapPlayerInfoComponent
-
-```csharp
-[ComponentOf(typeof(MapPlayerEntity))]
-public class MapPlayerInfoComponent : Component
-{
-    public string Name = "";
-}
-```
-
-### PlayerRefComponent
-
-```csharp
-[ComponentOf(typeof(MapPlayerEntity))]
-public class PlayerRefComponent : Component
-{
-    public PlayerEntity? PlayerEntity;
-}
-```
-
-## GameMap
-
-```csharp
-public class GameMap
-{
-    // 配置属性
-    public int CfgId { get; }
-    public int Line { get; }
-    public string Name { get; }
-    public int Width { get; }
-    public int Height { get; }
-    public int BirthX { get; }
-    public int BirthY { get; }
-
-    // 系统属性
-    public TowerAoi Aoi { get; }
-    public long MapKey { get; }      // CfgId * 1000 + Line
-    public int PlayerCount { get; }
-    public int ObjectCount { get; }
-
-    // 对象管理（内部字典）
-    // Dictionary<long, MapObjectEntity> _objects
-    // Dictionary<long, MapPlayerEntity> _players
-    // Dictionary<long, MonsterEntity> _monsters
-
-    bool AddObject(MapObjectEntity obj);
-    bool RemoveObject(long objectId);
-    MapObjectEntity? GetObject(long objectId);
-    MapPlayerEntity? GetPlayer(long roleId);
-    List<MapPlayerEntity> GetAllPlayers();
-    List<MonsterEntity> GetAllMonsters();
-    List<MapObjectEntity> GetObjectsInRange(int x, int y, int range);
-    bool MoveObject(long objectId, int newX, int newY);
-}
-```
-
-- AOI 视野范围：4格
-- AddObject 内部调用 AOI 一站式 API（`AddAoiEntity`）
-- MoveObject 内部调用 `UpdateAoiEntity`
-
-## System 详解
-
-### MapSystem
-
-| 方法 | 签名 | 说明 |
-|------|------|------|
-| CreateMap | `CreateMap(this MapComponent, int cfgId, int line, string name, int width, int height, int birthX, int birthY) → GameMap` | 创建地图实例 |
-| GetMap | `GetMap(this MapComponent, int cfgId, int line) → GameMap?` | 获取地图 |
-| GetPlayerMap | `GetPlayerMap(this MapComponent, long roleId) → GameMap?` | 获取玩家所在地图 |
-| GetPlayerMapEntity | `GetPlayerMapEntity(this MapComponent, long roleId) → MapPlayerEntity?` | 获取玩家地图投影 |
-| GetAllMaps | `GetAllMaps(this MapComponent) → List<GameMap>` | 所有地图 |
-| EnterMap | `EnterMap(this MapComponent, long roleId, string roleName, int cfgId, int line, int x, int y, PlayerEntity playerEntity) → bool` | 进入地图 |
-| QuitMap | `QuitMap(this MapComponent, long roleId) → bool` | 离开地图 |
-| ChangeMap | `ChangeMap(this MapComponent, long roleId, string roleName, int newCfgId, int newLine, int newX, int newY, PlayerEntity playerEntity) → bool` | 切换地图 |
-| Move | `Move(this MapComponent, long roleId, int newX, int newY) → bool` | 移动 |
-| GetPlayerPosition | `GetPlayerPosition(this MapComponent, long roleId) → (int,int,int,int)?` | 获取位置 |
-| GetNearbyPlayers | `GetNearbyPlayers(this MapComponent, long roleId) → List<MapPlayerEntity>` | 获取附近玩家 |
-| FindMapObject | `FindMapObject(long objectId) → MapObjectEntity?` | 全局查找地图对象 |
-| BroadcastToAoiWatchers | `BroadcastToAoiWatchers(this MapComponent, long objectId, IMessage msg)` | 向AOI视野内玩家广播 |
-| InitDefaultMaps | `InitDefaultMaps(this MapComponent)` | 初始化默认地图 |
-| RemoveAll | `RemoveAll(this MapComponent)` | 清除所有 |
-
-### 默认地图
-
-| 名称 | CfgId | 尺寸 | 出生点 |
-|------|-------|------|--------|
-| 新手村 | 1 | 200×200 | (100,100) |
-| 主城 | 2 | 300×300 | (150,150) |
-| 野外 | 3 | 500×500 | (250,250) |
 
 ## AOI 视野管理
-
-### 一站式 API（TowerAoi）
-
-| 方法 | 签名 | 说明 |
-|------|------|------|
-| AddAoiEntity | `AddAoiEntity(IAoiObject obj, int viewRange = 0)` | 同时添加对象和观察者 |
-| RemoveAoiEntity | `RemoveAoiEntity(IAoiObject obj)` | 同时移除对象和观察者 |
-| UpdateAoiEntity | `UpdateAoiEntity(IAoiObject obj, int oldX, int oldY, int newX, int newY)` | 同时更新位置 |
-
-- viewRange > 0 时同时作为观察者（玩家=4，怪物=0）
-- 底层 AddObject/RemoveObject/UpdateObject、AddWatcher/RemoveWatcher/UpdateWatcher 仍可用
-
-### MapAoiNotifier（IAoiEventListener 实现）
-
-| 回调 | 通知 | 说明 |
-|------|------|------|
-| OnObjectEnter | MapPlayerEnterNtf / MapObjectEnterNtf | 对象进入视野（按 ObjectType 区分） |
-| OnObjectLeave | MapPlayerLeaveNtf / MapObjectLeaveNtf | 对象离开视野 |
-| OnObjectMove | MapPlayerMoveNtf / MapObjectMoveNtf | 对象移动 |
-| OnWatcherUpdate | MapPlayerEnterNtf/LeaveNtf 或 MapObjectEnterNtf/LeaveNtf | 观察者跨塔移动时视野差集推送 |
 
 ### 视野推送流程
 
@@ -246,75 +100,40 @@ public class GameMap
   2. AOI UpdateAoiEntity → 自动触发 OnObjectMove + OnWatcherUpdate
 ```
 
-## Handler 详解
+### 默认地图
 
-### 消息处理
+| 名称 | CfgId | 尺寸 | 出生点 |
+|------|-------|------|--------|
+| 新手村 | 1 | 200×200 | (100,100) |
+| 主城 | 2 | 300×300 | (150,150) |
+| 野外 | 3 | 500×500 | (250,250) |
 
-| Handler | MsgId | 请求 | 响应 | 说明 |
-|---------|-------|------|------|------|
-| EnterMapHandler | 10701→10702 | EnterMapReq(cfgId, line) | EnterMapAck(cfgId, line, x, y) | 进入地图 |
-| LeaveMapHandler | 10703→10704 | LeaveMapReq | LeaveMapAck | 离开地图 |
-| ChangeMapHandler | 10705→10706 | ChangeMapReq(targetCfgId, targetLine, x, y) | ChangeMapAck | 切换地图 |
-| MapMoveHandler | 10707→10708 | MapMoveReq(x, y) | MapMoveAck(x, y) | 移动 |
-
-### 错误处理
-
-所有 Ack 使用 `ErrorMessage` 字段，成功时为空字符串，失败时为中文错误文本（如 "地图不存在"、"已在地图中" 等）。客户端通过 `!string.IsNullOrEmpty(ack.ErrorMessage)` 判断失败。
-
-### 事件订阅
-
-| 事件 | 方法 | 说明 |
-|------|------|------|
-| PlayerOfflineEvent | OnPlayerOffline | 自动退出地图 |
-
-### 发布事件
-
-| 事件 | 触发场景 |
-|------|---------|
-| PlayerEnterMapEvent | 玩家成功进入地图 |
-
-## 协议汇总
-
-| MsgId | 消息类 | 方向 | 关键字段 |
-|-------|--------|------|----------|
-| 10701 | EnterMapReq | C→S | MapCfgId, Line |
-| 10702 | EnterMapAck | S→C | ErrorMessage, MapCfgId, Line, X, Y |
-| 10703 | LeaveMapReq | C→S | （无） |
-| 10704 | LeaveMapAck | S→C | ErrorMessage |
-| 10705 | ChangeMapReq | C→S | TargetMapCfgId, TargetLine, X, Y |
-| 10706 | ChangeMapAck | S→C | ErrorMessage, MapCfgId, Line, X, Y |
-| 10707 | MapMoveReq | C→S | X, Y |
-| 10708 | MapMoveAck | S→C | ErrorMessage, X, Y |
-| 10709 | MapObjectsNtf | S→C | Objects(List\<MapObjectInfo\>) |
-| 10710 | MapPlayerEnterNtf | S→C | Player(MapObjectInfo) |
-| 10711 | MapPlayerLeaveNtf | S→C | RoleId |
-| 10712 | MapPlayerMoveNtf | S→C | RoleId, X, Y |
-| 10713 | MapObjectEnterNtf | S→C | ObjectId, CfgId, Name, X, Y, ObjectType |
-| 10714 | MapObjectLeaveNtf | S→C | ObjectId |
-| 10715 | MapObjectMoveNtf | S→C | ObjectId, X, Y |
-| 10716 | MonsterDropNtf | S→C | MonsterId, Gold, Items(List\<DropItemInfo\>) |
-
-共享结构：
-- `MapObjectInfo`：ObjectId, ObjectType, Name, X, Y, CfgId
-- `DropItemInfo`：ConfigId, Count
-
-## 模块依赖
+## 跨模块协作
 
 ```
-Map 模块
-  ├── 依赖 → Game.Core.Aoi（TowerAoi 视野系统，服务端专属）
-  ├── 依赖 → Player（Context.Players.SendToPlayer）
-  ├── 依赖 → EventBus（PlayerEnterMapEvent 发布、PlayerOfflineEvent 订阅）
-  ├── 依赖 → Fight（MapPlayerEntity.RegisterUnit/UnregisterUnit、BroadcastToAoiWatchers 广播战斗通知）
-  │
-  └── 被依赖 ←
-       ├── Monster（OnPlayerEnterMap → 初始化怪物、MonsterEntity 管理怪物）
-       ├── Fight（FindMapObject 全局查找、PlayerLeaveMapEvent → 注销战斗单元）
-       └── Chat（间接：通过 Player 在线列表广播）
+                ┌─────────────┐
+                │   Config    │ MapConfig 配置表
+                └──────┬──────┘
+                       │
+┌──────────┐    ┌──────▼──────┐    ┌──────────┐
+│  Fight   │◄──►│     Map     │◄──►│  Player  │
+│ 战斗注册  │    │ 进出/移动/AOI│    │ 消息推送  │
+└──────────┘    └──────┬──────┘    └──────────┘
+                       │
+                ┌──────▼──────┐
+                │  Monster    │ GameMap 扩展方法管理怪物
+                └─────────────┘
 ```
 
-## 已知待办
+| 交互方 | 方向 | 内容 |
+|--------|------|------|
+| Fight | 双向 | MapPlayerEntity 挂载 FightUnitComponent；OnUnitKilled → 移除对象 |
+| Monster | 双向 | MonsterEntity 继承 MapObjectEntity；刷怪/AI/掉落由 GameMap 扩展方法管理 |
+| Player | 单向 | `SendToPlayer` 推送地图通知 |
+| Config | 单向 | 读取 `MapConfig` 驱动地图参数 |
 
-1. **多线支持**：InitDefaultMaps 仅创建 Line=1，多线未实现
-2. **移动校验**：仅检查边界，无碰撞检测和寻路
+## 已知局限
+
+1. **多线未实现**：InitDefaultMaps 仅创建 Line=1
+2. **无碰撞检测**：移动只做边界校验，无寻路和碰撞
 3. **动态地图**：地图在启动时固定创建，无运行时动态创建

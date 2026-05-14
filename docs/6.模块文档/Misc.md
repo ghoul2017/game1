@@ -1,32 +1,30 @@
-# Misc 模块文档
+# Misc 模块
 
-## 概述
+## 定位
 
-Misc 模块提供网络基础通信功能：握手（Handshake）和心跳（Heartbeat）。握手用于连接建立后的初始验证，心跳用于保持连接活跃和测量网络延迟。同时负责驱动服务端心跳检测定时器（每20秒检查超时连接）。是最小的独立模块，无状态、无持久化。
+Misc 模块提供网络基础通信——握手和心跳。它是连接层之上的第一个协议处理点，确保连接可用、会话活跃。最小独立模块，无状态、无持久化、无业务逻辑。
 
-## 文件清单
+## 核心设计
 
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| `server/Game/Components/Misc/MiscHandlers.cs` | ~55 | 握手+心跳处理 + 心跳检测定时器 |
-| `client/Assets/Scripts/shared/Common/Protos/MiscProtos.cs` | 39 | 消息定义 |
-| `client/Assets/Scripts/shared/Common/MsgIdConst.cs` | — | MsgId 10201-10300 段 |
+### 握手是连接确认
 
-## Handler 详解
+TCP 连接建立后，客户端发送 `HandshakeReq` 确认连接可用。当前实现仅记录日志，未做 Token 验证——这是一个预留的入口，后续可加入认证逻辑。
 
-### 事件订阅
+### 心跳保持会话
 
-| 事件 | 方法 | 说明 |
-|------|------|------|
-| `ServerInitEvent` | `OnServerInit()` | 服务器初始化时启动心跳检测定时器 |
+客户端定时发送 `HeartbeatReq`，服务端更新 `session` 活跃时间。服务端每 20 秒检查所有连接，超时 60 秒的连接被断开。
 
-### 心跳检测定时器
+心跳检测定时器通过 `ServerInitEvent` 订阅启动，从 NetworkComponent 构造函数中分离出来，保持网络层的纯粹。
 
-- MiscHandlers.OnServerInit 订阅 ServerInitEvent，启动 GameTimer 每20秒调用 `Context.Network.DoHeartbeatCheck()`
-- NetworkComponent.DoHeartbeatCheck() 检查超时60秒的连接并断开
-- 心跳定时器原在 NetworkComponent 构造函数中启动，现已分离到 Misc 模块
+### 保留的文件
 
-### HandshakeHandler（MsgId 10201→10202）
+| 文件 | 职责 |
+|------|------|
+| `MiscHandlers.cs` | 握手 + 心跳处理 + 心跳检测定时器 |
+
+## 协议
+
+### 握手
 
 ```
 客户端                       服务端
@@ -37,10 +35,9 @@ Misc 模块提供网络基础通信功能：握手（Handshake）和心跳（Hea
   |<--------------------------|
 ```
 
-- 当前仅记录日志，未做 Token 验证
-- 返回固定 Code=0, Message="OK"
+当前仅记录日志，未验证 Token。
 
-### HeartbeatHandler（MsgId 10203→10204）
+### 心跳
 
 ```
 客户端                       服务端
@@ -52,28 +49,18 @@ Misc 模块提供网络基础通信功能：握手（Handshake）和心跳（Hea
   |<--------------------------|
 ```
 
-- `session.UpdateActiveTime()` 刷新会话活跃时间
-- 返回服务端时间戳，客户端可计算 RTT 延迟
+客户端可计算 RTT = serverTime - clientTime。
 
-## 协议汇总
+## 跨模块协作
 
-| MsgId | 消息类 | 方向 | 关键字段 |
-|-------|--------|------|----------|
-| 10201 | HandshakeReq | C→S | Token |
-| 10202 | HandshakeRes | S→C | Code, Message |
-| 10203 | HeartbeatReq | C→S | ClientTime |
-| 10204 | HeartbeatRes | S→C | ServerTime, ClientTime |
+| 交互方 | 方向 | 内容 |
+|--------|------|------|
+| Network | 单向 | RpcMethodHandler / TcpSession / DoHeartbeatCheck |
+| GameTimer | 单向 | 心跳检测定时器 |
 
-## 模块依赖
+Misc 不被任何业务模块依赖。
 
-```
-Misc 模块
-  ├── 依赖 → Network（RpcMethodHandler、TcpSession、DoHeartbeatCheck）
-  ├── 依赖 → GameTimer（心跳检测定时器）
-  │
-  └── 无被依赖（纯基础设施模块）
-```
+## 已知局限
 
-## 已知待办
-
-1. **握手验证**：HandshakeHandler 未验证 Token，仅记录日志
+1. **握手未验证**：HandshakeHandler 未验证 Token，仅记录日志
+2. **心跳频率固定**：客户端心跳间隔硬编码，不可配置
