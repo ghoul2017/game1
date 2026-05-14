@@ -52,7 +52,6 @@ public class MongoDb
         if (doc == null) return null;
 
         var entity = BsonSerializer.Deserialize<T>(doc);
-        InvokeAfterDeserialize(entity);
         return entity;
     }
 
@@ -156,17 +155,6 @@ public class MongoDb
     {
         if (_database == null) throw new InvalidOperationException("MongoDb 未初始化");
         return _database.GetCollection<T>(ConvertToUnderscore(typeof(T).Name));
-    }
-
-    private static void InvokeAfterDeserialize<T>(T entity) where T : class, IEntity
-    {
-        var method = typeof(T).GetMethod("AfterDeserialize",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        method?.Invoke(entity, null);
-
-        var rebuildMethod = typeof(T).GetMethod("RebuildIndex",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        rebuildMethod?.Invoke(entity, null);
     }
 
     private static string ConvertToUnderscore(string input)

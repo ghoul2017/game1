@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Game.Components.Player;
-using Shared.Core.Database;
 using MongoDB.Bson.Serialization.Attributes;
+using Shared.Core.Database;
 using Shared.Core.ECS;
 
 namespace Game.Components.GameTask;
@@ -15,32 +15,11 @@ public class RoleTaskComponent : Component, IEntity
     [BsonId]
     public long Id { get; set; }
 
-    /// <summary>当前任务列表</summary>
-    public List<RoleTask> Tasks { get; set; } = [];
-
-    /// <summary>运行时索引：taskId → RoleTask（不序列化）</summary>
-    [BsonIgnore]
-    private Dictionary<int, RoleTask>? _taskMap;
-
-    internal void AfterDeserialize() { RebuildIndex(); }
-
-    internal void RebuildIndex()
-    {
-        _taskMap = new Dictionary<int, RoleTask>(Tasks.Count);
-        foreach (var task in Tasks)
-        {
-            _taskMap[task.TaskId] = task;
-        }
-    }
-
-    internal Dictionary<int, RoleTask> GetTaskMap()
-    {
-        _taskMap ??= new Dictionary<int, RoleTask>(Tasks.Count);
-        return _taskMap;
-    }
+    /// <summary>任务字典：taskId → RoleTask</summary>
+    public Dictionary<int, RoleTask> Tasks { get; set; } = new();
 
     internal RoleTask? GetByTaskId(int taskId)
     {
-        return GetTaskMap().TryGetValue(taskId, out var task) ? task : null;
+        return Tasks.TryGetValue(taskId, out var task) ? task : null;
     }
 }

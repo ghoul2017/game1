@@ -36,7 +36,6 @@ public static class RoleTaskSystem
         // 把数据库加载的数据拷贝到当前 Component
         self.Id = taskList.Id;
         self.Tasks = taskList.Tasks;
-        self.RebuildIndex();
 
         return self;
     }
@@ -53,7 +52,7 @@ public static class RoleTaskSystem
         if (self.GetByTaskId(taskId) != null)
             return TaskAcceptResult.Fail("任务已接取");
 
-        var activeCount = self.Tasks.Count(t => t.IsInProgress);
+        var activeCount = self.Tasks.Values.Count(t => t.IsInProgress);
         if (activeCount >= MaxActiveTaskCount)
             return TaskAcceptResult.Fail("任务列表已满");
 
@@ -102,8 +101,7 @@ public static class RoleTaskSystem
             Goals = goals,
         };
 
-        self.Tasks.Add(task);
-        self.GetTaskMap()[taskId] = task;
+        self.Tasks[taskId] = task;
 
         Log.Info($"接取任务 TaskId:{taskId} GoalCount:{goals.Count}");
 
@@ -175,8 +173,7 @@ public static class RoleTaskSystem
         if (task.IsCompleted)
             return TaskGiveUpResult.Fail("任务已完成");
 
-        self.Tasks.Remove(task);
-        self.GetTaskMap().Remove(taskId);
+        self.Tasks.Remove(taskId);
 
         return TaskGiveUpResult.Ok();
     }
@@ -188,7 +185,7 @@ public static class RoleTaskSystem
     {
         var changedTaskIds = new List<int>();
 
-        foreach (var task in self.Tasks)
+        foreach (var task in self.Tasks.Values)
         {
             if (!task.IsInProgress) continue;
 
@@ -222,7 +219,7 @@ public static class RoleTaskSystem
     /// <summary>获取任务列表</summary>
     public static List<RoleTask> GetTaskList(this RoleTaskComponent self)
     {
-        return self.Tasks.ToList();
+        return self.Tasks.Values.ToList();
     }
 
     /// <summary>转换为网络传输用的 TaskInfo</summary>

@@ -90,7 +90,6 @@ public static class RoleMailHandlers
             await MongoDb.Instance.InsertAsync(mail);
             Log.Info($"创建新邮件 RoleId:{player.Id}");
         }
-        mail.RebuildIndex();
         player.AddComponent(mail);
     }
 

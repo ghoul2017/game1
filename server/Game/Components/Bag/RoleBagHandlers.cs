@@ -18,7 +18,7 @@ public static class RoleBagHandlers
     {
         await Task.CompletedTask;
         res.Capacity = player.RoleBag.Capacity;
-        res.Items = player.RoleBag.Items.Select(ToInfo).ToList();
+        res.Items = player.RoleBag.Items.Values.Select(ToInfo).ToList();
 
         return res;
     }
@@ -29,7 +29,7 @@ public static class RoleBagHandlers
         player.RoleBag.Tidy();
         await player.RoleBag.SaveBagAsync();
 
-        res.Items = player.RoleBag.Items.Select(ToInfo).ToList();
+        res.Items = player.RoleBag.Items.Values.Select(ToInfo).ToList();
 
         return res;
     }
@@ -105,7 +105,6 @@ public static class RoleBagHandlers
             await MongoDb.Instance.InsertAsync(bag);
             Log.Info($"创建新背包 RoleId:{player.Id}");
         }
-        bag.RebuildIndex();
         player.AddComponent(bag);
     }
 

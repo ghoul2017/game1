@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Game.Components.Player;
-using Shared.Core.Database;
 using MongoDB.Bson.Serialization.Attributes;
+using Shared.Core.Database;
 using Shared.Core.ECS;
 
 namespace Game.Components.Bag;
@@ -18,37 +18,11 @@ public class RoleBagComponent : Component, IEntity
     /// <summary>背包容量（最大格子数）</summary>
     public int Capacity { get; set; } = 100;
 
-    /// <summary>物品列表</summary>
-    public List<BagItem> Items { get; set; } = [];
-
-    /// <summary>运行时索引：index → BagItem（不序列化）</summary>
-    [BsonIgnore]
-    private Dictionary<int, BagItem>? _indexMap;
-
-    internal void AfterDeserialize() { RebuildIndex(); }
-
-    internal void RebuildIndex()
-    {
-        _indexMap = new Dictionary<int, BagItem>(Items.Count);
-        foreach (var item in Items)
-        {
-            _indexMap[item.Index] = item;
-        }
-    }
-
-    internal Dictionary<int, BagItem> GetIndexMap()
-    {
-        _indexMap ??= new Dictionary<int, BagItem>(Items.Count);
-        return _indexMap;
-    }
+    /// <summary>物品字典：格子索引 → BagItem</summary>
+    public Dictionary<int, BagItem> Items { get; set; } = new();
 
     internal BagItem? GetByIndex(int index)
     {
-        return GetIndexMap().TryGetValue(index, out var item) ? item : null;
-    }
-
-    internal void RemoveFromIndex(BagItem item)
-    {
-        GetIndexMap().Remove(item.Index);
+        return Items.TryGetValue(index, out var item) ? item : null;
     }
 }

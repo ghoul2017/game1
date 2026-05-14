@@ -35,7 +35,6 @@ public static class RoleMailSystem
         // 把数据库加载的数据拷贝到当前 Component
         self.Id = mailList.Id;
         self.Mails = mailList.Mails;
-        self.RebuildIndex();
 
         // 清理过期邮件
         CleanExpired(self);
@@ -69,8 +68,7 @@ public static class RoleMailSystem
             State = 0,
         };
 
-        self.Mails.Add(mail);
-        self.GetMailMap()[mail.Id] = mail;
+        self.Mails[mail.Id] = mail;
 
         return MailResult.Ok(mail.Id);
     }
@@ -85,8 +83,7 @@ public static class RoleMailSystem
         {
             await self.SaveMailsAsync();
 
-            var mail = self.Mails.First(m => m.Id == result.MailId);
-            var ntf = new MailNewNtf { Mail = self.ToMailInfo(mail) };
+            var ntf = new MailNewNtf { Mail = self.ToMailInfo(self.Mails[result.MailId]) };
             Context.Players.SendToPlayer(roleId, ntf);
 
             Log.Info($"系统邮件已发送 RoleId:{roleId} Title:{title}");
@@ -96,7 +93,7 @@ public static class RoleMailSystem
     /// <summary>获取邮件列表（按发送时间倒序）</summary>
     public static List<RoleMail> GetMailList(this RoleMailComponent self)
     {
-        return self.Mails
+        return self.Mails.Values
             .Where(m => !m.IsExpired)
             .OrderByDescending(m => m.SendTime)
             .ToList();
@@ -106,11 +103,10 @@ public static class RoleMailSystem
     public static MarkResult MarkRead(this RoleMailComponent self, List<long> mailIds)
     {
         var readIds = new List<long>();
-        var map = self.GetMailMap();
 
         foreach (var mailId in mailIds)
         {
-            if (map.TryGetValue(mailId, out var mail) && !mail.IsRead)
+            if (self.Mails.TryGetValue(mailId, out var mail) && !mail.IsRead)
             {
                 mail.State = 1;
                 readIds.Add(mailId);
@@ -125,11 +121,10 @@ public static class RoleMailSystem
     {
         var claimedIds = new List<long>();
         var allItems = new List<MailAttachment>();
-        var map = self.GetMailMap();
 
         foreach (var mailId in mailIds)
         {
-            if (!map.TryGetValue(mailId, out var mail)) continue;
+            if (!self.Mails.TryGetValue(mailId, out var mail)) continue;
             if (mail.IsClaimed || !mail.HasUnclaimedAttachment) continue;
 
             allItems.AddRange(mail.Attachments);
@@ -158,17 +153,15 @@ public static class RoleMailSystem
     public static DeleteResult DeleteMails(this RoleMailComponent self, List<long> mailIds)
     {
         var deletedIds = new List<long>();
-        var map = self.GetMailMap();
 
         foreach (var mailId in mailIds)
         {
-            if (!map.TryGetValue(mailId, out var mail)) continue;
+            if (!self.Mails.TryGetValue(mailId, out var mail)) continue;
 
             if (mail.HasUnclaimedAttachment)
                 continue;
 
-            map.Remove(mailId);
-            self.Mails.Remove(mail);
+            self.Mails.Remove(mailId);
             deletedIds.Add(mailId);
         }
 
@@ -178,7 +171,7 @@ public static class RoleMailSystem
     /// <summary>获取未读邮件数量</summary>
     public static int GetUnreadCount(this RoleMailComponent self)
     {
-        return self.Mails.Count(m => !m.IsRead && !m.IsExpired);
+        return self.Mails.Values.Count(m => !m.IsRead && !m.IsExpired);
     }
 
     /// <summary>转换为网络传输用的 MailInfo</summary>
@@ -204,13 +197,12 @@ public static class RoleMailSystem
     /// <summary>清理过期邮件</summary>
     private static void CleanExpired(RoleMailComponent self)
     {
-        var expired = self.Mails.Where(m => m.IsExpired).ToList();
+        var expired = self.Mails.Values.Where(m => m.IsExpired).ToList();
         if (expired.Count == 0) return;
 
         foreach (var mail in expired)
         {
-            self.Mails.Remove(mail);
-            self.GetMailMap().Remove(mail.Id);
+            self.Mails.Remove(mail.Id);
         }
 
         Log.Info($"清理过期邮件 RoleId:{self.Id} Count:{expired.Count}");

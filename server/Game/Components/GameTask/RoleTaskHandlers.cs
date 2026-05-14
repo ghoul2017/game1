@@ -101,7 +101,6 @@ public static class RoleTaskHandlers
             await MongoDb.Instance.InsertAsync(task);
             Log.Info($"创建新任务列表 RoleId:{player.Id}");
         }
-        task.RebuildIndex();
         player.AddComponent(task);
     }
 

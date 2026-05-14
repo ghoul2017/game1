@@ -40,7 +40,7 @@ public static class RoleBagSystem
         var remaining = count;
 
         // 先尝试叠加到已有同类物品
-        foreach (var item in self.Items)
+        foreach (var item in self.Items.Values)
         {
             if (item.ConfigId == configId && item.Count < maxStack)
             {
@@ -68,8 +68,7 @@ public static class RoleBagSystem
                 Bind = false,
                 ExpireTime = 0,
             };
-            self.Items.Add(newItem);
-            self.GetIndexMap()[emptyIndex] = newItem;
+            self.Items[emptyIndex] = newItem;
             remaining -= addCount;
         }
 
@@ -83,24 +82,29 @@ public static class RoleBagSystem
             return false;
 
         var remaining = count;
-        for (int i = self.Items.Count - 1; i >= 0; i--)
-        {
-            var item = self.Items[i];
-            if (item.ConfigId != configId) continue;
+        var keysToRemove = new List<int>();
 
-            if (item.Count <= remaining)
+        foreach (var kvp in self.Items)
+        {
+            if (kvp.Value.ConfigId != configId) continue;
+
+            if (kvp.Value.Count <= remaining)
             {
-                remaining -= item.Count;
-                self.RemoveFromIndex(item);
-                self.Items.RemoveAt(i);
+                remaining -= kvp.Value.Count;
+                keysToRemove.Add(kvp.Key);
             }
             else
             {
-                item.Count -= remaining;
+                kvp.Value.Count -= remaining;
                 remaining = 0;
             }
 
             if (remaining <= 0) break;
+        }
+
+        foreach (var key in keysToRemove)
+        {
+            self.Items.Remove(key);
         }
 
         return true;
@@ -109,14 +113,12 @@ public static class RoleBagSystem
     /// <summary>移除物品（按格子索引）</summary>
     public static bool RemoveByIndex(this RoleBagComponent self, int index, int count)
     {
-        var item = self.GetByIndex(index);
-        if (item == null) return false;
+        if (!self.Items.TryGetValue(index, out var item)) return false;
         if (item.Count < count) return false;
 
         if (item.Count == count)
         {
-            self.RemoveFromIndex(item);
-            self.Items.Remove(item);
+            self.Items.Remove(index);
         }
         else
         {
@@ -129,14 +131,14 @@ public static class RoleBagSystem
     /// <summary>检查物品数量是否足够</summary>
     public static bool HasEnough(this RoleBagComponent self, int configId, int count)
     {
-        var total = self.Items.Where(i => i.ConfigId == configId).Sum(i => i.Count);
+        var total = self.Items.Values.Where(i => i.ConfigId == configId).Sum(i => i.Count);
         return total >= count;
     }
 
     /// <summary>获取物品总数</summary>
     public static int GetItemCount(this RoleBagComponent self, int configId)
     {
-        return self.Items.Where(i => i.ConfigId == configId).Sum(i => i.Count);
+        return self.Items.Values.Where(i => i.ConfigId == configId).Sum(i => i.Count);
     }
 
     /// <summary>检查是否有空格子</summary>
@@ -148,27 +150,25 @@ public static class RoleBagSystem
     /// <summary>整理背包（按配置ID排序，紧凑排列）</summary>
     public static void Tidy(this RoleBagComponent self)
     {
-        var grouped = self.Items
+        var grouped = self.Items.Values
             .GroupBy(i => i.ConfigId)
             .OrderBy(g => g.Key)
             .ToList();
 
         self.Items.Clear();
-        self.GetIndexMap().Clear();
 
         var index = 0;
         foreach (var group in grouped)
         {
             var totalCount = group.Sum(i => i.Count);
-            self.Items.Add(new BagItem
+            self.Items[index] = new BagItem
             {
                 Uid = IdGenerator.Instance.NextId(),
                 ConfigId = group.Key,
                 Count = totalCount,
                 Index = index,
                 Bind = group.Any(i => i.Bind),
-            });
-            self.GetIndexMap()[index] = self.Items[^1];
+            };
             index++;
         }
     }
@@ -178,15 +178,11 @@ public static class RoleBagSystem
     {
         if (index1 == index2) return true;
 
-        var item1 = self.GetByIndex(index1);
-        var item2 = self.GetByIndex(index2);
+        self.Items.Remove(index1, out var item1);
+        self.Items.Remove(index2, out var item2);
 
-        var map = self.GetIndexMap();
-        map.Remove(index1);
-        map.Remove(index2);
-
-        if (item1 != null) { item1.Index = index2; map[index2] = item1; }
-        if (item2 != null) { item2.Index = index1; map[index1] = item2; }
+        if (item1 != null) { item1.Index = index2; self.Items[index2] = item1; }
+        if (item2 != null) { item2.Index = index1; self.Items[index1] = item2; }
 
         return true;
     }
@@ -197,8 +193,7 @@ public static class RoleBagSystem
         if (count <= 0)
             return UseItemResult.Fail("参数错误");
 
-        var item = self.GetByIndex(index);
-        if (item == null)
+        if (!self.Items.TryGetValue(index, out var item))
             return UseItemResult.Fail("物品不存在");
 
         if (item.Count < count)
@@ -207,8 +202,7 @@ public static class RoleBagSystem
         // 扣除物品
         if (item.Count == count)
         {
-            self.RemoveFromIndex(item);
-            self.Items.Remove(item);
+            self.Items.Remove(index);
         }
         else
         {
@@ -221,15 +215,14 @@ public static class RoleBagSystem
     /// <summary>获取背包信息（所有物品快照）</summary>
     public static List<BagItem> GetItems(this RoleBagComponent self)
     {
-        return self.Items.ToList();
+        return self.Items.Values.ToList();
     }
 
     private static int FindEmptyIndex(RoleBagComponent self)
     {
-        var map = self.GetIndexMap();
         for (int i = 0; i < self.Capacity; i++)
         {
-            if (!map.ContainsKey(i))
+            if (!self.Items.ContainsKey(i))
                 return i;
         }
         return -1;

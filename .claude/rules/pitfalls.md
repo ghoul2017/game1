@@ -9,8 +9,7 @@ always_apply: true
 Component 合并 IEntity 数据类时，Component 实现 IEntity 保持 MongoEntityRepository 兼容：
 
 - **`[BsonId]`** 必须标记在 `Id` 属性上
-- **`[BsonIgnore]`** 标记运行时索引字段（`_indexMap`、`_mailMap`）和运行时状态（`_nextItemUid`、`NextMailId`）
-- **`AfterDeserialize`** / `RebuildIndex` 通过反射在 LoadAsync 后调用，MongoDB 反序列化不会自动触发
+- **集合数据直接用 `Dictionary<K,V>`**（MongoDB 原生支持，key 存储为 BSON document 的 string key），不需要 `List<T>` + `Dictionary<K,V>` 双结构
 - **Proto 属性**：仅网络 Protobuf 序列化的类才需要 `[ProtoContract]`/`[ProtoMember]`，纯 MongoDB 持久化不需要
 
 ### 推荐加载模式：AddComponent(instance)
@@ -22,15 +21,15 @@ if (bag == null)
     bag = new RoleBagComponent { Id = player.Id, Capacity = 100 };
     await MongoDb.Instance.InsertAsync(bag);
 }
-bag.RebuildIndex();
 player.AddComponent(bag);
 ```
 
-**Why:** `AddComponent(instance)` 内部调用 `component.SetParent(this)`，DB 加载实例的 `_parent` 引用正确。`RebuildIndex()` 必须在 `AddComponent` 之前调用。
+**Why:** `AddComponent(instance)` 内部调用 `component.SetParent(this)`，DB 加载实例的 `_parent` 引用正确。Dictionary 由 MongoDB 直接反序列化，无需 `RebuildIndex()`。
 
-### 已淘汰：LoadAsync 拷贝
+### 已淘汰模式
 
-先 `AddComponent()` 再逐字段拷贝 — 新代码不要用此模式。
+- **List + Dictionary 双结构** — 曾用于 Bag/Mail/Task，Dictionary 标记 `[BsonIgnore]` 通过 `RebuildIndex()` 重建。已统一为 Dictionary 主结构，MongoDB 直接序列化。
+- **LoadAsync 拷贝** — 先 `AddComponent()` 再逐字段拷贝，已替换为 AddComponent(instance)。
 
 ## ConfigManager 双端共享
 
