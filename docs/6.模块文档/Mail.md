@@ -12,7 +12,7 @@ Mail 模块管理玩家邮件——查询、已读标记、附件领取、删除
 
 ### Component 与持久化合一
 
-`RoleMailComponent` 同时是 Component 和 IEntity，持久化到 `role_mail_list` 集合。运行时通过 `_mailMap` 索引提供 O(1) 邮件查找。
+`RoleMailComponent` 同时是 Component 和 IEntity，持久化到 `role_mail_list` 集合。直接使用 `Dictionary<long, RoleMail>` 作为 MongoDB 持久化结构（key=mailId），提供 O(1) 邮件查找。
 
 ### 系统邮件 + 实时推送
 
@@ -22,7 +22,7 @@ Mail 模块管理玩家邮件——查询、已读标记、附件领取、删除
 
 | 文件 | 职责 |
 |------|------|
-| `RoleMailComponent.cs` | 邮件 Component（IEntity 持久化 + 运行时索引） |
+| `RoleMailComponent.cs` | 邮件 Component（IEntity 持久化，Dictionary 主结构） |
 | `RoleMailSystem.cs` | 邮件操作扩展方法 |
 | `RoleMailHandlers.cs` | 消息处理 + PlayerOnlineEvent 订阅 |
 | `RoleMail.cs` | 邮件/附件数据类 |
@@ -61,7 +61,6 @@ Mail 模块管理玩家邮件——查询、已读标记、附件领取、删除
 PlayerOnlineEvent → RoleMailHandlers.OnPlayerOnline
   ├── LoadAsync<RoleMailComponent>(roleId)
   ├── 不存在 → 创建默认空邮件列表 + InsertAsync
-  ├── RebuildIndex()
   └── player.AddComponent(mailComp)
 ```
 

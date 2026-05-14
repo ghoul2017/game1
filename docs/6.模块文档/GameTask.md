@@ -37,13 +37,13 @@ GameTask 模块管理玩家任务——接取、进度追踪、提交领奖、�
 
 ### Component 与持久化合一
 
-`RoleTaskComponent` 同时是 Component 和 IEntity，持久化到 `role_task_list` 集合。运行时通过 `_taskMap` 索引提供 O(1) 任务查找。
+`RoleTaskComponent` 同时是 Component 和 IEntity，持久化到 `role_task_list` 集合。直接使用 `Dictionary<int, RoleTask>` 作为 MongoDB 持久化结构（key=taskId），提供 O(1) 任务查找。
 
 ### 保留的文件
 
 | 文件 | 职责 |
 |------|------|
-| `RoleTaskComponent.cs` | 任务 Component（IEntity 持久化 + 运行时索引） |
+| `RoleTaskComponent.cs` | 任务 Component（IEntity 持久化，Dictionary 主结构） |
 | `RoleTaskSystem.cs` | 任务操作扩展方法 |
 | `RoleTaskHandlers.cs` | 消息处理 + 多事件订阅 |
 | `RoleTask.cs` | 任务/目标数据类 + 目标类型常量 |
@@ -89,7 +89,6 @@ GameTask 模块管理玩家任务——接取、进度追踪、提交领奖、�
 PlayerOnlineEvent → RoleTaskHandlers.OnPlayerOnline
   ├── LoadAsync<RoleTaskComponent>(roleId)
   ├── 不存在 → 创建默认空任务列表 + InsertAsync
-  ├── RebuildIndex()
   └── player.AddComponent(taskComp)
 ```
 

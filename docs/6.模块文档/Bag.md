@@ -12,7 +12,7 @@ Bag 模块管理玩家的物品背包——增删改查、整理交换、使用�
 
 ### 运行时索引
 
-背包物品按 `Index`（格子编号）存储，MongoDB 中是 `List<BagItem>`。加载后通过 `RebuildIndex()` 构建 `_indexMap`（`Dictionary<int, BagItem>`），提供 O(1) 格子查找。每次增删物品后索引自动维护。
+背包物品按 `Index`（格子编号）存储，直接使用 `Dictionary<int, BagItem>` 作为 MongoDB 持久化结构。MongoDB 原生支持 Dictionary 序列化（key 存储为 BSON document 的 string key），O(1) 格子查找无需重建索引。
 
 ### 物品效果反向依赖 Fight
 
@@ -22,7 +22,7 @@ Bag 模块管理玩家的物品背包——增删改查、整理交换、使用�
 
 | 文件 | 职责 |
 |------|------|
-| `RoleBagComponent.cs` | 背包 Component（IEntity 持久化 + 运行时索引） |
+| `RoleBagComponent.cs` | 背包 Component（IEntity 持久化，Dictionary 主结构） |
 | `RoleBagSystem.cs` | 背包操作扩展方法（增删查改、整理、交换） |
 | `RoleBagHandlers.cs` | 消息处理 + PlayerOnlineEvent 订阅 |
 | `BagItem.cs` | 物品数据类 |
@@ -69,7 +69,6 @@ Bag 模块管理玩家的物品背包——增删改查、整理交换、使用�
 PlayerOnlineEvent → RoleBagHandlers.OnPlayerOnline
   ├── LoadAsync<RoleBagComponent>(roleId)
   ├── 不存在 → new RoleBagComponent { Capacity = 100 } + InsertAsync
-  ├── RebuildIndex()
   └── player.AddComponent(bag)   // AddComponent(instance)，_parent 正确
 ```
 
