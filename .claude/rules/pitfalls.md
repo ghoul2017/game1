@@ -49,14 +49,17 @@ player.AddComponent(bag);
 
 ## ECS 重构：Map/Monster/Fight
 
-- **FightSystem.OnUnitKilled 直接调用 MonsterSystem**，事件只给其他模块通知，不要用事件中转调用 MonsterSystem
+- **FightSystem.OnUnitKilled 直接调用 map.OnMonsterKilled()**，事件只给其他模块通知，不要用事件中转
 - **MapAoiNotifier 一站式分发** — 按 ObjectType 自动分发通知，不要手动广播（导致双通知）
 - **MonsterEntity 代替了 MapNpc + MonsterUnit** — 怪物类型 Monster(3)，不再有 Npc(2)
-- **FightUnitComponent 挂载在 MapObjectEntity** — 注册用 `entity.RegisterUnit(attr)`，查找用 `FightSystem.GetFightUnit()`
+- **FightUnitComponent 常驻** — 在 Entity.Create 中直接创建，不再需要 RegisterUnit/UnregisterUnit
 - **CfgId 上提到 IMapObject** — MapAoiNotifier 通过 `mapObj.CfgId` 统一访问，不需要 `is MonsterEntity` 判断
 - **掉落/经验/金币归 PlayerSystem** — MonsterSystem 不反向依赖 Player，通过 `Context.Players.GrantXxxAsync()` 调用
-- **MonsterComponent 共享 Random** — 用 `self.Random.Next()`，不要 `new Random()`
-- **MapPlayerEntity 是运行时投影** — 不放持久化数据，Id=RoleId，通过 PlayerRefComponent 桥接回 PlayerEntity
+- **GameMap.SharedRandom** — 用 `map.Random.Next()`，不要 `new Random()`
+- **MapPlayerEntity 直接存 PlayerEntity** — 不放持久化数据，Id=RoleId，直接字段引用，无 Component 中转
+- **Name 在 MapObjectEntity** — `SetName()` 一次赋值，不再需要 MapPlayerInfoComponent/MonsterInfoComponent.Name
+- **MapId/Line/X/Y 在 MapObjectEntity** — 不再需要 MapPositionComponent，直接字段存取
+- **MonsterSystem 是 GameMap 扩展方法** — `this GameMap map`，无状态设计，逻辑与数据分离
 - **RoleAttributeComponent 属性名**：PhyAttMin/PhyAttMax/PhyDef，不是 Attack/Defense
 - **AOI 一站式 API**：`Aoi.AddAoiEntity(obj, viewRange)`，业务代码不要分别调 AddObject+AddWatcher
 
