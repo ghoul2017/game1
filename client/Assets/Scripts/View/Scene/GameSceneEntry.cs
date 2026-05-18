@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Client.View;
+using Client.Logic;
 using Client.View;
 using Shared.Common;
 using Shared.Core.Network;

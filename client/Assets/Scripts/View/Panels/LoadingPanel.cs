@@ -88,7 +88,7 @@ namespace Client.View
             tipText.text = "加载完成！";
 
             yield return new WaitForSeconds(0.3f);
-            UIManager.Instance.ReplacePanel<Login.LoginPanel>();
+            UIManager.Instance.ReplacePanel<LoginPanel>();
         }
     }
 }

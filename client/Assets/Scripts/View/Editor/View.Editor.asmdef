@@ -1,7 +1,0 @@
-{
-    "name": "View.Editor",
-    "rootNamespace": "Client.View.Editor",
-    "references": ["View"],
-    "includePlatforms": ["Editor"],
-    "excludePlatforms": []
-}

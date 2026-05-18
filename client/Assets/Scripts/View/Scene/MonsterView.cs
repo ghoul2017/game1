@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Shared.Common.Protos;
 using UnityEngine;
 using UnityEngine.UI;
+using Client.Logic;
 
 namespace Client.View
 {

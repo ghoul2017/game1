@@ -454,7 +454,7 @@ namespace Client.View
             {
                 Debug.Log("[MainPanel] 退出游戏");
                 UIMessageBox.Show("退出游戏", "确定要退出游戏吗？",
-                    () => { UIManager.Instance.ClearAll(); UIManager.Instance.ShowPanel<Login.LoginPanel>(); },
+                    () => { UIManager.Instance.ClearAll(); UIManager.Instance.ShowPanel<LoginPanel>(); },
                     null, "退出", "取消", true);
             });
         }

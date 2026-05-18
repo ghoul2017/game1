@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using Client.View;
+using Client.Logic;
 using Client.View;
 using Shared.Common.Protos;
 using Shared.Common.Config;
