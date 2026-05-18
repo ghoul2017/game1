@@ -1,0 +1,7 @@
+{
+    "name": "View",
+    "rootNamespace": "Client.View",
+    "references": ["Shared", "Logic"],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

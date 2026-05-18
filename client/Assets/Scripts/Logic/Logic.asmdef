@@ -1,0 +1,7 @@
+{
+    "name": "Logic",
+    "rootNamespace": "Client.Logic",
+    "references": ["Shared"],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

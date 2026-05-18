@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="protobuf-net" Version="3.2.45" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\client\Assets\Scripts\Shared\**\*.cs" />
+    </ItemGroup>
+
+</Project>
