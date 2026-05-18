@@ -15,13 +15,9 @@ server/logs/
 server/.idea/
 server/.vs/
 
-# 共享项目（Robot 引用）
-shared/bin/
-shared/obj/
-
-# Logic 项目（客户端独立 csproj）
-client/Assets/Scripts/Logic/bin/
-client/Assets/Scripts/Logic/obj/
+# Robot 项目
+robot/bin/
+robot/obj/
 
 # 通用
 **/CLAUDE.local.md
