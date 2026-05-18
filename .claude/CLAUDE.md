@@ -36,22 +36,27 @@ scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 
 ```
 client/Assets/Scripts/
-  shared/               # 双端共享代码（服务端通过 csproj Compile Include 引用）
+  shared/               # 双端共享代码（服务端通过 csproj Compile Include 引用，Robot 通过 shared/Shared.csproj 引用）
     Core/
       ECS/              # Entity, Component, ComponentOfAttribute
       Network/          # IMessage, PacketCodec, MessageRouter, TcpSession, IMessageHandler
-      Config/           # ConfigManager, ConfigTableAttribute, SimpleCsvReader（双端共享，SimpleCsvReader 兼容 .NET 4.7.1+）
+      Config/           # ConfigManager, ConfigTableAttribute, SimpleCsvReader
       Log/              # ILog, LogManager, Console/File Appender
       IdGenerator.cs    # 雪花算法 ID 生成
     Common/
       Protos/           # MsgIdConst + 全部消息定义（双端共享）
       Config/           # 配置表定义（ItemConfig, SkillConfig, MapConfig 等）
-  Core/                 # UIManager, UIPanel, UIBuilder, GameEntry, UIToast, UIMessageBox
-  Loading/              # 加载界面（LoadingPanel）
-  Login/                # 登录 & 角色选择（LoginPanel, RoleSelectPanel）
-  Game/                 # MainPanel, PlayerController, MapGround, BagPanel, MailPanel 等
-  Network/              # NetClient, NetworkStatusPanel, NtfMethodHandler
-  Editor/               # SceneCreator
+  Logic/                # 客户端纯逻辑层（零 UnityEngine 依赖，供 Robot 引用）
+    IClientUI.cs        # UI 桥接接口 + ClientContext
+    IPanels.cs           # 面板接口（ILoginPanel, IBagPanel 等）
+    Handlers/           # 消息 Handler（LoginHandlers, BagHandlers 等 7 个）
+    Data/               # GameData, MapObjectType
+  View/                 # Unity 表现层
+    Core/               # UIManager, UIPanel, UIBuilder, GameEntry, Context 等
+    Panels/             # 面板（LoginPanel, BagPanel, MainPanel 等）
+    Scene/              # 场景对象（PlayerController, MapGround, MonsterView 等）
+    Network/            # NetClient
+    Editor/             # SceneCreator
 
 server/Game/
   Program.cs            # 入口：单线程调度 → Component 挂载 + 子系统初始化

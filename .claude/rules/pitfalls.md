@@ -69,6 +69,17 @@ player.AddComponent(bag);
 3. Entity 提供便利属性（`GetComponent<T>()` 快捷访问）
 4. 更新 Manager 和所有调用方
 
+## 客户端 Logic/View 分离
+
+- **分离原则**：Logic 层零 UnityEngine 依赖，View 层持有所有 Unity 引用
+- **命名空间**：Logic/ → `Client.Logic`，View/ → `Client.View`，Editor/ → `Client.View.Editor`
+- **面板解耦**：Handler 通过 `ClientContext.UI?.GetPanel<IPanel>()` 获取面板，不直接引用 Panel 类
+- **Panel 接口**：每个被 Handler 调用的 Panel 需在 Logic/IPanels.cs 定义接口，Panel 在 View 端实现
+- **删除 .asmdef 后无需程序集隔离**：Unity 单 Assembly-CSharp 编译，目录分隔纯为代码组织
+- **未删除 .meta 导致残留**：删除 .asmdef 或 .cs 文件后务必检查并删除对应 .meta，否则 Unity 仍尝试加载
+- **bin/obj 目录**：Logic.csproj 的构建产物会被 Unity 当成预编译 DLL 导致 "Multiple precompiled assemblies" 错误，必须删除
+- **Shared.csproj 用 net8.0**：netstandard2.0 不支持 shared 代码中的 C# 9 特性（target-typed new、GetValueOrDefault、Deconstruct），Robot 是 .NET 8 项目可以直接引用
+
 ## 调试方法论
 
 ### 服务端
