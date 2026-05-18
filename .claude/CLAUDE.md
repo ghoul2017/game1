@@ -36,7 +36,7 @@ scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 
 ```
 client/Assets/Scripts/
-  shared/               # 双端共享代码（服务端通过 csproj Compile Include 引用，Robot 通过 shared/Shared.csproj 引用）
+  shared/               # 双端共享代码（服务端和 Robot 均通过 csproj Compile Include 引用）
     Core/
       ECS/              # Entity, Component, ComponentOfAttribute
       Network/          # IMessage, PacketCodec, MessageRouter, TcpSession, IMessageHandler

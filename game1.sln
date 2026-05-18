@@ -16,6 +16,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game", "server\Game\Game.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tools", "server\tools\tools.csproj", "{724B020C-C6F7-4911-8CB0-CF290DF8F3E6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "robot", "robot", "{9DAE0482-AD07-45DF-B61D-0329349AC14D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Robot", "robot\Robot.csproj", "{D22F5F62-3F4D-4B3D-B827-C7CD42A16D38}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +40,10 @@ Global
 		{724B020C-C6F7-4911-8CB0-CF290DF8F3E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{724B020C-C6F7-4911-8CB0-CF290DF8F3E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{724B020C-C6F7-4911-8CB0-CF290DF8F3E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D22F5F62-3F4D-4B3D-B827-C7CD42A16D38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D22F5F62-3F4D-4B3D-B827-C7CD42A16D38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D22F5F62-3F4D-4B3D-B827-C7CD42A16D38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D22F5F62-3F4D-4B3D-B827-C7CD42A16D38}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -46,5 +54,6 @@ Global
 		{569a85a2-4aab-f951-60bb-1b6fc96e8c70} = {B2C3D4E5-F6A7-8901-BCDE-F12345678901}
 		{ce9fc52f-b1bc-d313-fb79-5dd1af79a2af} = {B2C3D4E5-F6A7-8901-BCDE-F12345678901}
 		{a0431b3a-6e27-fb34-197e-1acde9001a0f} = {B2C3D4E5-F6A7-8901-BCDE-F12345678901}
+		{D22F5F62-3F4D-4B3D-B827-C7CD42A16D38} = {9DAE0482-AD07-45DF-B61D-0329349AC14D}
 	EndGlobalSection
 EndGlobal

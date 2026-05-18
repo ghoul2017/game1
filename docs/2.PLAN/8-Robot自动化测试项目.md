@@ -32,7 +32,7 @@ Robot 架构：**10% 自身代码 + 90% 引用代码**
 
 ### robot/Robot.csproj
 - 类型：.NET 8 Console
-- 引用：`../shared/Shared.csproj` + `../client/Assets/Scripts/Logic/Logic.csproj`
+- Compile Include：`../client/Assets/Scripts/Shared/**/*.cs` + `../client/Assets/Scripts/Logic/**/*.cs`
 - 包：protobuf-net
 
 ### robot/Program.cs
@@ -82,12 +82,11 @@ public abstract class TestScenario
 ## 依赖关系
 
 ```
-Robot.csproj
-  ├── Shared.csproj（netstandard2.0）
-  │   └── shared/Core/* + shared/Common/*
-  └── Logic.csproj（netstandard2.0）
-      ├── 引用 Shared.csproj
-      └── client/Logic/*.cs（Handler + GameData + IClientUI）
+Robot.csproj (net8.0)
+  ├── Compile Include: ../client/Assets/Scripts/Shared/**/*.cs
+  │   └── Core/* + Common/*
+  └── Compile Include: ../client/Assets/Scripts/Logic/**/*.cs
+      └── Handlers/* + Data/* + IClientUI.cs + IPanels.cs
 ```
 
 ## 执行顺序
