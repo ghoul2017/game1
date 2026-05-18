@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.Rendering.Universal;
+using Client.View;
 
 namespace Client.View.Editor
 {
@@ -73,7 +74,7 @@ namespace Client.View.Editor
 
             // GameSceneEntry
             var entryObj = new GameObject("GameSceneEntry");
-            entryObj.AddComponent<Client.Game.GameSceneEntry>();
+            entryObj.AddComponent<GameSceneEntry>();
 
             // 保存场景
             EditorSceneManager.SaveScene(scene, scenePath);
