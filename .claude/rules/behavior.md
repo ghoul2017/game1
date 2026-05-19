@@ -43,6 +43,7 @@ always_apply: true
 | 工作流程 | `.claude/rules/workflow.md` | 每次都加载 |
 | 代码规范约定 | `.claude/rules/code-conventions.md` | paths 匹配时 |
 | 踩坑记录 | `.claude/rules/pitfalls.md` | 每次都加载 |
+| Robot 代码规范 | `.claude/rules/robot-ai-manual.md` | paths 匹配 robot/ 时 |
 | 项目配置、待办 | `CLAUDE.md` | 每次都加载 |
 | 决策记录、调研结论 | `docs/` | 需主动读 |
 
