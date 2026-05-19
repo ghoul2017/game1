@@ -178,8 +178,8 @@ Context.Players.AddPlayer(player);
 - 提交前确认编译通过
 - 允许在分析阶段提问，实现阶段全自动
 - 实现代码后自动 commit，无需额外确认
-- 重要长期规则优先写入 `AGENTS.md` 或 `.claude/rules/`，不要只写 memory
-- 记忆文件如需新增，写在项目目录 `.Codex/memory/` 下，便于 Git 管理
+- 重要长期规则优先写入 `AGENTS.md`、`codex/rules/` 或 `docs/`，不要只写 memory
+- 记忆文件如需新增，写在项目目录 `codex/memory/` 下，便于 Git 管理
 
 ## Codex 权限偏好
 
@@ -191,24 +191,22 @@ Context.Players.AddPlayer(player);
 
 ## 新对话启动指南
 
-1. 读 `.claude/rules/behavior.md`、`.claude/rules/workflow.md`、`.claude/rules/pitfalls.md` — 获取长期行为规则、流程和踩坑记录
+1. 读 `codex/rules/behavior.md`、`codex/rules/workflow.md`、`codex/rules/pitfalls.md` — 获取长期行为规则、流程和踩坑记录
 2. 读 `docs/1.需求.md` — 检查是否有未规划条目，有则按 docs-workflow 规则拆解
 3. 读 `docs/3.TODO.md` — 按 TODO 优先级推进工作，不要重复已完成的事
 4. 读 `docs/2.PLAN/` — 了解当前需求的设计方案
 5. 读 `docs/4.发现需求.md` — 自行发现的问题和待办，按优先级自行解决
-6. 修改 `*.cs` 前按需参考 `.claude/rules/code-conventions.md`
-7. 修改 `robot/` 代码时必须参考 `.claude/rules/robot-ai-manual.md`
+6. 修改 `*.cs` 前按需参考 `codex/rules/code-conventions.md`
+7. 修改 `robot/` 代码时必须参考 `codex/rules/robot-ai-manual.md`
 
-## Claude 迁移兼容规则
+## Codex 规则入口
 
-- 保留 `.claude/` 目录，不删除、不移动；Codex 通过本文件按需读取其中规则。
-- `AGENTS.md` 是 Codex 当前入口；`.claude/CLAUDE.md` 是 Claude 历史入口。两者冲突时以 `AGENTS.md` 为准。
-- `.claude/rules/behavior.md`、`.claude/rules/workflow.md`、`.claude/rules/pitfalls.md` 中仍有效的规则作为项目规则读取。
-- `.claude/commands/save.md` 对应本项目 `/save` 流程：更新 TODO/需求/决策/踩坑/模块文档/遗留问题，并输出下次继续点。
-- `.claude/agents/` 是 Claude Code 专用配置，保留但不迁移到 Codex 工作流。
-- `.claude/rules/workflow.md` 中“计划后等待审批”只适用于从 `docs/1.需求.md` 拆出的新需求；用户在当前对话中直接下达的实现请求，按“实现阶段全自动”执行。
-- `.claude/rules/workflow.md` 中“验证失败后 git checkout 回退”在 Codex 中不自动执行；涉及丢弃改动必须先得到用户明确指令。
-- `.claude/rules/workflow.md` 中“改完必须 verify-feature + verify-quality”不迁移；Codex 默认使用本地复查和编译验证。
+- `AGENTS.md` 是 Codex 当前入口；新对话不再读取历史工具目录。
+- `codex/rules/` 是 Codex 长期规则库：行为、工作流、代码规范、踩坑、Robot 规范。
+- `/save` 流程：更新 TODO/需求/决策/踩坑/模块文档/遗留问题，并输出下次继续点。
+- 从 `docs/1.需求.md` 新拆需求时先规划并等待审批；用户在当前对话中直接下达的实现请求，按“实现阶段全自动”执行。
+- 不自动执行 `git push`、`git reset`、`git checkout` 回退、递归删除等高风险操作，除非用户明确要求。
+- 默认使用本地复查和编译验证，不依赖历史外部 Agent 流程。
 
 ## 自定义命令
 
@@ -216,6 +214,6 @@ Context.Players.AddPlayer(player);
 
 ## 记忆系统
 
-长期知识优先进入 `docs/` 和 `.claude/rules/`，因为这些文件由启动指南触发读取。
-`.Codex/memory/` 仅用于后续新增的 Codex 专用项目记忆；如果不存在，不影响工作流。
+长期知识优先进入 `docs/` 和 `codex/rules/`，因为这些文件由启动指南触发读取。
+`codex/memory/` 仅用于后续新增的 Codex 专用项目记忆；如果不存在，不影响工作流。
 迁移说明见 `docs/8.Codex迁移说明.md`。
