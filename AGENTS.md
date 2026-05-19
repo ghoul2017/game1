@@ -181,6 +181,14 @@ Context.Players.AddPlayer(player);
 - 重要长期规则优先写入 `AGENTS.md` 或 `.claude/rules/`，不要只写 memory
 - 记忆文件如需新增，写在项目目录 `.Codex/memory/` 下，便于 Git 管理
 
+## Codex 权限偏好
+
+- 用户希望 Codex 在项目内高自主执行。
+- 代码修改、构建、测试、Git stage/commit 默认可主动执行。
+- 遇到 sandbox 或文件权限阻塞时，直接发起提升权限请求。
+- 可为常用安全命令申请持久 prefix rule，例如 `dotnet build`、`git status`、`git add`、`git commit`。
+- 不自动执行 `git push`、`git reset`、`git checkout` 回退、递归删除等高风险操作，除非用户明确要求。
+
 ## 新对话启动指南
 
 1. 读 `.claude/rules/behavior.md`、`.claude/rules/workflow.md`、`.claude/rules/pitfalls.md` — 获取长期行为规则、流程和踩坑记录
@@ -197,10 +205,10 @@ Context.Players.AddPlayer(player);
 - `AGENTS.md` 是 Codex 当前入口；`.claude/CLAUDE.md` 是 Claude 历史入口。两者冲突时以 `AGENTS.md` 为准。
 - `.claude/rules/behavior.md`、`.claude/rules/workflow.md`、`.claude/rules/pitfalls.md` 中仍有效的规则作为项目规则读取。
 - `.claude/commands/save.md` 对应本项目 `/save` 流程：更新 TODO/需求/决策/踩坑/模块文档/遗留问题，并输出下次继续点。
-- `.claude/agents/` 和 `.Codex/agents/` 是不同运行时的 Agent 配置。Codex 只在用户明确要求子 Agent 或并行 Agent 时使用子 Agent。
+- `.claude/agents/` 是 Claude Code 专用配置，保留但不迁移到 Codex 工作流。
 - `.claude/rules/workflow.md` 中“计划后等待审批”只适用于从 `docs/1.需求.md` 拆出的新需求；用户在当前对话中直接下达的实现请求，按“实现阶段全自动”执行。
 - `.claude/rules/workflow.md` 中“验证失败后 git checkout 回退”在 Codex 中不自动执行；涉及丢弃改动必须先得到用户明确指令。
-- `.claude/rules/workflow.md` 中“改完必须 verify-feature + verify-quality”在 Codex 中降级为按风险执行本地复查和编译验证；除非用户明确要求，不强制启动子 Agent。
+- `.claude/rules/workflow.md` 中“改完必须 verify-feature + verify-quality”不迁移；Codex 默认使用本地复查和编译验证。
 
 ## 自定义命令
 
