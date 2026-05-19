@@ -21,15 +21,17 @@ Assets/
     │   ├── Core/     #     ECS, Network, Config, Log, IdGenerator
     │   └── Common/   #     Protos（消息定义）, Config（配置表定义）, MsgIdConst
     ├── Logic/        #   客户端纯逻辑层（零 UnityEngine 依赖）
-    │   ├── Handlers/ #     消息 Handler（LoginHandlers, BagHandlers 等 7 个）
-    │   ├── Data/     #     GameData, MapObjectType
-    │   ├── IClientUI.cs  #  UI 桥接接口 + ClientContext
-    │   └── IPanels.cs    #  面板接口
+    │   ├── Controllers/ #  业务控制器（Login/Bag/Mail/Task/Chat/Fight/RoleSelect/Map 共 8 个）
+    │   ├── Handlers/ #     消息 Handler（LoginHandlers, BagHandlers 等 8 个，含 MapHandlers）
+    │   ├── Data/     #     GameData, MapObjectType, MapData（坐标转换元组）
+    │   ├── NetClient.cs    #  网络管理器（纯 C# 类，非 MonoBehaviour）
+    │   ├── Context.cs      #  客户端上下文（Module + NetworkComponent）
+    │   ├── IClientUI.cs    #  UI 桥接接口 + INetworkSender + ClientContext
+    │   └── IPanels.cs      #  面板空标记接口
     └── View/         #   Unity 表现层
-        ├── Core/     #     核心框架（Context, UIManager, UIPanel, UIBuilder, GameEntry 等）
-        ├── Panels/   #     面板（LoginPanel, BagPanel, MainPanel 等）
+        ├── Core/     #     核心框架（UIManager, UIPanel, UIBuilder, GameEntry 等）
+        ├── Panels/   #     面板（LoginPanel, BagPanel, MainPanel 等，纯渲染）
         ├── Scene/    #     场景对象（PlayerController, MapGround, MonsterView 等）
-        ├── Network/  #     网络层（NetClient）
         └── Editor/   #     编辑器工具（SceneCreator）
 ```
 
@@ -37,11 +39,21 @@ Assets/
 
 ## 网络层
 
-- **Context** — 客户端上下文（`Client.Context`），类似于服务端 `Context`，挂载 `NetworkComponent`
-- **NetClient** — MonoBehaviour 单例，底层基于 `Context.Network.ConnectAsync()` + `TcpSession`
+- **Context** — 客户端上下文（`Client.Logic.Context`），类似于服务端 `Context`，挂载 `NetworkComponent`
+- **NetClient** — 纯 C# 网络管理器（已从 MonoBehaviour 重构），底层基于 `Context.Network.ConnectAsync()` + `TcpSession`。GameEntry.Update 驱动 `NetClient.Instance.Update(deltaTime)`
+- **INetworkSender** — Logic 层定义的网络发送接口，NetClient 实现。Logic 通过 `ClientContext.Network?.Send(msg)` 发消息
 - **NetworkComponent** — 共享网络组件，客户端复用其 `ConnectAsync` 连接远端服务器
-- **TcpSession** — 连接会话，通过 `PostToMainThread` 回调将消息投递到 Unity 主线程
+- **TcpSession** — 连接会话，通过 `PostToMainThread` 回调将消息投递到主线程队列
 - **MessageRouter** — 自动扫描 `[MessageHandler]` 标记的静态方法（在 `NetworkComponent` 构造函数中自动注册），客户端所有消息处理统一使用此机制
+
+## Controller 模式
+
+- **Controller 单例** — 每个子系统一个 Controller（Logic/Controllers/），持有业务状态 + 处理网络响应 + 触发事件
+- **数据流**：`Message → Handler → Controller.HandleXxx() → 更新状态 + 触发事件 → Panel 订阅刷新`
+- **用户操作流**：`Panel 按钮 → Controller.Action() → ClientContext.Network.Send(msg)`
+- **Panel 纯渲染**：读 Controller 状态，不持有业务数据，不直接发网络消息
+- **事件订阅**：Panel 在 `OnShow` 中 `Controller.Instance.OnDataChanged += Refresh`，`OnHide` 中 `-=`
+- **ConfigManager 查询**：物品品质颜色等显示格式化保留在 View
 
 ## UI 框架约定
 

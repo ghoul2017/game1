@@ -47,15 +47,17 @@ client/Assets/Scripts/
       Protos/           # MsgIdConst + 全部消息定义（双端共享）
       Config/           # 配置表定义（ItemConfig, SkillConfig, MapConfig 等）
   Logic/                # 客户端纯逻辑层（零 UnityEngine 依赖，供 Robot 引用）
-    IClientUI.cs        # UI 桥接接口 + ClientContext
-    IPanels.cs           # 面板接口（ILoginPanel, IBagPanel 等）
-    Handlers/           # 消息 Handler（LoginHandlers, BagHandlers 等 7 个）
-    Data/               # GameData, MapObjectType
+    IClientUI.cs        # UI 桥接接口 + INetworkSender + ClientContext
+    IPanels.cs           # 面板空标记接口（仅用于 UIManager.GetPanel<T> 类型参数）
+    NetClient.cs         # 网络管理器（连接/心跳/重连，纯 C# 类，非 MonoBehaviour）
+    Context.cs           # 客户端上下文（Module + NetworkComponent）
+    Handlers/           # 消息 Handler（LoginHandlers, BagHandlers 等 8 个，含 MapHandlers）
+    Controllers/        # 业务控制器（Login/Bag/Mail/Task/Chat/Fight/RoleSelect/Map 共 8 个）
+    Data/               # GameData, MapObjectType, MapData（坐标转换，返回元组）
   View/                 # Unity 表现层
-    Core/               # UIManager, UIPanel, UIBuilder, GameEntry, Context 等
+    Core/               # UIManager, UIPanel, UIBuilder, GameEntry, LogClientInitializer 等
     Panels/             # 面板（LoginPanel, BagPanel, MainPanel 等）
     Scene/              # 场景对象（PlayerController, MapGround, MonsterView 等）
-    Network/            # NetClient
     Editor/             # SceneCreator
 
 server/Game/

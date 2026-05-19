@@ -69,16 +69,38 @@ player.AddComponent(bag);
 3. Entity 提供便利属性（`GetComponent<T>()` 快捷访问）
 4. 更新 Manager 和所有调用方
 
-## 客户端 Logic/View 分离
+## 客户端 Logic/View 分离（Controller 模式）
 
-- **分离原则**：Logic 层零 UnityEngine 依赖，View 层持有所有 Unity 引用
+- **分离原则**：Logic 层零 UnityEngine 依赖，View 层持有所有 Unity 引用。View 可依赖 Logic，Logic 不可依赖 View
 - **命名空间**：Logic/ → `Client.Logic`，View/ → `Client.View`，Editor/ → `Client.View.Editor`
-- **面板解耦**：Handler 通过 `ClientContext.UI?.GetPanel<IPanel>()` 获取面板，不直接引用 Panel 类
-- **Panel 接口**：每个被 Handler 调用的 Panel 需在 Logic/IPanels.cs 定义接口，Panel 在 View 端实现
+- **Controller 模式**：每个子系统一个 Controller 单例（Logic/Controllers/），持有状态 + 处理网络响应 + 暴露 Action 方法 + 触发 `event Action` 事件
+- **Panel 纯渲染**：Panel 读 Controller 状态渲染 UI，调用 Controller Action 响应用户操作，通过事件订阅刷新
+- **Handler → Controller**：Handler 不再调用 Panel 接口，改为调用 `XxxController.Instance.HandleXxx(msg)`
+- **INetworkSender**：Logic 定义接口，NetClient 实现，Logic 通过 `ClientContext.Network?.Send(msg)` 发消息
+- **IPanels.cs 空标记**：保留接口声明但不含方法，仅用作 `UIManager.GetPanel<T>()` 类型参数
+- **NetClient 已移到 Logic**：去掉 MonoBehaviour，改为普通类。GameEntry.Update 驱动 `NetClient.Instance.Update(deltaTime)`
+- **MapData 元组化**：返回 `(float,float,float)` 而非 Vector3，View 侧自行构造
+
+### Controller 设计约定
+
+```csharp
+public class BagController
+{
+    public static BagController Instance { get; } = new();
+    public List<BagItemInfo> Items { get; private set; }  // 状态
+    public event Action OnDataChanged;                      // 事件
+    public void QueryBag() { ... }                         // Action（View 调用）
+    public void HandleQueryBagAck(QueryBagAck ack) { ... } // Handler（Logic Handler 调用）
+}
+```
+
+- **Panel 订阅模式**：OnShow 中 `Controller.Instance.OnDataChanged += Refresh`，OnHide 中 `-=`
+- **`event Action` 不可外部调用**：`MapController.OnKicked?.Invoke()` 在外部类报 CS0070。对外暴露 `HandleXxx()` 方法，内部再触发事件
 - **删除 .asmdef 后无需程序集隔离**：Unity 单 Assembly-CSharp 编译，目录分隔纯为代码组织
 - **未删除 .meta 导致残留**：删除 .asmdef 或 .cs 文件后务必检查并删除对应 .meta，否则 Unity 仍尝试加载
 - **bin/obj 目录**：.csproj 的构建产物若放在 Unity Assets/ 下会被 Unity 当成预编译 DLL 导致 "Multiple precompiled assemblies" 错误。Robot.csproj 放在 client/ 外部（robot/ 目录），避免此问题
 - **Robot.csproj 用 net8.0**：netstandard2.0 不支持 shared 代码中的 C# 9 特性（target-typed new、GetValueOrDefault、Deconstruct），Robot 通过 Compile Include 直接引用 shared/ 和 Logic/ 源文件
+- **接口实现需显式声明**：即使类已有所有接口方法，仍需在类声明加 `: INetworkSender`，否则隐式转换报 CS0266
 
 ## 调试方法论
 
