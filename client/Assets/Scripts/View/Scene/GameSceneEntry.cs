@@ -50,7 +50,7 @@ namespace Client.View
             {
                 _onReconnectedHandler = () => MapController.Instance.HandleReconnected();
                 _onReconnectFailedHandler = (msg) => MapController.Instance.HandleReconnectFailed(msg);
-                _onKickedHandler = (reason) => MapController.Instance.OnKicked(reason);
+                _onKickedHandler = (reason) => MapController.Instance.HandleKicked(reason);
 
                 nc.OnReconnected += _onReconnectedHandler;
                 nc.OnReconnectFailed += _onReconnectFailedHandler;

@@ -12,7 +12,7 @@ namespace Client.Logic
     /// 客户端网络管理器。基于 NetworkComponent + TcpSession，
     /// 负责连接、心跳、断线重连。消息处理由 NetworkComponent 的 MessageRouter 统一分发。
     /// </summary>
-    public class NetClient
+    public class NetClient : INetworkSender
     {
         public static NetClient Instance { get; private set; }
 
