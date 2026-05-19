@@ -21,6 +21,10 @@ namespace Game.Components.Fight;
 public static class FightSystem
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(FightSystem));
+    private const int EffectAreaSingle = 1;
+    private const int EffectAreaCircle = 2;
+    private const int EffectAreaFan = 3;
+    private const int EffectAreaSelf = 4;
 
     /// <summary>受伤，返回实际扣血量</summary>
     public static int TakeDamage(this FightUnitComponent self, int damage)
@@ -141,41 +145,61 @@ public static class FightSystem
             return result;
         }
 
-        var targetFight = GetFightUnit(targetId);
-        if (targetFight == null)
+        var attackerObj = Context.Map.FindMapObject(attackerId);
+        if (attackerObj == null)
         {
-            result.ErrorMessage = "目标不存在";
+            result.ErrorMessage = "不在地图中";
             return result;
         }
 
-        if (targetFight.IsDead)
+        var map = Context.Map.GetMap(attackerObj.MapId, attackerObj.Line);
+        if (map == null)
         {
-            result.ErrorMessage = "目标已死亡";
+            result.ErrorMessage = "不在地图中";
             return result;
         }
 
-        // 距离检查
-        var map = Context.Map.GetPlayerMap(attackerId);
-        if (map != null)
+        var targetObj = targetId != 0 ? map.GetObject(targetId) : null;
+        var targetFight = targetId != 0 ? targetObj?.GetComponent<FightUnitComponent>() : null;
+
+        if (skillCfg.EffectArea == EffectAreaSingle)
         {
-            var attackerObj = map.GetObject(attackerId);
-            var targetObj = map.GetObject(targetId);
-            if (attackerObj != null && targetObj != null)
+            if (targetFight == null)
             {
-                int dist = Math.Max(Math.Abs(attackerObj.X - targetObj.X), Math.Abs(attackerObj.Y - targetObj.Y));
-                if (skillCfg.CastRange > 0 && dist > skillCfg.CastRange)
-                {
-                    result.ErrorMessage = "超出攻击范围";
-                    return result;
-                }
+                result.ErrorMessage = "目标不存在";
+                return result;
+            }
+
+            if (targetFight.IsDead)
+            {
+                result.ErrorMessage = "目标已死亡";
+                return result;
+            }
+        }
+
+        if (targetObj != null && skillCfg.CastRange > 0)
+        {
+            int dist = Math.Max(Math.Abs(attackerObj.X - targetObj.X), Math.Abs(attackerObj.Y - targetObj.Y));
+            if (dist > skillCfg.CastRange)
+            {
+                result.ErrorMessage = "超出攻击范围";
+                return result;
             }
         }
 
         // 更新技能使用时间
         skill.LastUseTime = now;
 
-        // 执行战斗计算
-        var hitResults = FightCore.UseSkill(attackerFight, attackerId, targetFight, targetId, skillCfg);
+        var targets = CollectSkillTargets(map, attackerObj, targetObj, targetFight, targetId, skillCfg, x, y);
+        if (targets.Count == 0)
+        {
+            result.ErrorMessage = "目标不存在";
+            return result;
+        }
+
+        var hitResults = skillCfg.EffectArea == EffectAreaSingle
+            ? FightCore.UseSkill(attackerFight, attackerId, targets[0].fight, targets[0].id, skillCfg)
+            : FightCore.UseSkillAoe(attackerFight, attackerId, targets, skillCfg);
 
         // 成功，ErrorMessage 保持空
         result.AttackerId = attackerId;
@@ -199,6 +223,60 @@ public static class FightSystem
 
         Log.Debug($"技能使用 Attacker:{attackerId} Skill:{skillId} Target:{targetId} Hits:{hitResults.Count}");
         return result;
+    }
+
+    private static List<(FightUnitComponent fight, long id)> CollectSkillTargets(
+        GameMap map,
+        MapObjectEntity attackerObj,
+        MapObjectEntity? targetObj,
+        FightUnitComponent? targetFight,
+        long targetId,
+        SkillConfig skillCfg,
+        int x,
+        int y)
+    {
+        if (skillCfg.EffectArea == EffectAreaSingle)
+        {
+            return targetFight != null && !targetFight.IsDead
+                ? new List<(FightUnitComponent fight, long id)> { (targetFight, targetId) }
+                : new List<(FightUnitComponent fight, long id)>();
+        }
+
+        int centerX = x;
+        int centerY = y;
+        if (skillCfg.EffectArea == EffectAreaSelf)
+        {
+            centerX = attackerObj.X;
+            centerY = attackerObj.Y;
+        }
+        else if ((skillCfg.EffectArea == EffectAreaCircle || skillCfg.EffectArea == EffectAreaFan) && targetObj != null)
+        {
+            centerX = targetObj.X;
+            centerY = targetObj.Y;
+        }
+        else if (centerX == 0 && centerY == 0)
+        {
+            centerX = attackerObj.X;
+            centerY = attackerObj.Y;
+        }
+
+        int range = skillCfg.EffectParam > 0 ? skillCfg.EffectParam : Math.Max(1, skillCfg.CastRange);
+        int maxTarget = skillCfg.MaxTarget > 0 ? skillCfg.MaxTarget : 1;
+
+        return map.GetObjectsInRange(centerX, centerY, range)
+            .Where(o => o.ObjectId != attackerObj.ObjectId)
+            .Select(o => new
+            {
+                Obj = o,
+                Fight = o.GetComponent<FightUnitComponent>(),
+                Distance = Math.Max(Math.Abs(o.X - centerX), Math.Abs(o.Y - centerY))
+            })
+            .Where(t => t.Fight != null && !t.Fight.IsDead)
+            .OrderByDescending(t => t.Obj.ObjectId == targetId)
+            .ThenBy(t => t.Distance)
+            .Take(maxTarget)
+            .Select(t => (t.Fight!, t.Obj.ObjectId))
+            .ToList();
     }
 
     /// <summary>战斗单元死亡回调</summary>

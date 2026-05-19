@@ -16,7 +16,7 @@ public static class RoleTaskHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> QueryTaskListHandler(PlayerEntity player, QueryTaskListReq req, QueryTaskListAck res)
     {
-        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
+        await Task.CompletedTask;
         var tasks = player.RoleTask.GetTaskList();
 
         res.Tasks = tasks.Select(player.RoleTask.ToTaskInfo).ToList();
@@ -27,13 +27,12 @@ public static class RoleTaskHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> TaskAcceptHandler(PlayerEntity player, TaskAcceptReq req, TaskAcceptAck res)
     {
-        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
         var result = player.RoleTask.AcceptTask(req.TaskId);
 
         if (result.Success)
         {
             await player.RoleTask.SaveTasksAsync();
-            var task = taskComp.GetByTaskId(req.TaskId);
+            var task = player.RoleTask.GetByTaskId(req.TaskId);
             res.Task = player.RoleTask.ToTaskInfo(task!);
             Log.Info($"接取任务 RoleId:{player.Id} TaskId:{req.TaskId}");
         }
@@ -48,7 +47,6 @@ public static class RoleTaskHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> TaskSubmitHandler(PlayerEntity player, TaskSubmitReq req, TaskSubmitAck res)
     {
-        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
         var result = await player.RoleTask.SubmitTaskAsync(player.Id, req.TaskId);
 
         if (result.Success)
@@ -69,7 +67,6 @@ public static class RoleTaskHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> TaskGiveUpHandler(PlayerEntity player, TaskGiveUpReq req, TaskGiveUpAck res)
     {
-        var taskComp = await player.RoleTask.LoadTasksAsync(player.Id);
         var result = player.RoleTask.GiveUpTask(req.TaskId);
 
         if (result.Success)

@@ -25,9 +25,10 @@ public static class FightCore
         // 随机防御值
         int defence = RandomRange(target.Attr.PhyDefMin, target.Attr.PhyDefMax);
 
-        // 技能伤害系数（千分比）+ 附加伤害
-        int hurtPoint = skillCfg.HurtPoint + skillCfg.HurtPointPerLevel * (1 - 1); // TODO: skill.Level
-        int exHurt = skillCfg.ExHurt + skillCfg.ExHurtPerLevel * (1 - 1);
+        // 当前技能不做等级扩展，统一按 1 级配置计算。
+        const int skillLevel = 1;
+        int hurtPoint = skillCfg.HurtPoint + skillCfg.HurtPointPerLevel * (skillLevel - 1);
+        int exHurt = skillCfg.ExHurt + skillCfg.ExHurtPerLevel * (skillLevel - 1);
 
         // 增伤系数
         int addDamagePct = attacker.Attr.DamagePct;

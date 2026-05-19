@@ -19,8 +19,6 @@ public static class RoleBagSystem
 
     public const int EffectHp = 1;
     public const int EffectMp = 2;
-    public const int EffectBuff = 3;
-    public const int EffectTeleport = 4;
     public const int EffectRevive = 5;
 
     #endregion

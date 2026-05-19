@@ -117,7 +117,5 @@ FightSystem.OnUnitKilled
 ## 已知局限
 
 1. **仅物攻计算**：FightAttribute 有 MagicAtt 字段但 FightCore 未使用
-2. **Buff/Debuff 未实现**：无增益/减益效果系统
-3. **AOE 未接入**：`UseSkillAoe` 已定义但未在 UseSkill 流程中调用
-4. **MP 未校验**：ErrorMessage "MP不足" 已定义但无实际校验
-5. **单目标仇恨**：ThreatMap 存在但未在 AI 中实际使用（AI 用简单距离判定）
+2. **MP 校验暂不实现**：ErrorMessage "MP不足" 已定义但无实际校验，短期不接入技能消耗
+3. **单目标仇恨**：ThreatMap 存在但未在 AI 中实际使用（AI 用简单距离判定）

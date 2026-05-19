@@ -20,8 +20,6 @@ public static class ItemEffectSystem
 
     public const int EffectHp = 1;
     public const int EffectMp = 2;
-    public const int EffectBuff = 3;
-    public const int EffectTeleport = 4;
     public const int EffectRevive = 5;
 
     #endregion
@@ -63,14 +61,6 @@ public static class ItemEffectSystem
 
             case EffectMp:
                 ApplyMpEffect(roleId, attr, effectConfig.Value1);
-                break;
-
-            case EffectBuff:
-                Log.Warn($"BUFF效果未实现 RoleId:{roleId} BuffId:{effectConfig.Value1} Duration:{effectConfig.Value2}");
-                break;
-
-            case EffectTeleport:
-                Log.Warn($"传送效果未实现 RoleId:{roleId} MapId:{effectConfig.Value1} PosX:{effectConfig.Value2}");
                 break;
 
             case EffectRevive:

@@ -16,7 +16,7 @@ public static class RoleMailHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> QueryMailListHandler(PlayerEntity player, QueryMailListReq req, QueryMailListAck res)
     {
-        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
+        await Task.CompletedTask;
         var mails = player.RoleMail.GetMailList();
 
         res.Mails = mails.Select(player.RoleMail.ToMailInfo).ToList();
@@ -27,7 +27,6 @@ public static class RoleMailHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> MailReadHandler(PlayerEntity player, MailReadReq req, MailReadAck res)
     {
-        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var result = player.RoleMail.MarkRead(req.MailIds);
 
         if (result.Changed)
@@ -42,7 +41,6 @@ public static class RoleMailHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> MailGetItemHandler(PlayerEntity player, MailGetItemReq req, MailGetItemAck res)
     {
-        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var result = await player.RoleMail.ClaimAttachmentsAsync(req.MailIds);
 
         res.ClaimedMailIds = result.ClaimedIds;
@@ -63,7 +61,6 @@ public static class RoleMailHandlers
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
     public static async Task<IMessage> MailDeleteHandler(PlayerEntity player, MailDeleteReq req, MailDeleteAck res)
     {
-        var mailComp = await player.RoleMail.LoadMailsAsync(player.Id);
         var result = player.RoleMail.DeleteMails(req.MailIds);
 
         if (result.Changed)

@@ -15,13 +15,13 @@ namespace Shared.Common.Config
         /// <summary>关联的物品ID</summary>
         public int ItemId { get; set; }
 
-        /// <summary>效果类型（1=恢复HP, 2=恢复MP, 3=增益BUFF, 4=传送, 5=复活）</summary>
+        /// <summary>效果类型（1=恢复HP, 2=恢复MP, 5=复活）</summary>
         public int EffectType { get; set; }
 
-        /// <summary>效果值1（HP恢复量/MP恢复量/BUFFID等）</summary>
+        /// <summary>效果值1（HP恢复量/MP恢复量/复活血量等）</summary>
         public int Value1 { get; set; }
 
-        /// <summary>效果值2（BUFF持续时间秒/BUFF层数等）</summary>
+        /// <summary>效果值2（扩展参数）</summary>
         public int Value2 { get; set; }
 
         /// <summary>冷却时间（秒），0表示无冷却</summary>

@@ -59,8 +59,6 @@ Bag 模块管理玩家的物品背包——增删改查、整理交换、使用�
 |---------|------|------|------|
 | EffectHp | 1 | HP 恢复 | 已实现 |
 | EffectMp | 2 | MP 恢复 | 已实现 |
-| EffectBuff | 3 | BUFF 效果 | 未实现 |
-| EffectTeleport | 4 | 传送 | 未实现 |
 | EffectRevive | 5 | 复活 | 已实现 |
 
 ## 上线加载
@@ -99,6 +97,5 @@ PlayerOnlineEvent → RoleBagHandlers.OnPlayerOnline
 
 ## 已知局限
 
-1. **效果不回滚**：物品扣除后若效果应用失败，物品不会退回
-2. **Buff 未实现**：EffectBuff 定义了但无处理逻辑
-3. **无物品过期检查**：BagItem 有 ExpireTime 字段但无定时清理
+1. **效果回滚暂不实现**：物品扣除后若效果应用失败，物品不会退回
+2. **物品过期暂不实现**：BagItem 有 ExpireTime 字段但无定时清理

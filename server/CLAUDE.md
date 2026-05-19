@@ -37,8 +37,7 @@ server/Game/
 tools/
 ├── Program.cs            # 入口：自动扫描 ITool 实现
 ├── Xlsx2CsvTool.cs       # xlsx 转 csv
-├── Xlsx2CsTool.cs        # xlsx 转 C# 配置类
-└── Proto2CsTool.cs       # proto 转 cs（待实现）
+└── Xlsx2CsTool.cs        # xlsx 转 C# 配置类
 scripts/                  # cmd 快捷脚本
 ```
 
