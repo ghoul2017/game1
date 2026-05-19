@@ -35,7 +35,8 @@ namespace Client.View
         {
             ObjectId = objectId;
             CfgId = cfgId;
-            transform.position = MapData.GridToWorld(x, y);
+            (float px, float py, float pz) = MapData.GridToWorld(x, y);
+            transform.position = new Vector3(px, py, pz);
             _targetPos = transform.position;
 
             IsMonster = objectType == MapObjectType.Monster;
@@ -59,7 +60,8 @@ namespace Client.View
         public void MoveTo(int x, int y)
         {
             if (_isDead) return;
-            _targetPos = MapData.GridToWorld(x, y);
+            (float px, float py, float pz) = MapData.GridToWorld(x, y);
+            _targetPos = new Vector3(px, py, pz);
         }
 
         public void UpdateHp(int hp, int maxHp)

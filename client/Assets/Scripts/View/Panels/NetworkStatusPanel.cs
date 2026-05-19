@@ -1,4 +1,4 @@
-using Client.View;
+using Client.Logic;
 using Shared.Core.Network;
 using UnityEngine;
 using UnityEngine.UI;

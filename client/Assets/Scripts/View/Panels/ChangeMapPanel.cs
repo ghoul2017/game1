@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Client.Logic;
-using Client.View;
 using Shared.Common.Protos;
 using Shared.Common.Config;
 using Shared.Core.Config;
@@ -117,8 +116,8 @@ namespace Client.View
 
         private void OnTeleport(int targetMapCfgId)
         {
-            var nc = NetClient.Instance;
-            if (nc == null || !nc.IsConnected)
+            var network = ClientContext.Network;
+            if (network == null || !network.IsConnected)
             {
                 UIToast.Show("网络未连接");
                 return;
@@ -129,7 +128,7 @@ namespace Client.View
             req.TargetLine = 1;
             req.X = 0;
             req.Y = 0;
-            nc.Send(req);
+            network.Send(req);
 
             UIManager.Instance.HidePanel<ChangeMapPanel>();
             UIToast.Show("正在传送...");

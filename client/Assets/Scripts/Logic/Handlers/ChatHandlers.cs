@@ -8,22 +8,19 @@ namespace Client.Logic
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleChatAck(TcpSession session, ChatAck ack)
         {
-            var panel = ClientContext.UI?.GetPanel<IMainPanel>();
-            if (panel != null) panel.HandleChatAck(ack);
+            ChatController.Instance.HandleChatAck(ack);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleChatNtf(TcpSession session, ChatNtf ntf)
         {
-            var panel = ClientContext.UI?.GetPanel<IMainPanel>();
-            if (panel != null) panel.HandleChatNtf(ntf);
+            ChatController.Instance.HandleChatNtf(ntf);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleSystemChatNtf(TcpSession session, SystemChatNtf ntf)
         {
-            var panel = ClientContext.UI?.GetPanel<IMainPanel>();
-            if (panel != null) panel.HandleSystemChatNtf(ntf);
+            ChatController.Instance.HandleSystemChatNtf(ntf);
         }
     }
 }

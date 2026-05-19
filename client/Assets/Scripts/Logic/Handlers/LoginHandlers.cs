@@ -8,8 +8,7 @@ namespace Client.Logic
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleLoginRes(TcpSession session, LoginRes res)
         {
-            var panel = ClientContext.UI?.GetPanel<ILoginPanel>();
-            if (panel != null) panel.HandleLoginRes(res);
+            LoginController.Instance.HandleLoginRes(res);
         }
     }
 }

@@ -1,19 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using System.Collections.Generic;
-using Client.View;
 using Client.Logic;
-using Client.View;
-using Shared.Common;
-using Shared.Common.Protos;
 
 namespace Client.View
 {
     public class RoleSelectPanel : UIPanel, IRoleSelectPanel
     {
-        private List<RoleData> roles = new List<RoleData>();
-        private int selectedRoleIndex = -1;
         private GameObject[] roleSlots = new GameObject[4];
         private Button enterBtn;
         private Text selectTip;
@@ -24,7 +17,6 @@ namespace Client.View
         private InputField createNameInput;
         private int selectedJob = 0;
         private Text[] jobLabels = new Text[4];
-        private int createSlotIndex;
 
         private static readonly string[] JobNames = { "战士", "法师", "弓手", "刺客" };
         private static readonly Color[] JobColors = {
@@ -111,111 +103,28 @@ namespace Client.View
 
         public override void OnShow()
         {
-            LoadRolesFromCache();
+            RoleSelectController.Instance.OnDataChanged += OnControllerDataChanged;
+            RoleSelectController.Instance.OnEnterMapSuccess += OnEnterMapSuccessHandler;
+            RoleSelectController.Instance.LoadRoles();
         }
 
         public override void OnHide()
         {
+            RoleSelectController.Instance.OnDataChanged -= OnControllerDataChanged;
+            RoleSelectController.Instance.OnEnterMapSuccess -= OnEnterMapSuccessHandler;
             HideCreateDialog();
         }
 
-        private void LoadRolesFromCache()
+        private void OnControllerDataChanged()
         {
-            roles = new List<RoleData>(GameData.Roles);
-            selectedRoleIndex = -1;
-            enterBtn.interactable = false;
-            selectTip.text = roles.Count > 0 ? "请选择一个角色进入游戏" : "没有角色，请创建新角色";
-            selectTip.color = UIBuilder.TextDim;
             RefreshSlots();
         }
 
-        // --- Network Handlers ---
-
-        public void HandleCreateRoleRes(CreateRoleRes res)
+        private void OnEnterMapSuccessHandler()
         {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
-            {
-                var info = res.Role;
-                roles.Add(new RoleData
-                {
-                    RoleId = info.RoleId,
-                    Name = info.Name,
-                    Level = info.Level,
-                    Job = GameData.GetJobName(info.Job)
-                });
-                selectedRoleIndex = roles.Count - 1;
-                enterBtn.interactable = true;
-                selectTip.text = $"已创建并选择: {info.Name} ({GameData.GetJobName(info.Job)})";
-                selectTip.color = UIBuilder.Gold;
-                HideCreateDialog();
-                RefreshSlots();
-            }
-            else
-            {
-                selectTip.text = res.ErrorMessage;
-                selectTip.color = Color.red;
-            }
-        }
-
-        public void HandleEnterGameRes(EnterGameRes res)
-        {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
-            {
-                GameData.Token = res.Token;
-                selectTip.text = "正在进入游戏...";
-                selectTip.color = UIBuilder.TextDim;
-            }
-            else
-            {
-                selectTip.text = res.ErrorMessage;
-                selectTip.color = Color.red;
-                enterBtn.interactable = true;
-            }
-        }
-
-        public void HandleEnterGameNtf(EnterGameNtf ntf)
-        {
-            GameData.CurrentRole = new RoleData
-            {
-                RoleId = ntf.RoleId,
-                Name = ntf.Name,
-                Level = ntf.Level,
-                Job = GameData.GetJobName(ntf.Job)
-            };
-            Debug.Log(string.Format("[RoleSelectPanel] 进入游戏成功: {0} Lv.{1}，正在进入地图...", ntf.Name, ntf.Level));
-            selectTip.text = "正在进入地图...";
-            selectTip.color = UIBuilder.TextDim;
-
-            // 发送进图请求（默认进入新手村）
-            NetClient.Instance.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
-        }
-
-        public void HandleEnterMapAck(EnterMapAck res)
-        {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
-            {
-                Debug.Log(string.Format("[RoleSelectPanel] 进图成功: MapCfgId={0} Line={1} Spawn=({2},{3})",
-                    res.MapCfgId, res.Line, res.X, res.Y));
-
-                // 缓存进图数据
-                GameData.CurrentMap = new EnterMapData
-                {
-                    MapCfgId = res.MapCfgId,
-                    Line = res.Line,
-                    SpawnX = res.X,
-                    SpawnY = res.Y
-                };
-
-                UIManager.Instance.ClearAll();
-                SceneManager.LoadScene("GameScene");
-            }
-            else
-            {
-                Debug.LogError("[RoleSelectPanel] 进图失败: " + res.ErrorMessage);
-                selectTip.text = "进入地图失败: " + res.ErrorMessage;
-                selectTip.color = Color.red;
-                enterBtn.interactable = true;
-            }
+            Debug.Log("[RoleSelectPanel] 进图成功");
+            UIManager.Instance.ClearAll();
+            SceneManager.LoadScene("GameScene");
         }
 
         // --- Create Role Dialog ---
@@ -295,7 +204,6 @@ namespace Client.View
 
         private void ShowCreateDialog(int slotIndex)
         {
-            createSlotIndex = slotIndex;
             selectedJob = 0;
             if (createNameInput != null) createNameInput.text = "";
             UpdateJobSelection();
@@ -311,21 +219,7 @@ namespace Client.View
         private void OnConfirmCreateRole()
         {
             string name = (createNameInput != null) ? createNameInput.text.Trim() : "";
-            if (string.IsNullOrEmpty(name))
-            {
-                selectTip.text = "请输入角色名称";
-                selectTip.color = Color.red;
-                return;
-            }
-            if (name.Length > 12)
-            {
-                selectTip.text = "角色名称最多12个字符";
-                selectTip.color = Color.red;
-                return;
-            }
-            selectTip.text = "正在创建角色...";
-            selectTip.color = UIBuilder.TextDim;
-            NetClient.Instance.Send(new CreateRoleReq { Name = name, Job = selectedJob });
+            RoleSelectController.Instance.CreateRole(name, selectedJob);
         }
 
         // --- Slot UI ---
@@ -385,8 +279,23 @@ namespace Client.View
 
         private void RefreshSlots()
         {
+            var roles = RoleSelectController.Instance.Roles;
+            var selectedRoleIndex = RoleSelectController.Instance.SelectedRoleIndex;
+
             if (slotsCountText != null)
-                slotsCountText.text = $"已有角色 ({roles.Count}/4)";
+                slotsCountText.text = string.Format("已有角色 ({0}/4)", roles.Count);
+
+            // 更新提示文字
+            selectTip.text = RoleSelectController.Instance.StatusText;
+            if (RoleSelectController.Instance.HasError)
+                selectTip.color = Color.red;
+            else if (selectedRoleIndex >= 0)
+                selectTip.color = UIBuilder.Gold;
+            else
+                selectTip.color = UIBuilder.TextDim;
+
+            // 更新进入按钮
+            enterBtn.interactable = selectedRoleIndex >= 0;
 
             for (int i = 0; i < 4; i++)
             {
@@ -423,13 +332,11 @@ namespace Client.View
 
         private void OnSlotClick(int index)
         {
+            var roles = RoleSelectController.Instance.Roles;
+
             if (index < roles.Count)
             {
-                selectedRoleIndex = index;
-                enterBtn.interactable = true;
-                selectTip.text = string.Format("已选择: {0} (Lv.{1} {2})", roles[index].Name, roles[index].Level, roles[index].Job);
-                selectTip.color = UIBuilder.Gold;
-                RefreshSlots();
+                RoleSelectController.Instance.SelectRole(index);
             }
             else
             {
@@ -439,18 +346,19 @@ namespace Client.View
 
         private void OnEnterGame()
         {
-            if (selectedRoleIndex < 0 || selectedRoleIndex >= roles.Count) return;
-            enterBtn.interactable = false;
-            var role = roles[selectedRoleIndex];
+            if (RoleSelectController.Instance.SelectedRoleIndex < 0) return;
+
+            var roles = RoleSelectController.Instance.Roles;
+            var idx = RoleSelectController.Instance.SelectedRoleIndex;
+            var role = roles[idx];
             Debug.Log(string.Format("[RoleSelectPanel] 请求进入游戏: {0} (Lv.{1} {2})", role.Name, role.Level, role.Job));
-            selectTip.text = "正在进入游戏...";
-            selectTip.color = UIBuilder.TextDim;
-            NetClient.Instance.Send(new EnterGameReq { RoleId = role.RoleId });
+
+            RoleSelectController.Instance.EnterGame();
+            enterBtn.interactable = false;
         }
 
         private void OnBack()
         {
-            selectedRoleIndex = -1;
             HideCreateDialog();
             UIManager.Instance.ReplacePanel<LoginPanel>();
         }

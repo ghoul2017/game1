@@ -8,36 +8,31 @@ namespace Client.Logic
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleQueryMailListAck(TcpSession session, QueryMailListAck ack)
         {
-            var panel = ClientContext.UI?.GetPanel<IMailPanel>();
-            if (panel != null) panel.HandleQueryMailListAck(ack);
+            MailController.Instance.HandleQueryMailListAck(ack);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleMailReadAck(TcpSession session, MailReadAck ack)
         {
-            var panel = ClientContext.UI?.GetPanel<IMailPanel>();
-            if (panel != null) panel.HandleMailReadAck(ack);
+            MailController.Instance.HandleMailReadAck(ack);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleMailGetItemAck(TcpSession session, MailGetItemAck ack)
         {
-            var panel = ClientContext.UI?.GetPanel<IMailPanel>();
-            if (panel != null) panel.HandleMailGetItemAck(ack);
+            MailController.Instance.HandleMailGetItemAck(ack);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleMailDeleteAck(TcpSession session, MailDeleteAck ack)
         {
-            var panel = ClientContext.UI?.GetPanel<IMailPanel>();
-            if (panel != null) panel.HandleMailDeleteAck(ack);
+            MailController.Instance.HandleMailDeleteAck(ack);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleMailNewNtf(TcpSession session, MailNewNtf ntf)
         {
-            var panel = ClientContext.UI?.GetPanel<IMailPanel>();
-            if (panel != null) panel.HandleMailNewNtf(ntf);
+            MailController.Instance.HandleMailNewNtf(ntf);
         }
     }
 }

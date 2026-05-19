@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using Client.View;
-using Client.View;
-using Shared.Common;
 using Shared.Common.Protos;
 using Client.Logic;
 
@@ -13,9 +10,6 @@ namespace Client.View
     {
         private const float TASK_ITEM_H = 55f;
         private const float TASK_ITEM_GAP = 4f;
-
-        private List<TaskInfo> _tasks = new List<TaskInfo>();
-        private int _selectedTaskId = -1;
 
         // List area
         private GameObject _listContent;
@@ -188,98 +182,17 @@ namespace Client.View
 
         public override void OnShow()
         {
-            NetClient.Instance.Send(new QueryTaskListReq());
+            TaskController.Instance.OnDataChanged += OnTaskDataChanged;
+            TaskController.Instance.QueryTaskList();
         }
 
         public override void OnHide()
         {
+            TaskController.Instance.OnDataChanged -= OnTaskDataChanged;
         }
 
-        // ==================== Handlers ====================
-
-        public void HandleQueryTaskListAck(QueryTaskListAck ack)
+        private void OnTaskDataChanged()
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            _tasks = ack.Tasks ?? new List<TaskInfo>();
-            _selectedTaskId = -1;
-            RefreshList();
-            ClearDetail();
-        }
-
-        public void HandleTaskAcceptAck(TaskAcceptAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            if (ack.Task != null)
-            {
-                _tasks.Add(ack.Task);
-                RefreshList();
-                UIToast.Show("接取任务成功");
-            }
-        }
-
-        public void HandleTaskSubmitAck(TaskSubmitAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            // Remove submitted task
-            _tasks.RemoveAll(t => t.TaskId == ack.TaskId);
-            _selectedTaskId = -1;
-            RefreshList();
-            ClearDetail();
-
-            // Show rewards
-            if (ack.Rewards != null && ack.Rewards.Count > 0)
-            {
-                var parts = new List<string>();
-                foreach (var r in ack.Rewards)
-                    parts.Add("物品#" + r.ConfigId + " x" + r.Count);
-                UIToast.Show("提交成功，获得: " + string.Join(", ", parts.ToArray()));
-            }
-            else
-            {
-                UIToast.Show("提交成功");
-            }
-        }
-
-        public void HandleTaskGiveUpAck(TaskGiveUpAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            _tasks.RemoveAll(t => t.TaskId == ack.TaskId);
-            if (_selectedTaskId == ack.TaskId)
-            {
-                _selectedTaskId = -1;
-                ClearDetail();
-            }
-            RefreshList();
-            UIToast.Show("已放弃任务");
-        }
-
-        public void HandleTaskChangedNtf(TaskChangedNtf ntf)
-        {
-            if (ntf.Tasks == null) return;
-            foreach (var changed in ntf.Tasks)
-            {
-                int idx = _tasks.FindIndex(t => t.TaskId == changed.TaskId);
-                if (idx >= 0)
-                    _tasks[idx] = changed;
-                else
-                    _tasks.Add(changed);
-            }
             RefreshList();
             RefreshDetail();
         }
@@ -288,19 +201,21 @@ namespace Client.View
 
         private void RefreshList()
         {
-            _taskCountText.text = _tasks.Count + " 个";
+            var tasks = TaskController.Instance.Tasks;
+
+            _taskCountText.text = tasks.Count + " 个";
 
             // Clear old items
             for (int i = _listContent.transform.childCount - 1; i >= 0; i--)
                 Destroy(_listContent.transform.GetChild(i).gameObject);
 
-            float totalH = _tasks.Count * (TASK_ITEM_H + TASK_ITEM_GAP);
+            float totalH = tasks.Count * (TASK_ITEM_H + TASK_ITEM_GAP);
             var lcRect = _listContent.GetComponent<RectTransform>();
             lcRect.sizeDelta = new Vector2(0, totalH);
 
-            for (int i = 0; i < _tasks.Count; i++)
+            for (int i = 0; i < tasks.Count; i++)
             {
-                var task = _tasks[i];
+                var task = tasks[i];
                 var item = CreateTaskListItem(_listContent.transform, task, i);
                 var itemRect = item.GetComponent<RectTransform>();
                 itemRect.anchoredPosition = new Vector2(0, -i * (TASK_ITEM_H + TASK_ITEM_GAP));
@@ -309,7 +224,7 @@ namespace Client.View
 
         private GameObject CreateTaskListItem(Transform parent, TaskInfo task, int index)
         {
-            bool isSelected = task.TaskId == _selectedTaskId;
+            bool isSelected = task.TaskId == TaskController.Instance.SelectedTaskId;
             string stateText = GetStateText(task.State);
             Color stateColor = GetStateColor(task.State);
 
@@ -377,14 +292,12 @@ namespace Client.View
 
         private void OnTaskItemClick(int taskId)
         {
-            _selectedTaskId = taskId;
-            RefreshList();
-            RefreshDetail();
+            TaskController.Instance.SelectTask(taskId);
         }
 
         private void RefreshDetail()
         {
-            var task = _tasks.Find(t => t.TaskId == _selectedTaskId);
+            var task = TaskController.Instance.Tasks.Find(t => t.TaskId == TaskController.Instance.SelectedTaskId);
             if (task == null)
             {
                 ClearDetail();
@@ -443,40 +356,38 @@ namespace Client.View
         {
             if (_acceptInput == null) return;
             string text = _acceptInput.text.Trim();
-            if (string.IsNullOrEmpty(text))
+            string error = TaskController.Instance.ValidateAcceptInput(text);
+            if (error != null)
             {
-                UIToast.Show("请输入任务ID");
+                UIToast.Show(error);
                 return;
             }
-            int taskId;
-            if (!int.TryParse(text, out taskId) || taskId <= 0)
-            {
-                UIToast.Show("无效的任务ID");
-                return;
-            }
-            NetClient.Instance.Send(new TaskAcceptReq { TaskId = taskId });
+            int taskId = int.Parse(text);
+            TaskController.Instance.AcceptTask(taskId);
             _acceptInput.text = "";
         }
 
         private void OnSubmitClick()
         {
-            if (_selectedTaskId <= 0)
+            int selectedTaskId = TaskController.Instance.SelectedTaskId;
+            if (selectedTaskId <= 0)
             {
                 UIToast.Show("请先选择一个任务");
                 return;
             }
-            NetClient.Instance.Send(new TaskSubmitReq { TaskId = _selectedTaskId });
+            TaskController.Instance.SubmitTask(selectedTaskId);
         }
 
         private void OnGiveUpClick()
         {
-            if (_selectedTaskId <= 0)
+            int selectedTaskId = TaskController.Instance.SelectedTaskId;
+            if (selectedTaskId <= 0)
             {
                 UIToast.Show("请先选择一个任务");
                 return;
             }
             UIMessageBox.Show("放弃任务", "确定要放弃这个任务吗？进度将丢失。",
-                () => NetClient.Instance.Send(new TaskGiveUpReq { TaskId = _selectedTaskId }),
+                () => TaskController.Instance.GiveUpTask(selectedTaskId),
                 null, "确定", "取消", true);
         }
 

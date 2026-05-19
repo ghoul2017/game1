@@ -1,7 +1,5 @@
 using UnityEngine;
-using Client.View;
-using Shared.Common.Config;
-using Shared.Core.Network;
+using Client.Logic;
 using Shared.Common.Protos;
 
 namespace Client.View
@@ -12,17 +10,18 @@ namespace Client.View
         public int CurrentGridX { get; private set; }
         public int CurrentGridY { get; private set; }
 
-        private MapConfig currentMap;
+        private Shared.Common.Config.MapConfig currentMap;
         private int _lastSyncGridX;
         private int _lastSyncGridY;
 
         [HideInInspector]
         public Vector2 joystickInput;
 
-        public void Init(MapConfig mapConfig, int gridX, int gridY)
+        public void Init(Shared.Common.Config.MapConfig mapConfig, int gridX, int gridY)
         {
             currentMap = mapConfig;
-            transform.position = MapData.GridToWorld(gridX, gridY);
+            (float px, float py, float pz) = Client.Logic.MapData.GridToWorld(gridX, gridY);
+            transform.position = new Vector3(px, py, pz);
             CurrentGridX = gridX;
             CurrentGridY = gridY;
             _lastSyncGridX = gridX;
@@ -57,7 +56,7 @@ namespace Client.View
                 transform.position = newPos;
 
                 // 更新格子坐标
-                var (gx, gy) = MapData.WorldToGrid(transform.position);
+                (int gx, int gy) = Client.Logic.MapData.WorldToGrid(transform.position.x, transform.position.z);
                 CurrentGridX = gx;
                 CurrentGridY = gy;
 
@@ -73,15 +72,16 @@ namespace Client.View
 
         private void SendMoveReq(int x, int y)
         {
-            var nc = NetClient.Instance;
-            if (nc == null || !nc.IsConnected) return;
+            var network = ClientContext.Network;
+            if (network == null || !network.IsConnected) return;
 
-            nc.Send(new MapMoveReq { X = x, Y = y });
+            network.Send(new MapMoveReq { X = x, Y = y });
         }
 
         public void CorrectPosition(int serverX, int serverY)
         {
-            transform.position = MapData.GridToWorld(serverX, serverY);
+            (float px, float py, float pz) = Client.Logic.MapData.GridToWorld(serverX, serverY);
+            transform.position = new Vector3(px, py, pz);
             CurrentGridX = serverX;
             CurrentGridY = serverY;
             _lastSyncGridX = serverX;

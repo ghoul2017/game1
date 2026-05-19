@@ -1,12 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using Client.View;
-using Client.View;
 using Shared.Common.Protos;
 using Shared.Common.Config;
 using Shared.Core.Config;
-using Shared.Common;
 using Client.Logic;
 
 namespace Client.View
@@ -15,9 +12,6 @@ namespace Client.View
     {
         private const float MAIL_ITEM_H = 60f;
         private const float MAIL_ITEM_GAP = 4f;
-
-        private List<MailInfo> _mails = new List<MailInfo>();
-        private long _selectedMailId = -1;
 
         // List area
         private GameObject _listContent;
@@ -198,115 +192,40 @@ namespace Client.View
 
         public override void OnShow()
         {
-            NetClient.Instance.Send(new QueryMailListReq());
+            MailController.Instance.OnDataChanged += OnMailDataChanged;
+            MailController.Instance.QueryMailList();
         }
 
         public override void OnHide()
         {
+            MailController.Instance.OnDataChanged -= OnMailDataChanged;
         }
 
-        // ==================== Handlers ====================
-
-        public void HandleQueryMailListAck(QueryMailListAck ack)
+        private void OnMailDataChanged()
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            _mails = ack.Mails ?? new List<MailInfo>();
-            _selectedMailId = -1;
-            RefreshList();
-            ClearDetail();
-        }
-
-        public void HandleMailReadAck(MailReadAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            if (ack.ReadMailIds != null)
-            {
-                foreach (var id in ack.ReadMailIds)
-                {
-                    var mail = _mails.Find(m => m.MailId == id);
-                    if (mail != null) mail.State = 1;
-                }
-            }
             RefreshList();
             RefreshDetail();
-            UIToast.Show("已标记为已读");
-        }
-
-        public void HandleMailGetItemAck(MailGetItemAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            if (ack.ClaimedMailIds != null)
-            {
-                foreach (var id in ack.ClaimedMailIds)
-                {
-                    var mail = _mails.Find(m => m.MailId == id);
-                    if (mail != null) mail.State = 2;
-                }
-            }
-            RefreshList();
-            RefreshDetail();
-            UIToast.Show("附件已领取");
-        }
-
-        public void HandleMailDeleteAck(MailDeleteAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            if (ack.DeletedMailIds != null)
-            {
-                _mails.RemoveAll(m => ack.DeletedMailIds.Contains(m.MailId));
-            }
-            if (_selectedMailId >= 0 && !_mails.Exists(m => m.MailId == _selectedMailId))
-            {
-                _selectedMailId = -1;
-                ClearDetail();
-            }
-            RefreshList();
-            UIToast.Show("邮件已删除");
-        }
-
-        public void HandleMailNewNtf(MailNewNtf ntf)
-        {
-            if (ntf.Mail != null)
-            {
-                _mails.Insert(0, ntf.Mail);
-                RefreshList();
-                UIToast.Show("收到新邮件: " + ntf.Mail.Title);
-            }
         }
 
         // ==================== UI Refresh ====================
 
         private void RefreshList()
         {
-            _mailCountText.text = _mails.Count + " 封";
+            var mails = MailController.Instance.Mails;
+
+            _mailCountText.text = mails.Count + " 封";
 
             // Clear old items
             for (int i = _listContent.transform.childCount - 1; i >= 0; i--)
                 Destroy(_listContent.transform.GetChild(i).gameObject);
 
-            float totalH = _mails.Count * (MAIL_ITEM_H + MAIL_ITEM_GAP);
+            float totalH = mails.Count * (MAIL_ITEM_H + MAIL_ITEM_GAP);
             var lcRect = _listContent.GetComponent<RectTransform>();
             lcRect.sizeDelta = new Vector2(0, totalH);
 
-            for (int i = 0; i < _mails.Count; i++)
+            for (int i = 0; i < mails.Count; i++)
             {
-                var mail = _mails[i];
+                var mail = mails[i];
                 var item = CreateMailListItem(_listContent.transform, mail, i);
                 var itemRect = item.GetComponent<RectTransform>();
                 itemRect.anchoredPosition = new Vector2(0, -i * (MAIL_ITEM_H + MAIL_ITEM_GAP));
@@ -315,7 +234,7 @@ namespace Client.View
 
         private GameObject CreateMailListItem(Transform parent, MailInfo mail, int index)
         {
-            bool isSelected = mail.MailId == _selectedMailId;
+            bool isSelected = mail.MailId == MailController.Instance.SelectedMailId;
             bool isUnread = mail.State == 0;
             bool hasAttach = mail.Attachments != null && mail.Attachments.Count > 0 && mail.State < 2;
 
@@ -381,14 +300,12 @@ namespace Client.View
 
         private void OnMailItemClick(long mailId)
         {
-            _selectedMailId = mailId;
-            RefreshList();
-            RefreshDetail();
+            MailController.Instance.SelectMail(mailId);
         }
 
         private void RefreshDetail()
         {
-            var mail = _mails.Find(m => m.MailId == _selectedMailId);
+            var mail = MailController.Instance.Mails.Find(m => m.MailId == MailController.Instance.SelectedMailId);
             if (mail == null)
             {
                 ClearDetail();
@@ -432,59 +349,17 @@ namespace Client.View
 
         private void OnReadAllClick()
         {
-            var unreadIds = new List<long>();
-            foreach (var m in _mails)
-            {
-                if (m.State == 0) unreadIds.Add(m.MailId);
-            }
-            if (unreadIds.Count == 0)
-            {
-                UIToast.Show("没有未读邮件");
-                return;
-            }
-            NetClient.Instance.Send(new MailReadReq { MailIds = unreadIds });
+            MailController.Instance.ReadAll();
         }
 
         private void OnClaimClick()
         {
-            var claimIds = new List<long>();
-            if (_selectedMailId >= 0)
-            {
-                var mail = _mails.Find(m => m.MailId == _selectedMailId);
-                if (mail != null && mail.Attachments != null && mail.Attachments.Count > 0 && mail.State < 2)
-                    claimIds.Add(mail.MailId);
-            }
-            // Also claim all other claimable mails
-            foreach (var m in _mails)
-            {
-                if (m.State == 1 && m.Attachments != null && m.Attachments.Count > 0 && !claimIds.Contains(m.MailId))
-                    claimIds.Add(m.MailId);
-            }
-            if (claimIds.Count == 0)
-            {
-                UIToast.Show("没有可领取的附件");
-                return;
-            }
-            NetClient.Instance.Send(new MailGetItemReq { MailIds = claimIds });
+            MailController.Instance.ClaimAttachments();
         }
 
         private void OnDeleteReadClick()
         {
-            var deleteIds = new List<long>();
-            foreach (var m in _mails)
-            {
-                if (m.State >= 1)
-                {
-                    bool hasUnclaimed = m.Attachments != null && m.Attachments.Count > 0 && m.State < 2;
-                    if (!hasUnclaimed) deleteIds.Add(m.MailId);
-                }
-            }
-            if (deleteIds.Count == 0)
-            {
-                UIToast.Show("没有可删除的邮件");
-                return;
-            }
-            NetClient.Instance.Send(new MailDeleteReq { MailIds = deleteIds });
+            MailController.Instance.DeleteRead();
         }
 
         private void OnCloseClick()

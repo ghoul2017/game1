@@ -1,11 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System.Linq;
-using Client.View;
-using Client.View;
 using Client.Logic;
-using Shared.Common;
-using Shared.Common.Protos;
 
 namespace Client.View
 {
@@ -17,7 +12,6 @@ namespace Client.View
         private Toggle rememberToggle;
         private Button loginBtn;
         private Text loginBtnText;
-        private bool isLoggingIn;
 
         private const string PREF_USERNAME = "login_username";
         private const string PREF_PASSWORD = "login_password";
@@ -149,12 +143,13 @@ namespace Client.View
         public override void OnShow()
         {
             errorText.text = "";
-            isLoggingIn = false;
-            SetButtonEnabled(true);
+            SetButtonEnabled(!LoginController.Instance.IsLoggingIn);
+            LoginController.Instance.OnLoginCompleted += HandleLoginCompleted;
         }
 
         public override void OnHide()
         {
+            LoginController.Instance.OnLoginCompleted -= HandleLoginCompleted;
             CleanupConnectEvents();
         }
 
@@ -170,105 +165,80 @@ namespace Client.View
             string username = usernameInput.text.Trim();
             string password = passwordInput.text.Trim();
 
-            if (string.IsNullOrEmpty(username))
+            string validationError = LoginController.Instance.ValidateInput(username, password);
+            if (validationError != null)
             {
-                errorText.text = "请输入账号";
-                return;
-            }
-            if (string.IsNullOrEmpty(password))
-            {
-                errorText.text = "请输入密码";
+                errorText.text = validationError;
                 return;
             }
 
             errorText.text = "";
             SaveCredentials();
 
-            if (isLoggingIn) return;
-            isLoggingIn = true;
+            if (LoginController.Instance.IsLoggingIn) return;
             SetButtonEnabled(false);
 
-            var nc = NetClient.Instance;
-            if (nc == null)
-            {
-                errorText.text = "网络未初始化";
-                isLoggingIn = false;
-                SetButtonEnabled(true);
-                return;
-            }
+            bool needConnect = LoginController.Instance.BeginLogin(username, password);
 
-            if (nc.IsConnected)
+            if (needConnect)
             {
-                DoLogin(username, password);
-            }
-            else
-            {
-                errorText.text = "正在连接服务器...";
-                _pendingUser = username;
-                _pendingPass = password;
-                nc.OnConnected += OnServerConnected;
-                nc.OnError += OnServerError;
+                errorText.text = LoginController.Instance.ErrorMessage;
+
+                var nc = NetClient.Instance;
+                if (nc == null)
+                {
+                    errorText.text = "网络未初始化";
+                    LoginController.Instance.OnConnectionError("网络未初始化");
+                    SetButtonEnabled(true);
+                    return;
+                }
+
+                _connectEventsActive = true;
+                nc.OnConnected += OnConnectedHandler;
+                nc.OnError += OnErrorHandler;
                 if (!nc.IsConnecting)
                     nc.Connect();
             }
         }
 
-        private string _pendingUser;
-        private string _pendingPass;
+        private bool _connectEventsActive;
 
-        private void OnServerConnected()
+        private void OnConnectedHandler()
         {
-            if (_pendingUser != null)
-                DoLogin(_pendingUser, _pendingPass);
+            LoginController.Instance.OnConnectionSuccess();
             CleanupConnectEvents();
         }
 
-        private void OnServerError(string reason)
+        private void OnErrorHandler(string reason)
         {
-            errorText.text = "连接服务器失败";
-            isLoggingIn = false;
+            // 忽略重连过程中的错误回调，OnConnected/OnError 是一次性的
+            errorText.text = LoginController.Instance.ErrorMessage;
             SetButtonEnabled(true);
             CleanupConnectEvents();
         }
 
         private void CleanupConnectEvents()
         {
+            if (!_connectEventsActive) return;
+            _connectEventsActive = false;
             var nc = NetClient.Instance;
             if (nc != null)
             {
-                nc.OnConnected -= OnServerConnected;
-                nc.OnError -= OnServerError;
+                nc.OnConnected -= OnConnectedHandler;
+                nc.OnError -= OnErrorHandler;
             }
-            _pendingUser = null;
-            _pendingPass = null;
         }
 
-        private void DoLogin(string username, string password)
+        private void HandleLoginCompleted(bool success, string errorMessage)
         {
-            errorText.text = "正在登录...";
-            NetClient.Instance.Send(new LoginReq { Username = username, Password = password });
-        }
-
-        public void HandleLoginRes(LoginRes res)
-        {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
+            if (success)
             {
-                GameData.PlayerId = res.PlayerId;
-                GameData.Token = res.Token;
-                GameData.Roles = res.Roles.Select(r => new RoleData
-                {
-                    RoleId = r.RoleId,
-                    Name = r.Name,
-                    Level = r.Level,
-                    Job = GameData.GetJobName(r.Job)
-                }).ToList();
-                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + res.PlayerId + " 角色数=" + GameData.Roles.Count);
+                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + GameData.PlayerId + " 角色数=" + GameData.Roles.Count);
                 UIManager.Instance.ReplacePanel<RoleSelectPanel>();
             }
             else
             {
-                errorText.text = res.ErrorMessage;
-                isLoggingIn = false;
+                errorText.text = errorMessage;
                 SetButtonEnabled(true);
             }
         }

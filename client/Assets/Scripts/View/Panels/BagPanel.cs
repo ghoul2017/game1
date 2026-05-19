@@ -1,12 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic;
-using Client.View;
-using Client.View;
-using Shared.Common.Protos;
 using Shared.Common.Config;
 using Shared.Core.Config;
-using Shared.Common;
 using Client.Logic;
 
 namespace Client.View
@@ -17,10 +12,6 @@ namespace Client.View
         private const int ROWS = 8;
         private const float SLOT_SIZE = 68f;
         private const float SLOT_GAP = 4f;
-
-        private List<BagItemInfo> _items = new List<BagItemInfo>();
-        private Dictionary<int, BagItemInfo> _itemMap = new Dictionary<int, BagItemInfo>();
-        private int _capacity;
 
         private Image[] _slotBgs = new Image[COLS * ROWS];
         private Image[] _slotBorders = new Image[COLS * ROWS];
@@ -144,87 +135,27 @@ namespace Client.View
 
         public override void OnShow()
         {
-            NetClient.Instance.Send(new QueryBagReq());
+            BagController.Instance.OnDataChanged += RefreshGrid;
+            BagController.Instance.QueryBag();
         }
 
         public override void OnHide()
         {
-        }
-
-        public void HandleQueryBagAck(QueryBagAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            _items = ack.Items ?? new List<BagItemInfo>();
-            _capacity = ack.Capacity;
-            RefreshGrid();
-        }
-
-        public void HandleBagTidyAck(BagTidyAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            _items = ack.Items ?? new List<BagItemInfo>();
-            RefreshGrid();
-            UIToast.Show("整理完成");
-        }
-
-        public void HandleBagUseItemAck(BagUseItemAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-            var cfg = ConfigManager.Get<ItemConfig>(ack.ConfigId);
-            string itemName = cfg != null ? cfg.Name : "物品";
-            UIToast.Show("使用了 " + itemName);
-        }
-
-        public void HandleBagItemChangedNtf(BagItemChangedNtf ntf)
-        {
-            if (ntf.RemovedIndices != null)
-            {
-                foreach (int idx in ntf.RemovedIndices)
-                {
-                    _itemMap.Remove(idx);
-                }
-                _items.RemoveAll(it => ntf.RemovedIndices.Contains(it.Index));
-            }
-            if (ntf.ChangedItems != null)
-            {
-                foreach (var item in ntf.ChangedItems)
-                {
-                    _itemMap[item.Index] = item;
-                    int existIdx = _items.FindIndex(it => it.Index == item.Index);
-                    if (existIdx >= 0)
-                        _items[existIdx] = item;
-                    else
-                        _items.Add(item);
-                }
-            }
-            RefreshGrid();
+            BagController.Instance.OnDataChanged -= RefreshGrid;
         }
 
         private void RefreshGrid()
         {
-            _itemMap.Clear();
-            foreach (var item in _items)
-                _itemMap[item.Index] = item;
+            var items = BagController.Instance.Items;
+            var itemMap = BagController.Instance.ItemMap;
+            int capacity = BagController.Instance.Capacity;
 
-            _capacityText.text = _items.Count + "/" + _capacity;
+            _capacityText.text = items.Count + "/" + capacity;
 
             int totalSlots = COLS * ROWS;
             for (int i = 0; i < totalSlots; i++)
             {
-                BagItemInfo item;
-                bool hasItem = _itemMap.TryGetValue(i, out item);
+                bool hasItem = itemMap.TryGetValue(i, out var item);
 
                 if (hasItem)
                 {
@@ -252,19 +183,18 @@ namespace Client.View
 
         private void OnSlotClick(int slotIndex)
         {
-            BagItemInfo item;
-            if (!_itemMap.TryGetValue(slotIndex, out item)) return;
+            if (!BagController.Instance.ItemMap.TryGetValue(slotIndex, out var item)) return;
 
             var cfg = ConfigManager.Get<ItemConfig>(item.ConfigId);
             string itemName = cfg != null ? cfg.Name : "物品";
 
             UIMessageBox.Show("使用物品", "使用 " + itemName + " x1 ?",
-                () => { NetClient.Instance.Send(new BagUseItemReq { Index = slotIndex, Count = 1 }); });
+                () => { BagController.Instance.UseItem(slotIndex, 1); });
         }
 
         private void OnTidyClick()
         {
-            NetClient.Instance.Send(new BagTidyReq());
+            BagController.Instance.TidyBag();
         }
 
         private void OnCloseClick()

@@ -8,29 +8,25 @@ namespace Client.Logic
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleCreateRoleRes(TcpSession session, CreateRoleRes res)
         {
-            var panel = ClientContext.UI?.GetPanel<IRoleSelectPanel>();
-            if (panel != null) panel.HandleCreateRoleRes(res);
+            RoleSelectController.Instance.HandleCreateRoleRes(res);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleEnterGameRes(TcpSession session, EnterGameRes res)
         {
-            var panel = ClientContext.UI?.GetPanel<IRoleSelectPanel>();
-            if (panel != null) panel.HandleEnterGameRes(res);
+            RoleSelectController.Instance.HandleEnterGameRes(res);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleEnterGameNtf(TcpSession session, EnterGameNtf ntf)
         {
-            var panel = ClientContext.UI?.GetPanel<IRoleSelectPanel>();
-            if (panel != null) panel.HandleEnterGameNtf(ntf);
+            RoleSelectController.Instance.HandleEnterGameNtf(ntf);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleEnterMapAck(TcpSession session, EnterMapAck ack)
         {
-            var panel = ClientContext.UI?.GetPanel<IRoleSelectPanel>();
-            if (panel != null) panel.HandleEnterMapAck(ack);
+            RoleSelectController.Instance.HandleEnterMapAck(ack);
         }
     }
 }

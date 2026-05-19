@@ -1,7 +1,7 @@
 using Shared.Core.Entities;
 using Shared.Core.Network;
 
-namespace Client
+namespace Client.Logic
 {
     public static class Context
     {

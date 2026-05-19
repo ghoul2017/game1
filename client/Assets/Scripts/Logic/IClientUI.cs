@@ -1,4 +1,5 @@
 using System;
+using Shared.Core.Network;
 
 namespace Client.Logic
 {
@@ -14,8 +15,15 @@ namespace Client.Logic
         void ShowMessageBox(string title, string content, Action onOk, Action onCancel);
     }
 
+    public interface INetworkSender
+    {
+        void Send(IMessage msg);
+        bool IsConnected { get; }
+    }
+
     public static class ClientContext
     {
         public static IClientUI UI { get; set; }
+        public static INetworkSender Network { get; set; }
     }
 }

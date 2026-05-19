@@ -1,5 +1,6 @@
 using UnityEngine;
 using Shared.Common.Config;
+using Client.Logic;
 
 namespace Client.View
 {
@@ -67,7 +68,8 @@ namespace Client.View
 
         private void CreateBirthMark()
         {
-            var pos = MapData.GridToWorld(config.BirthX, config.BirthY);
+            (float px, float py, float pz) = MapData.GridToWorld(config.BirthX, config.BirthY);
+            var pos = new Vector3(px, py, pz);
 
             // 地面标记：一个发光的小方块
             var mark = GameObject.CreatePrimitive(PrimitiveType.Cube);

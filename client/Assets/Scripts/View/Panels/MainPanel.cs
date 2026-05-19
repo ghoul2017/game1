@@ -1,22 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic;
-using Client.View;
-using Client.View;
-using Shared.Common;
-using Shared.Common.Protos;
 using Client.Logic;
+using Shared.Common.Protos;
 
 namespace Client.View
 {
-    public class MainPanel : UIPanel, IMainPanel
+    public class MainPanel : UIPanel
     {
         private Text chatDisplay;
         private InputField chatInput;
         private Text chatTitle;
-        private int currentChannel = ChatChannel.World;
-        private const int MAX_CHAT_LINES = 50;
-        private readonly List<string> chatLines = new List<string>();
 
         private Text roleNameText;
         private Text roleJobText;
@@ -61,10 +54,27 @@ namespace Client.View
             }
             UpdateHpDisplay();
             UpdatePkModeDisplay();
+            RefreshChatDisplay();
+            RefreshChannelDisplay();
+
+            // 订阅 Controller 事件
+            ChatController.Instance.OnMessageAdded += RefreshChatDisplay;
+            ChatController.Instance.OnChannelChanged += RefreshChannelDisplay;
+            FightController.Instance.OnHpChanged += HandleHpChangedEvent;
+            FightController.Instance.OnPkModeChanged += UpdatePkModeDisplay;
+            FightController.Instance.OnKilledBy += HandleKilledByEvent;
+            FightController.Instance.OnSkillCasted += HandleSkillCastedEvent;
         }
 
         public override void OnHide()
         {
+            // 取消订阅 Controller 事件
+            ChatController.Instance.OnMessageAdded -= RefreshChatDisplay;
+            ChatController.Instance.OnChannelChanged -= RefreshChannelDisplay;
+            FightController.Instance.OnHpChanged -= HandleHpChangedEvent;
+            FightController.Instance.OnPkModeChanged -= UpdatePkModeDisplay;
+            FightController.Instance.OnKilledBy -= HandleKilledByEvent;
+            FightController.Instance.OnSkillCasted -= HandleSkillCastedEvent;
         }
 
         private void Update()
@@ -351,18 +361,21 @@ namespace Client.View
             sbRect.anchoredPosition = new Vector2(380, 4);
 
             sendBtn.onClick.AddListener(OnSendChat);
-
-            // 初始化聊天记录
-            chatLines.Add("<color=#FFD700>[系统]</color> 欢迎来到游戏世界！");
-            chatLines.Add("<color=#FFD700>[系统]</color> 祝你冒险愉快！");
         }
 
         private void SwitchChannel(int channel)
         {
-            currentChannel = channel;
-            string chName = channel == ChatChannel.World ? "世界" : "私聊";
+            ChatController.Instance.SwitchChannel(channel);
+            RefreshChannelDisplay();
+        }
+
+        private void RefreshChannelDisplay()
+        {
             if (chatTitle != null)
+            {
+                string chName = ChatController.Instance.CurrentChannel == ChatChannel.World ? "世界" : "私聊";
                 chatTitle.text = "[ " + chName + " ]";
+            }
         }
 
         private void OnSendChat()
@@ -371,45 +384,35 @@ namespace Client.View
             string msg = chatInput.text.Trim();
             if (string.IsNullOrEmpty(msg)) return;
 
-            var req = new ChatReq();
-            req.Channel = currentChannel;
-            req.Content = msg;
-            NetClient.Instance.Send(req);
+            ChatController.Instance.SendChat(msg);
             chatInput.text = "";
         }
 
-        // ==================== Chat Network Handlers ====================
+        // ==================== Chat Display ====================
 
-        public void HandleChatAck(ChatAck ack)
+        private void RefreshChatDisplay()
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            if (chatDisplay == null) return;
+
+            var lines = ChatController.Instance.ChatLines;
+            if (lines.Count == 0)
             {
-                UIToast.Show(ack.ErrorMessage);
+                chatDisplay.text = "<color=#FFD700>[系统]</color> 欢迎来到游戏世界！\n<color=#FFD700>[系统]</color> 祝你冒险愉快！";
+                return;
             }
-        }
 
-        public void HandleChatNtf(ChatNtf ntf)
-        {
-            string chTag = ntf.Channel == ChatChannel.World ? "世界" : "私聊";
-            string line = string.Format("<color=#88CCFF>[{0}][{1}]</color> {2}",
-                chTag, ntf.SenderName, ntf.Content);
-            AppendChatLine(line);
-        }
-
-        public void HandleSystemChatNtf(SystemChatNtf ntf)
-        {
-            string line = string.Format("<color=#FFD700>[系统]</color> {0}", ntf.Content);
-            AppendChatLine(line);
-        }
-
-        private void AppendChatLine(string line)
-        {
-            chatLines.Add(line);
-            if (chatLines.Count > MAX_CHAT_LINES)
-                chatLines.RemoveAt(0);
-
-            if (chatDisplay != null)
-                chatDisplay.text = string.Join("\n", chatLines.ToArray());
+            var formatted = new string[lines.Count];
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var item = lines[i];
+                string color;
+                if (item.DisplayText.StartsWith("[系统]"))
+                    color = "#FFD700";
+                else
+                    color = "#88CCFF";
+                formatted[i] = string.Format("<color={0}>{1}</color>", color, item.DisplayText);
+            }
+            chatDisplay.text = string.Join("\n", formatted);
         }
 
         private void CreateSystemButtons()
@@ -612,25 +615,17 @@ namespace Client.View
             var pc = GameSceneEntry.PlayerController;
             if (pc == null) return;
 
-            var req = new UseSkillReq();
-            req.SkillId = skillId;
-            req.X = pc.CurrentGridX;
-            req.Y = pc.CurrentGridY;
-            req.TargetId = GameData.SelectedTargetId;
-            NetClient.Instance.Send(req);
+            FightController.Instance.UseSkill(skillId, pc.CurrentGridX, pc.CurrentGridY, GameData.SelectedTargetId);
         }
 
         private void OnTogglePkMode()
         {
-            int nextMode = (GameData.CurrentPkMode + 1) % 4;
-            var req = new SetPkModeReq();
-            req.PkMode = nextMode;
-            NetClient.Instance.Send(req);
+            FightController.Instance.TogglePkMode();
         }
 
-        // ==================== Fight Network Handlers ====================
+        // ==================== Fight Event Handlers ====================
 
-        public void HandleUseSkillAck(UseSkillAck ack)
+        private void HandleSkillCastedEvent(UseSkillAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -662,14 +657,13 @@ namespace Client.View
                 ack.AttackerId, ack.SkillId, ack.MainTargetId, ack.Targets.Count));
         }
 
-        public void HandleHpChangedNtf(HpChangedNtf ntf)
+        private void HandleHpChangedEvent(HpChangedNtf ntf)
         {
             long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;
 
             if (ntf.ObjectId == selfId)
             {
                 // 自己的血量变化
-                GameData.CurrentHp = ntf.Hp;
                 UpdateHpDisplay();
 
                 // 同步更新PlayerView的HP条
@@ -715,28 +709,14 @@ namespace Client.View
             }
         }
 
-        public void HandleKilledByNtf(KilledByNtf ntf)
+        private void HandleKilledByEvent(KilledByNtf ntf)
         {
             string killerDesc = ntf.IsMonster ? "怪物" : ntf.KillerName;
             UIMessageBox.Show("阵亡", string.Format("你被 {0} 击杀了！", killerDesc),
                 () =>
                 {
-                    // 复活：回城（重新进图）
-                    var mapData = GameData.CurrentMap;
-                    if (mapData != null && NetClient.Instance != null)
-                    {
-                        var req = new EnterMapReq();
-                        req.MapCfgId = mapData.MapCfgId;
-                        req.Line = mapData.Line;
-                        NetClient.Instance.Send(req);
-                    }
+                    FightController.Instance.RespawnAtCurrentMap();
                 }, showCancel: false, confirmText: "回城复活");
-        }
-
-        public void HandlePkModeChangedNtf(PkModeChangedNtf ntf)
-        {
-            GameData.CurrentPkMode = ntf.PkMode;
-            UpdatePkModeDisplay();
         }
 
         // ==================== Fight UI Updates ====================

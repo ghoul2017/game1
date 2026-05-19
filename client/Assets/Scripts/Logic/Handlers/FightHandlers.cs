@@ -8,29 +8,25 @@ namespace Client.Logic
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleUseSkillAck(TcpSession session, UseSkillAck ack)
         {
-            var panel = ClientContext.UI?.GetPanel<IMainPanel>();
-            if (panel != null) panel.HandleUseSkillAck(ack);
+            FightController.Instance.HandleUseSkillAck(ack);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleHpChangedNtf(TcpSession session, HpChangedNtf ntf)
         {
-            var panel = ClientContext.UI?.GetPanel<IMainPanel>();
-            if (panel != null) panel.HandleHpChangedNtf(ntf);
+            FightController.Instance.HandleHpChangedNtf(ntf);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleKilledByNtf(TcpSession session, KilledByNtf ntf)
         {
-            var panel = ClientContext.UI?.GetPanel<IMainPanel>();
-            if (panel != null) panel.HandleKilledByNtf(ntf);
+            FightController.Instance.HandleKilledByNtf(ntf);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandlePkModeChangedNtf(TcpSession session, PkModeChangedNtf ntf)
         {
-            var panel = ClientContext.UI?.GetPanel<IMainPanel>();
-            if (panel != null) panel.HandlePkModeChangedNtf(ntf);
+            FightController.Instance.HandlePkModeChangedNtf(ntf);
         }
     }
 }

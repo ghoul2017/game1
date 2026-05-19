@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Shared.Common.Protos;
+using Client.Logic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -39,7 +40,8 @@ namespace Client.View
         public void Init(long roleId, string name, int x, int y)
         {
             RoleId = roleId;
-            transform.position = MapData.GridToWorld(x, y);
+            (float px, float py, float pz) = MapData.GridToWorld(x, y);
+            transform.position = new Vector3(px, py, pz);
             _targetPos = transform.position;
 
             CreateBody();
@@ -50,7 +52,8 @@ namespace Client.View
         public void MoveTo(int x, int y)
         {
             if (_isDead) return;
-            _targetPos = MapData.GridToWorld(x, y);
+            (float px, float py, float pz) = MapData.GridToWorld(x, y);
+            _targetPos = new Vector3(px, py, pz);
         }
 
         public void UpdateHp(int hp, int maxHp)

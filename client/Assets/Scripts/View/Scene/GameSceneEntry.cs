@@ -1,9 +1,8 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Client.Logic;
-using Client.View;
-using Shared.Common;
-using Shared.Core.Network;
 using Shared.Common.Protos;
 using Shared.Common.Config;
 using Shared.Core.Config;
@@ -16,6 +15,11 @@ namespace Client.View
         public static MapGround MapGround { get; private set; }
         private static MainPanel _mainPanel;
 
+        // 存储 NetClient 事件委托以便取消订阅
+        private Action _onReconnectedHandler;
+        private Action<string> _onReconnectFailedHandler;
+        private Action<int> _onKickedHandler;
+
         private void Start()
         {
             Debug.Log("[GameSceneEntry] 初始化游戏场景");
@@ -24,13 +28,64 @@ namespace Client.View
             UIManager.EnsureCreated();
 
             InitializeScene();
-            RegisterReconnectEvents();
+
+            // 订阅 MapController 事件
+            MapController.Instance.OnMapObjectsSpawned += HandleMapObjectsSpawned;
+            MapController.Instance.OnMapPlayerEnter += HandleMapPlayerEnter;
+            MapController.Instance.OnMapPlayerLeave += HandleMapPlayerLeave;
+            MapController.Instance.OnMapPlayerMove += HandleMapPlayerMove;
+            MapController.Instance.OnMapObjectEnter += HandleMapObjectEnter;
+            MapController.Instance.OnMapObjectLeave += HandleMapObjectLeave;
+            MapController.Instance.OnMapObjectMove += HandleMapObjectMove;
+            MapController.Instance.OnMapMoveCorrected += HandleMapMoveCorrected;
+            MapController.Instance.OnMapRebuild += HandleMapRebuild;
+            MapController.Instance.OnChangeMapFailed += HandleChangeMapFailed;
+            MapController.Instance.OnKicked += HandleKickedEvent;
+            MapController.Instance.OnReconnected += HandleReconnectedEvent;
+            MapController.Instance.OnReconnectFailed += HandleReconnectFailedEvent;
+
+            // Wire NetClient events to MapController
+            var nc = NetClient.Instance;
+            if (nc != null)
+            {
+                _onReconnectedHandler = () => MapController.Instance.HandleReconnected();
+                _onReconnectFailedHandler = (msg) => MapController.Instance.HandleReconnectFailed(msg);
+                _onKickedHandler = (reason) => MapController.Instance.OnKicked(reason);
+
+                nc.OnReconnected += _onReconnectedHandler;
+                nc.OnReconnectFailed += _onReconnectFailedHandler;
+                nc.OnKicked += _onKickedHandler;
+            }
+
             _mainPanel = UIManager.Instance.ShowPanel<MainPanel>();
         }
 
         private void OnDestroy()
         {
-            UnregisterReconnectEvents();
+            // 取消订阅 MapController 事件
+            MapController.Instance.OnMapObjectsSpawned -= HandleMapObjectsSpawned;
+            MapController.Instance.OnMapPlayerEnter -= HandleMapPlayerEnter;
+            MapController.Instance.OnMapPlayerLeave -= HandleMapPlayerLeave;
+            MapController.Instance.OnMapPlayerMove -= HandleMapPlayerMove;
+            MapController.Instance.OnMapObjectEnter -= HandleMapObjectEnter;
+            MapController.Instance.OnMapObjectLeave -= HandleMapObjectLeave;
+            MapController.Instance.OnMapObjectMove -= HandleMapObjectMove;
+            MapController.Instance.OnMapMoveCorrected -= HandleMapMoveCorrected;
+            MapController.Instance.OnMapRebuild -= HandleMapRebuild;
+            MapController.Instance.OnChangeMapFailed -= HandleChangeMapFailed;
+            MapController.Instance.OnKicked -= HandleKickedEvent;
+            MapController.Instance.OnReconnected -= HandleReconnectedEvent;
+            MapController.Instance.OnReconnectFailed -= HandleReconnectFailedEvent;
+
+            // 取消订阅 NetClient 事件
+            var nc = NetClient.Instance;
+            if (nc != null)
+            {
+                nc.OnReconnected -= _onReconnectedHandler;
+                nc.OnReconnectFailed -= _onReconnectFailedHandler;
+                nc.OnKicked -= _onKickedHandler;
+            }
+
             OtherPlayerManager.Instance.ClearAll();
             MonsterEntityManager.Instance.ClearAll();
             _mainPanel = null;
@@ -129,7 +184,8 @@ namespace Client.View
 
             // 创建玩家（使用服务端返回的出生点）
             var playerObj = new GameObject("Player");
-            playerObj.transform.position = MapData.GridToWorld(spawnX, spawnY);
+            (float px, float py, float pz) = Client.Logic.MapData.GridToWorld(spawnX, spawnY);
+            playerObj.transform.position = new Vector3(px, py, pz);
 
             var controller = playerObj.AddComponent<PlayerController>();
             controller.Init(mapConfig, spawnX, spawnY);
@@ -157,13 +213,13 @@ namespace Client.View
             }
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapObjectsNtf(TcpSession session, MapObjectsNtf ntf)
+        // ==================== MapController Event Handlers ====================
+
+        private void HandleMapObjectsSpawned(List<MapObjectInfo> objects)
         {
-            if (ntf.Objects == null) return;
-            foreach (var obj in ntf.Objects)
+            if (objects == null) return;
+            foreach (var obj in objects)
             {
-                // ObjectType: 1=Player, 2=NPC, 3=Monster
                 if (obj.ObjectType == MapObjectType.Player)
                 {
                     OtherPlayerManager.Instance.SpawnPlayer(obj);
@@ -175,81 +231,47 @@ namespace Client.View
             }
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapPlayerEnterNtf(TcpSession session, MapPlayerEnterNtf ntf)
+        private void HandleMapPlayerEnter(MapObjectInfo player)
         {
-            OtherPlayerManager.Instance.SpawnPlayer(ntf.Player);
+            if (player != null)
+                OtherPlayerManager.Instance.SpawnPlayer(player);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapPlayerLeaveNtf(TcpSession session, MapPlayerLeaveNtf ntf)
+        private void HandleMapPlayerLeave(long roleId)
         {
-            OtherPlayerManager.Instance.RemovePlayer(ntf.RoleId);
+            OtherPlayerManager.Instance.RemovePlayer(roleId);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapPlayerMoveNtf(TcpSession session, MapPlayerMoveNtf ntf)
+        private void HandleMapPlayerMove(long roleId, int x, int y)
         {
-            OtherPlayerManager.Instance.MovePlayer(ntf.RoleId, ntf.X, ntf.Y);
+            OtherPlayerManager.Instance.MovePlayer(roleId, x, y);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapObjectEnterNtf(TcpSession session, MapObjectEnterNtf ntf)
+        private void HandleMapObjectEnter(long objectId, int cfgId, int objectType, string name, int x, int y)
         {
-            MonsterEntityManager.Instance.Spawn(ntf.ObjectId, ntf.CfgId, ntf.ObjectType, ntf.Name, ntf.X, ntf.Y);
+            MonsterEntityManager.Instance.Spawn(objectId, cfgId, objectType, name, x, y);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapObjectLeaveNtf(TcpSession session, MapObjectLeaveNtf ntf)
+        private void HandleMapObjectLeave(long objectId)
         {
-            MonsterEntityManager.Instance.Remove(ntf.ObjectId);
+            MonsterEntityManager.Instance.Remove(objectId);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapObjectMoveNtf(TcpSession session, MapObjectMoveNtf ntf)
+        private void HandleMapObjectMove(long objectId, int x, int y)
         {
-            MonsterEntityManager.Instance.Move(ntf.ObjectId, ntf.X, ntf.Y);
+            MonsterEntityManager.Instance.Move(objectId, x, y);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapMoveAck(TcpSession session, MapMoveAck ack)
+        private void HandleMapMoveCorrected(int x, int y)
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            if (PlayerController != null)
             {
-                // 服务端校验失败，回退到服务端位置
-                if (PlayerController != null)
-                {
-                    PlayerController.CorrectPosition(ack.X, ack.Y);
-                    Debug.Log(string.Format("[GameSceneEntry] 移动被服务端纠正: ({0},{1})", ack.X, ack.Y));
-                }
+                PlayerController.CorrectPosition(x, y);
+                Debug.Log(string.Format("[GameSceneEntry] 移动被服务端纠正: ({0},{1})", x, y));
             }
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnChangeMapAck(TcpSession session, ChangeMapAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show("传送失败: " + ack.ErrorMessage);
-                Debug.Log("[GameSceneEntry] 切图失败: " + ack.ErrorMessage);
-                return;
-            }
-
-            Debug.Log(string.Format("[GameSceneEntry] 切图成功 Map={0} Spawn=({1},{2})", ack.MapCfgId, ack.X, ack.Y));
-
-            // 更新缓存的地图数据
-            GameData.CurrentMap = new EnterMapData
-            {
-                MapCfgId = ack.MapCfgId,
-                Line = ack.Line,
-                SpawnX = ack.X,
-                SpawnY = ack.Y
-            };
-
-            RebuildScene(ack.MapCfgId, ack.X, ack.Y);
-        }
-
-        private static void RebuildScene(int mapCfgId, int spawnX, int spawnY)
+        private void HandleMapRebuild(int mapCfgId, int spawnX, int spawnY)
         {
             // 清除其他玩家和怪物
             OtherPlayerManager.Instance.ClearAll();
@@ -258,7 +280,7 @@ namespace Client.View
             // 销毁旧地图
             if (MapGround != null)
             {
-                Object.Destroy(MapGround.gameObject);
+                UnityEngine.Object.Destroy(MapGround.gameObject);
                 MapGround = null;
             }
 
@@ -279,74 +301,32 @@ namespace Client.View
                 mapConfig.Name, mapConfig.Width, mapConfig.Height));
         }
 
-        // ==================== Reconnect Events ====================
-
-        private void RegisterReconnectEvents()
+        private void HandleChangeMapFailed(string error)
         {
-            var netClient = NetClient.Instance;
-            if (netClient == null) return;
-
-            netClient.OnReconnected += HandleReconnected;
-            netClient.OnReconnectFailed += HandleReconnectFailed;
-            netClient.OnKicked += HandleKicked;
-            Debug.Log("[GameSceneEntry] 重连事件已注册");
+            UIToast.Show("传送失败: " + error);
+            Debug.Log("[GameSceneEntry] 切图失败: " + error);
         }
 
-        private void UnregisterReconnectEvents()
-        {
-            var netClient = NetClient.Instance;
-            if (netClient == null) return;
-
-            netClient.OnReconnected -= HandleReconnected;
-            netClient.OnReconnectFailed -= HandleReconnectFailed;
-            netClient.OnKicked -= HandleKicked;
-        }
-
-        private void HandleReconnected()
-        {
-            Debug.Log("[GameSceneEntry] 重连成功，重新进入地图");
-
-            // 清除旧的视野数据
-            OtherPlayerManager.Instance.ClearAll();
-
-            // 重新发送进图请求，获取最新AOI数据
-            var mapData = GameData.CurrentMap;
-            if (mapData != null && NetClient.Instance != null)
-            {
-                var req = new EnterMapReq();
-                req.MapCfgId = mapData.MapCfgId;
-                req.Line = mapData.Line;
-                NetClient.Instance.Send(req);
-            }
-        }
-
-        private void HandleReconnectFailed(string message)
-        {
-            Debug.Log("[GameSceneEntry] 重连失败: " + message + "，返回登录");
-            GoBackToLogin();
-        }
-
-        private void HandleKicked(int reason)
+        private void HandleKickedEvent(int reason)
         {
             Debug.Log("[GameSceneEntry] 被踢下线，reason=" + reason);
-            string reasonText = GetKickReasonText(reason);
+            string reasonText = MapController.GetKickReasonText(reason);
             UIMessageBox.Show("下线通知", reasonText, () =>
             {
                 GoBackToLogin();
             }, showCancel: false, confirmText: "确定");
         }
 
-        private static string GetKickReasonText(int reason)
+        private void HandleReconnectedEvent()
         {
-            switch (reason)
-            {
-                case 2: return "您的账号在其他设备登录，已被迫下线。";
-                case 3: return "您的账号已被封禁，请联系客服。";
-                case 4: return "您已被GM强制踢下线。";
-                case 5: return "网络连接超时，请检查网络后重试。";
-                case 1: return "服务器正在维护，请稍后重试。";
-                default: return "您已与服务器断开连接。";
-            }
+            Debug.Log("[GameSceneEntry] 重连成功，清除旧的视野数据");
+            OtherPlayerManager.Instance.ClearAll();
+        }
+
+        private void HandleReconnectFailedEvent(string msg)
+        {
+            Debug.Log("[GameSceneEntry] 重连失败: " + msg + "，返回登录");
+            GoBackToLogin();
         }
 
         private void GoBackToLogin()
