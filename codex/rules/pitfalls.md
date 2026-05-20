@@ -99,7 +99,7 @@ public class BagController
 - **删除 .asmdef 后无需程序集隔离**：Unity 单 Assembly-CSharp 编译，目录分隔纯为代码组织
 - **未删除 .meta 导致残留**：删除 .asmdef 或 .cs 文件后务必检查并删除对应 .meta，否则 Unity 仍尝试加载
 - **bin/obj 目录**：.csproj 的构建产物若放在 Unity Assets/ 下会被 Unity 当成预编译 DLL 导致 "Multiple precompiled assemblies" 错误。Robot.csproj 放在 client/ 外部（robot/ 目录），避免此问题
-- **Robot.csproj 用 net8.0**：netstandard2.0 不支持 shared 代码中的 C# 9 特性（target-typed new、GetValueOrDefault、Deconstruct），Robot 通过 Compile Include 直接引用 shared/ 和 Logic/ 源文件
+- **Robot.csproj 用 net8.0**：netstandard2.0 不支持 Shared 代码中的 C# 9 特性（target-typed new、GetValueOrDefault、Deconstruct），Robot 通过 Compile Include 直接引用 Shared/ 和 Logic/ 源文件
 - **接口实现需显式声明**：即使类已有所有接口方法，仍需在类声明加 `: INetworkSender`，否则隐式转换报 CS0266
 
 ## 调试方法论

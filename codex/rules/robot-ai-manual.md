@@ -4,7 +4,7 @@
 
 ## 项目定位
 
-Robot 是独立 .NET 8 Console 项目，通过 TCP 连接服务端，发送 Protobuf 消息模拟客户端行为，验证服务端逻辑。**自身代码只有基础设施（~300 行），90% 引用 shared/ + Logic/ 代码。**
+Robot 是独立 .NET 8 Console 项目，通过 TCP 连接服务端，发送 Protobuf 消息模拟客户端行为，验证服务端逻辑。**自身代码只有基础设施（~300 行），90% 引用 Shared/ + Logic/ 代码。**
 
 ## 架构
 
@@ -100,8 +100,8 @@ Assertions.True(string.IsNullOrEmpty(res.ErrorMessage), $"登录失败: {res.Err
 
 ## 新增消息
 
-1. 在 `shared/Common/Protos/XxxProtos.cs` 定义 `[ProtoContract]` 类，实现 `IMessage`
-2. 在 `shared/Common/MsgIdConst.cs` 分配 ID
+1. 在 `Shared/Common/Protos/XxxProtos.cs` 定义 `[ProtoContract]` 类，实现 `IMessage`
+2. 在 `Shared/Common/MsgIdConst.cs` 分配 ID
 3. Robot 自动通过 Compile Include 获取新消息类型
 4. 测试场景中直接 `SendAndWaitAsync<T>()` 使用
 
@@ -132,4 +132,4 @@ dotnet build game1.sln
 - **禁止引用 View/** 或 UnityEngine 相关代码
 - **禁止在 TestScenario 中 `new RobotSession()`**：Session 由 TestRunner 注入
 - **禁止在场景间共享状态**：每个场景独立连接，TestRunner 在场景结束后 Disconnect
-- **禁止修改 shared/ 代码以适应 Robot**：shared/ 是双端共享，Robot 只能适配自己
+- **禁止修改 Shared/ 代码以适应 Robot**：Shared/ 是双端共享，Robot 只能适配自己

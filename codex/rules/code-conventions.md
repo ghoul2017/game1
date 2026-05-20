@@ -102,7 +102,7 @@ Handler 使用 `[MessageHandler]` 标记的静态方法，通过 MessageRouter �
 - **ConcurrentDictionary**：用 `TryRemove` 而非 `Remove`（.NET 5+ 才有 Remove 重载）
 - **SynchronizationContext**：安装后 await 自动回主线程。Timer 回调、外部线程事件需手动 Post
 - **Thread.Sleep(1)**：Windows 下实际 ~15.6ms，轮询场景用 `AutoResetEvent` 替代
-- **Unity csproj**：`Assembly-CSharp.csproj` 由 Unity Editor 自动生成，新增 shared 文件后需 Unity 刷新重新生成
+- **Unity csproj**：`Assembly-CSharp.csproj` 由 Unity Editor 自动生成，新增 Shared 文件后需 Unity 刷新重新生成
 - **客户端 .NET 4.7.1**：需要显式 `using System.Linq;`，不能用 C# 10+ 语法和 .NET 5+ API
 
 ## ID 生成
