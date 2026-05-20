@@ -133,6 +133,10 @@ Context.Players.AddPlayer(player);
 
 ## 关键约定
 
+### 路径大小写
+
+- 工程目录名固定使用小写 `server/`、`tools/`、`scripts/`；文档、脚本、`.sln`、`.csproj` 中不要写成 `Server/`。
+
 ### 服务端
 
 - **命名空间**: PascalCase `Game.Core`, `Game.Components.Player`，类名 PascalCase。共享代码 `Shared.*`
