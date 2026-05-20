@@ -13,7 +13,7 @@ always_apply: true
 
 ## 底线规则
 
-1. **改完必须编译** — 服务端 `dotnet build server/Game`，客户端/整体改动 `dotnet build game1.sln`。编译不过就继续修；涉及丢弃改动必须先得到用户明确指令
+1. **改完必须编译** — 服务端 `dotnet build server/Server.csproj`，客户端/整体改动 `dotnet build game1.sln`。编译不过就继续修；涉及丢弃改动必须先得到用户明确指令
 2. **验证不是摆设** — 代码变更后做本地复查和必要运行验证。验证失败就修，最多 3 轮；仍失败时说明原因和剩余风险
 3. **知识归档** — 实现中发现有价值经验，优先写入 `docs/` 或 `codex/rules/`
 4. **不 git push**

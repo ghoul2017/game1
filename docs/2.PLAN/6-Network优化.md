@@ -12,13 +12,13 @@ NetworkComponent 构造函数中直接启动 GameTimer，导致 shared 层代码
 
 ### 修改文件
 
-### server/Game/Core/Network/NetworkComponent.cs
+### server/Core/Network/NetworkComponent.cs
 - 变更类型：修改
 - 删除 `_heartbeatTimer` 字段和构造函数中的 `GameTimer.Start(...)` 调用
 - `DoHeartbeatCheck()` 保留为 public 方法，供外部定时调用
 - 构造函数变为空（或只初始化 MessageRouter）
 
-### server/Game/Components/Misc/MiscHandlers.cs（或新建 MiscSystem.cs）
+### server/Components/Misc/MiscHandlers.cs（或新建 MiscSystem.cs）
 - 变更类型：修改/新增
 - 添加心跳检测定时器启动逻辑：`GameTimer.Start(CheckIntervalSeconds * 1000, () => Context.Network.DoHeartbeatCheck())`
 - 时机：在 ServerInitEvent 中启动
@@ -52,26 +52,26 @@ session.Disconnect(reason)
 - `OnDisconnected` 事件签名改为 `Action<TcpSession, LogoutReason>`
 - 所有内部 `Disconnect()` 调用无需改动（使用默认值）
 
-### server/Game/Core/Network/NetworkComponent.cs
+### server/Core/Network/NetworkComponent.cs
 - 变更类型：修改
 - 删除 `Kick()` 方法
 - `KickAll()` 方法：遍历调用 `session.Disconnect(LogoutReason.ServerClose)`，不发 KickNtf
 - `SessionDisconnected` 回调签名改为 `Action<TcpSession, LogoutReason>`
 - `OnSessionDisconnected` 传递 reason
 
-### server/Game/Components/User/UserHandler.cs
+### server/Components/User/UserHandler.cs
 - 变更类型：新增方法 + 修改调用
 - 新增 `KickUser(TcpSession session, LogoutReason reason)`：
   - `session.Send(new KickNtf { Reason = (int)reason })`
   - `session.Disconnect(reason)`
 - LoginHandler: `Context.Server.GetComponent<NetworkComponent>().Kick(oldSession, LogoutReason.AnotherSession)` → `KickUser(oldSession, LogoutReason.AnotherSession)`
 
-### server/Game/AppStart.cs: OnSessionDisconnected
+### server/AppStart.cs: OnSessionDisconnected
 - 变更类型：修改
 - 签名改为 `OnSessionDisconnected(TcpSession session, LogoutReason reason)`
 - `PlayerOfflineEvent` 增加 `Reason` 字段，传递 reason
 
-### server/Game/Core/Event/EventType.cs: PlayerOfflineEvent
+### server/Core/Event/EventType.cs: PlayerOfflineEvent
 - 变更类型：修改
 - 增加 `public LogoutReason Reason;` 字段
 

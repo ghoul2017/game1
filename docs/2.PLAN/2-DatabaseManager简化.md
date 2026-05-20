@@ -32,7 +32,7 @@ var account = await MongoDb.QueryFirstOrDefaultAsync<PlayerAccount>(p => p.Usern
 
 ## 新增文件
 
-### `Game.Database.MongoDb` — `server/Game/Core/Database/MongoDb.cs`
+### `Game.Database.MongoDb` — `server/Core/Database/MongoDb.cs`
 - 用途：统一的数据库操作入口，替代 DatabaseManager + 3 个 Repository
 - 单例模式：`public static MongoDb Instance { get; } = new();`
 - 字段：
@@ -60,36 +60,36 @@ var account = await MongoDb.QueryFirstOrDefaultAsync<PlayerAccount>(p => p.Usern
 
 ## 修改文件
 
-### `server/Game/Core/Database/DatabaseManager.cs`: DatabaseManager
+### `server/Core/Database/DatabaseManager.cs`: DatabaseManager
 - 变更类型：删除
 - 原因：功能合并到 MongoDb.cs
 
-### `server/Game/Core/Database/MongoDbManager.cs`: MongoDbManager
+### `server/Core/Database/MongoDbManager.cs`: MongoDbManager
 - 变更类型：删除
 - 原因：功能合并到 MongoDb.cs
 
-### `server/Game/Core/Database/Repositories/MongoEntityRepository.cs`: MongoEntityRepository
+### `server/Core/Database/Repositories/MongoEntityRepository.cs`: MongoEntityRepository
 - 变更类型：删除
 - 原因：功能合并到 MongoDb.cs
 
-### `server/Game/Core/Database/Repositories/MongoPlayerRepository.cs`: MongoPlayerRepository + PlayerAccount
+### `server/Core/Database/Repositories/MongoPlayerRepository.cs`: MongoPlayerRepository + PlayerAccount
 - 变更类型：删除
 - 原因：功能合并到 MongoDb.cs，PlayerAccount 类移到 MongoDb.cs 同文件或独立文件
 
-### `server/Game/Core/Database/Repositories/MongoRoleRepository.cs`: MongoRoleRepository + UserRole
+### `server/Core/Database/Repositories/MongoRoleRepository.cs`: MongoRoleRepository + UserRole
 - 变更类型：删除
 - 原因：功能合并到 MongoDb.cs，UserRole 类移到 MongoDb.cs 同文件或独立文件
 
-### `server/Game/Context.cs`: Context
+### `server/Context.cs`: Context
 - 变更类型：修改
 - 修改字段：`DatabaseManager.Instance` → `MongoDb.Instance`
 - 修改属性：`public static MongoDb Db => MongoDb.Instance;`（新增便利属性）
 
-### `server/Game/AppStart.cs`: AppStart
+### `server/AppStart.cs`: AppStart
 - 变更类型：修改
 - 修改调用：`await DatabaseManager.Instance.Init()` → `await MongoDb.Instance.Init(Context.Config.MongoDb)`
 
-### `server/Game/Components/User/UserHandler.cs`: UserHandler
+### `server/Components/User/UserHandler.cs`: UserHandler
 - 变更类型：修改
 - 所有 `DatabaseManager.Instance.PlayerRepo.xxx` → `MongoDb.Instance.xxx`
 - 所有 `DatabaseManager.Instance.RoleRepo.xxx` → `MongoDb.Instance.xxx`
@@ -103,7 +103,7 @@ var account = await MongoDb.QueryFirstOrDefaultAsync<PlayerAccount>(p => p.Usern
 ## 执行顺序
 
 1. 新建 `MongoDb.cs`，合并 DatabaseManager + MongoDbManager + 3 个 Repository 的全部功能
-2. 将 PlayerAccount、UserRole 类移到独立文件（`server/Game/Core/Database/PlayerAccount.cs`、`server/Game/Core/Database/UserRole.cs`）
+2. 将 PlayerAccount、UserRole 类移到独立文件（`server/Core/Database/PlayerAccount.cs`、`server/Core/Database/UserRole.cs`）
 3. 修改 Context.cs — 更新数据库访问入口
 4. 修改 AppStart.cs — 更新初始化调用
 5. 批量替换所有 `DatabaseManager.Instance.EntityRepo.xxx` → `MongoDb.Instance.xxx`
@@ -114,7 +114,7 @@ var account = await MongoDb.QueryFirstOrDefaultAsync<PlayerAccount>(p => p.Usern
 
 ## 验证
 
-- [ ] `dotnet build server/Game` 编译通过
+- [ ] `dotnet build server/Server.csproj` 编译通过
 - [ ] 所有旧调用方式已替换
 - [ ] PlayerAccount、UserRole 独立文件存在
 
@@ -127,18 +127,18 @@ User 和 UserRole 当前是普通类，用 `MongoDb.SaveAsync` 持久化。改�
 
 ### 修改文件
 
-#### `server/Game/Components/User/User.cs`: User
+#### `server/Components/User/User.cs`: User
 - 变更类型：修改
 - 实现 `IEntity` 接口
 - `Id` 属性加 `[BsonId]` 标记
 - `Session` 属性加 `[BsonIgnore]`（运行时会话引用，不持久化）
 
-#### `server/Game/Components/User/UserRole.cs`: UserRole
+#### `server/Components/User/UserRole.cs`: UserRole
 - 变更类型：修改
 - 实现 `IEntity` 接口
 - `Id` 属性映射到 `RoleId`（`Id => RoleId`），加 `[BsonId]` 标记
 
-#### `server/Game/Components/User/UserHandler.cs`: UserHandler
+#### `server/Components/User/UserHandler.cs`: UserHandler
 - 变更类型：修改
 - `MongoDb.Instance.SaveAsync(account)` → `MongoDb.Instance.InsertAsync(account)`（新注册时）
 - `MongoDb.Instance.SaveAsync(new UserRole {...})` → `MongoDb.Instance.InsertAsync(new UserRole {...})`（创建角色索引时）
@@ -152,7 +152,7 @@ User 和 UserRole 当前是普通类，用 `MongoDb.SaveAsync` 持久化。改�
 
 ### 验证
 
-- [ ] `dotnet build server/Game` 编译通过
+- [ ] `dotnet build server/Server.csproj` 编译通过
 - [ ] User 实现 IEntity，`Id` 有 `[BsonId]`，`Session` 有 `[BsonIgnore]`
 - [ ] UserRole 实现 IEntity，`Id`/`RoleId` 有 `[BsonId]`
 - [ ] UserHandler 中新注册用 `InsertAsync`，创建角色索引用 `InsertAsync`

@@ -21,7 +21,7 @@ LoginRes 已返回 PlayerId 和 Token，RoleListReq 无参数（只需 session.U
 - 变更类型：修改
 - 删除 `RoleListReq = 10103` 和 `RoleListRes = 10104` 两个常量
 
-### server/Game/Components/User/UserHandler.cs
+### server/Components/User/UserHandler.cs
 - 变更类型：修改
 - LoginHandler：登录成功后查询用户角色列表，填充 `res.Roles`
 - 删除 RoleListHandler 方法
@@ -55,7 +55,7 @@ LoginRes 已返回 PlayerId 和 Token，RoleListReq 无参数（只需 session.U
 - `SelectRoleReq = 10107` → `EnterGameReq = 10107`
 - `SelectRoleRes = 10108` → `EnterGameRes = 10108`
 
-### server/Game/Components/User/UserHandler.cs
+### server/Components/User/UserHandler.cs
 - 变更类型：修改
 - `SelectRoleHandler` → `EnterGameHandler`
 - 方法签名：`static async Task<IMessage> EnterGameHandler(TcpSession session, EnterGameReq req, EnterGameRes res)`
@@ -79,7 +79,7 @@ LoginRes 已返回 PlayerId 和 Token，RoleListReq 无参数（只需 session.U
 - ReconnectRes：删除 `RoleId`、`Name`、`Level` 字段（不再返回角色数据，由 EnterGameReq 流程获取）
 - 保留 `Code`、`Message` 字段
 
-### server/Game/Components/User/UserHandler.cs
+### server/Components/User/UserHandler.cs
 - 变更类型：修改
 - ReconnectHandler：简化为只验证 Token → 绑定 session.UserId → 刷新 Token → 返回成功
 - 删除 PlayerEntity 创建、PlayerOnlineEvent 发布、角色加载逻辑
@@ -108,7 +108,7 @@ LoginRes 已返回 PlayerId 和 Token，RoleListReq 无参数（只需 session.U
 
 ### 新增文件
 
-### server/Game/Core/TokenSigner.cs — Game.Core
+### server/Core/TokenSigner.cs — Game.Core
 - 用途：Token 签名和验证
 - 字段：
   - `byte[] _key` — HMAC 密钥（启动时随机生成）
@@ -118,20 +118,20 @@ LoginRes 已返回 PlayerId 和 Token，RoleListReq 无参数（只需 session.U
 
 ### 修改文件
 
-### server/Game/Components/Player/Role.cs
+### server/Components/Player/Role.cs
 - 变更类型：修改
 - 新增字段：`public string LastToken { get; set; } = "";` — 最近一次重连 Token
 
-### server/Game/Components/User/UserHandler.cs
+### server/Components/User/UserHandler.cs
 - 变更类型：修改
 - LoginHandler：用 TokenSigner 替换 TokenStore 调用
 - EnterGameHandler：用 TokenSigner 生成 Token，写入 Role.LastToken
 - ReconnectHandler：用 TokenSigner 验证签名 + 检查 Role.LastToken 匹配 + 更新 LastToken
 
-### server/Game/Core/TokenStore.cs
+### server/Core/TokenStore.cs
 - 变更类型：删除（不再需要）
 
-### server/Game/Program.cs 或 Context.cs
+### server/Program.cs 或 Context.cs
 - 变更类型：修改
 - 删除 TokenStore 相关初始化代码（如有）
 
@@ -143,12 +143,12 @@ NetworkComponent.Kick() 方法已实现（发送 KickNtf + Disconnect），直�
 
 ### 修改文件
 
-### server/Game/Components/User/UserHandler.cs
+### server/Components/User/UserHandler.cs
 - 变更类型：修改
 - LoginHandler：同名用户检测到后，调用 `Context.Server.GetComponent<NetworkComponent>().Kick(oldUser.Session, LogoutReason.AnotherSession)` 踢下线
 - 同时需要清理旧用户的 PlayerEntity（如果已选角）：从 PlayerComponent 移除、发布 PlayerOfflineEvent
 
-### server/Game/Components/Player/PlayerSystem.cs
+### server/Components/Player/PlayerSystem.cs
 - 变更类型：确认
 - 确认 PlayerOfflineEvent 处理逻辑存在，能正确清理玩家数据
 

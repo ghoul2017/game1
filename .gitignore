@@ -8,12 +8,9 @@ client/.idea/
 client/UserSettings/
 client/Logs/
 
-# 服务端
-server/bin/
-server/obj/
-server/logs/
-server/.idea/
-server/.vs/
+bin/
+obj/
+logs/
 
 # Robot 项目
 robot/bin/

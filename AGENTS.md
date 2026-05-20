@@ -6,9 +6,9 @@
 
 ```bash
 # 服务端（本机 .NET 8 SDK 在 ~/.dotnet/，需用完整路径）
-~/.dotnet/dotnet build server/Game
-~/.dotnet/dotnet run --project server/Game           # 监听 0.0.0.0:9000
-~/.dotnet/dotnet run --project server/tools -- --list  # 辅助工具
+dotnet build server/Server.csproj
+dotnet run --project server/Server.csproj           # 监听 0.0.0.0:9000
+dotnet run --project tools/tools.csproj -- --list   # 辅助工具
 scripts\xlsx2csv.cmd [args]               # xlsx 转 csv
 scripts\xlsx2cs.cmd [args]                # xlsx 转 C# 配置类
 
@@ -60,7 +60,7 @@ client/Assets/Scripts/
     Scene/              # 场景对象（PlayerController, MapGround, MonsterView 等）
     Editor/             # SceneCreator
 
-server/Game/
+server/
   Program.cs            # 入口：单线程调度 → Component 挂载 + 子系统初始化
   Context.cs            # 静态上下文：Context.Server(Module), Context.Players, Context.Map 等
   Entities/Module.cs    # 根实体（所有 Module 级 Component 挂载于此）
@@ -89,7 +89,7 @@ server/Game/
     Event/              # EventBus, IEvent, IEventListener
     Network/            # NetworkComponent, RpcMethodHandler, NtfMethodHandler
   Data/Tables/          # CSV 配置表数据文件
-server/tools/           # xlsx2csv, xlsx2cs
+tools/                  # xlsx2csv, xlsx2cs
 server/scripts/         # cmd 快捷脚本
 ```
 

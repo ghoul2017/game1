@@ -28,7 +28,7 @@ robot/
 dotnet build robot/
 
 # 2. 启动服务端（另开终端）
-~/.dotnet/dotnet run --project server/Game
+dotnet run --project server/Server.csproj
 
 # 3. 运行测试
 dotnet run --project robot/
@@ -201,6 +201,6 @@ Robot 使用共享的 `ILog` + `LogManager`。未初始化时使用 `ConsoleFall
 
 - **不用 MessageRouter**：Robot 自建 Socket + 直接调用 PacketCodec，避免与客户端 Handler 耦合
 - **不用 TcpSession**：TcpSession 需要 MessageRouter，Robot 需要的是简单的请求/响应模式
-- **Compile Include 而非 ProjectReference**：与 server/Game/ 引用 shared/ 的方式一致，避免中间 .csproj
+- **Compile Include 而非 ProjectReference**：与 server/ 引用 shared/ 的方式一致，避免中间 .csproj
 - **排除 Logic/Handlers/**：客户端 Handler 依赖 UI 面板接口（ILoginPanel 等），Robot 的 RobotClientUI.GetPanel 返回 null，Handler 无实际作用
 - **每个场景独立连接**：TestRunner 为每个场景创建新 RobotSession，运行后 Disconnect，保证场景间隔离

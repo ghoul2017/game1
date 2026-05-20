@@ -14,7 +14,7 @@ namespace Client.View
             LogClientInitializer.Init();
             Debug.Log("[GameEntry] 游戏启动");
 
-            var tablesDir = Path.Combine(Application.dataPath, "..", "..", "server", "Game", "Data", "Tables");
+            var tablesDir = Path.Combine(Application.dataPath, "..", "..", "server", "Data", "Tables");
             ConfigManager.Instance.LoadAll(tablesDir);
 
             // 初始化 NetClient（已从 View 迁移到 Logic，不再依赖 MonoBehaviour）

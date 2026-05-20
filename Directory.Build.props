@@ -6,5 +6,6 @@
     <OutputPath>$(MSBuildThisFileDirectory)bin\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildThisFileDirectory)bin\**;$(MSBuildThisFileDirectory)obj\**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

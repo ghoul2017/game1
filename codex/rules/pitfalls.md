@@ -36,7 +36,7 @@ player.AddComponent(bag);
 - namespace 从 `Game.Config` 迁移到 `Shared.Core.Config`，服务端需同步改 using
 - CsvLoader 依赖 CsvHelper NuGet 包（Unity 不可用），统一用 SimpleCsvReader
 - SimpleCsvReader 需提供非泛型 `Load(Type, string)` 重载供反射调用
-- 客户端开发环境 CSV 路径：`Application.dataPath + "/../../server/Game/Data/Tables"`
+- 客户端开发环境 CSV 路径：`Application.dataPath + "/../../server/Data/Tables"`
 - 删除 .cs 文件后 Unity csproj 仍引用，需 Unity Editor 刷新重新生成
 
 ## 反常规/反直觉的代码模式

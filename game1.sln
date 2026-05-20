@@ -6,15 +6,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "server", "server", "{A1B2C3
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "client", "client", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "client\Assembly-CSharp.csproj", "{569a85a2-4aab-f951-60bb-1b6fc96e8c70}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "client\Assembly-CSharp.csproj", "{569A85A2-4AAB-F951-60BB-1B6FC96E8C70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "client\Assembly-CSharp-Editor.csproj", "{ce9fc52f-b1bc-d313-fb79-5dd1af79a2af}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "client\Assembly-CSharp-Editor.csproj", "{CE9FC52F-B1BC-D313-FB79-5DD1AF79A2AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-firstpass", "client\Assembly-CSharp-firstpass.csproj", "{a0431b3a-6e27-fb34-197e-1acde9001a0f}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-firstpass", "client\Assembly-CSharp-firstpass.csproj", "{A0431B3A-6E27-FB34-197E-1ACDE9001A0F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game", "server\Game\Game.csproj", "{206FBB24-62BA-423D-B712-F812D2A5B140}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "server\Server.csproj", "{206FBB24-62BA-423D-B712-F812D2A5B140}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tools", "server\tools\tools.csproj", "{724B020C-C6F7-4911-8CB0-CF290DF8F3E6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tools", "tools\tools.csproj", "{724B020C-C6F7-4911-8CB0-CF290DF8F3E6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "robot", "robot", "{9DAE0482-AD07-45DF-B61D-0329349AC14D}"
 EndProject

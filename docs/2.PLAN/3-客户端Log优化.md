@@ -98,7 +98,7 @@ public void Append(LogEntry entry)
 
 ## 验证
 
-- [ ] `dotnet build server/Game` 编译通过（服务端不受影响）
+- [ ] `dotnet build server/Server.csproj` 编译通过（服务端不受影响）
 - [ ] 客户端 Unity 编译通过
 - [ ] 共享模块（如 TcpSession）的日志在 Unity Console 可见
 - [ ] 日志文件写入 `Application.persistentDataPath/logs/`

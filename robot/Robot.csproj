@@ -12,6 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Remove="obj\**\*.cs" />
         <Compile Include="..\client\Assets\Scripts\Shared\**\*.cs" />
         <Compile Include="..\client\Assets\Scripts\Logic\**\*.cs" />
         <Compile Remove="..\client\Assets\Scripts\Logic\Handlers\**\*.cs" />

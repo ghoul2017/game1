@@ -28,7 +28,7 @@ public class GameSynchronizationContext : SynchronizationContext
     {
         _thread = new Thread(Loop)
         {
-            Name = "Game-Main",
+            Name = "Server-Main",
             IsBackground = true
         };
     }
