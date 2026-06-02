@@ -17,9 +17,7 @@ robot/bin/
 robot/obj/
 
 # 通用
-**/CLAUDE.local.md
 .idea/
 .vs/
 *.user
 *.suo
-.claude/settings.local.json

@@ -1,0 +1,16 @@
+# 架构知识
+
+LINEKB:ARCH:PROJECT_TYPE doc=AGENTS.md note="game1 是 2.5D RPG，Unity 客户端 + .NET 8 服务端 + Robot 自动化测试，TCP 二进制 Protobuf 通信，服务端权威。"
+LINEKB:ARCH:CLIENT_ROOT path=client/Assets/Scripts note="Unity 客户端代码根目录，分为 shared、Logic、View。"
+LINEKB:ARCH:SHARED_ROOT path=client/Assets/Scripts/shared note="双端共享代码，服务端和 Robot 通过 csproj Compile Include 引用。"
+LINEKB:ARCH:CLIENT_LOGIC path=client/Assets/Scripts/Logic note="客户端纯逻辑层，零 UnityEngine 依赖，供 Robot 引用。"
+LINEKB:ARCH:CLIENT_VIEW path=client/Assets/Scripts/View note="Unity 表现层，负责 UI、场景对象、Editor 工具和 Unity 生命周期适配。"
+LINEKB:ARCH:SERVER_ROOT path=server note=".NET 8 服务端根目录，服务端权威逻辑、组件系统、配置和持久化入口。"
+LINEKB:ARCH:SERVER_ECS doc=AGENTS.md path=server/Components note="服务端采用 Entity + Component + System；Entity 是节点，Component 放数据，System 负责方法。"
+LINEKB:ARCH:SERVER_CONTEXT path=server/Context.cs symbol=Context note="服务端静态上下文入口，提供 Context.Server 和模块便利属性。"
+LINEKB:ARCH:SERVER_THREAD path=server/Core/GameSynchronizationContext.cs symbol=GameSynchronizationContext note="服务端单线程调度入口，await 后自动回主线程，业务逻辑默认无需加锁。"
+LINEKB:ARCH:NETWORK_PROTOCOL doc=AGENTS.md note="通信包格式为小端序 [MsgId:2B][Length:4B][Payload]，Payload 使用 protobuf-net 序列化。"
+LINEKB:ARCH:ROBOT_ROOT path=robot note="独立 .NET 8 Console 自动化测试项目，通过 TCP 模拟客户端请求验证服务端逻辑。"
+LINEKB:ARCH:DOCS_ROOT path=docs note="需求、计划、TODO、模块文档、遗留问题、迁移说明和行式知识库的文档根目录。"
+LINEKB:ARCH:RULE_ENTRY path=AGENTS.md note="唯一活跃规则入口；不再读取 codex/ 或 .claude/ 作为规则来源。"
+LINEKB:ARCH:LINE_KB path=docs/line-kb note="行式知识库是辅助导航层，代码、Unity 资源、配置、测试和正式文档才是权威来源。"
