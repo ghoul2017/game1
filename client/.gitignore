@@ -4,7 +4,7 @@ Temp/
 obj/
 
 # Unity auto-generated IDE files
-# *.csproj
+*.csproj
 
 # Unity IDE
 .vs/
