@@ -14,7 +14,6 @@ namespace Client.Logic
         public bool HasError { get; private set; }
 
         public event Action OnDataChanged;
-        public event Action<bool> OnEnterGameResult;
         public event Action OnEnterMapSuccess;
 
         public void LoadRoles()

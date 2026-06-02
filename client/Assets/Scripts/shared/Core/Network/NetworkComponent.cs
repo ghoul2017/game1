@@ -9,6 +9,7 @@ using Shared.Common.Enums;
 using Shared.Core.ECS;
 using Shared.Core.Log;
 
+#nullable enable
 namespace Shared.Core.Network
 {
     /// <summary>
@@ -28,7 +29,7 @@ namespace Shared.Core.Network
         public int MaxConnections { get; set; } = 5000;
 
         private Socket? _listenSocket;
-        private readonly Dictionary<long, TcpSession> _sessionMap = new(); // sessionId -> session
+        private readonly Dictionary<long, TcpSession> _sessionMap = new(); // sessionId 到 session
 
         private const int HeartbeatTimeoutSeconds = 60;
 

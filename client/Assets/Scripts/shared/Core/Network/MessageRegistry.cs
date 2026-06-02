@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 
+#nullable enable
 namespace Shared.Core.Network
 {
     public static class MessageRegistry

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+if ! command -v rg >/dev/null 2>&1; then
+    echo "缺少 rg，无法执行客户端边界检查"
+    exit 1
+fi
+
+matches="$(rg -n "using[[:space:]]+UnityEngine|UnityEngine\\." client/Assets/Scripts/shared client/Assets/Scripts/Logic -g '*.cs' || true)"
+real_matches="$(printf "%s\n" "$matches" | awk -F: 'NF >= 3 { line=$3; sub(/^[[:space:]]*/, "", line); if (substr(line, 1, 2) != "//") print }')"
+
+if [ -n "$real_matches" ]; then
+    echo "客户端边界检查失败：Logic/shared 存在 UnityEngine 依赖"
+    printf "%s\n" "$real_matches"
+    exit 1
+fi
+
+echo "客户端边界检查通过：Logic/shared 未发现真实 UnityEngine 依赖"

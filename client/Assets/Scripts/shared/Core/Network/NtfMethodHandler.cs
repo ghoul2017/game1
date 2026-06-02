@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ProtoBuf;
 using Shared.Core.Network;
 
+#nullable enable
 namespace Shared.Core.Network
 {
     /// <summary>
@@ -31,6 +32,16 @@ namespace Shared.Core.Network
             }
 
             var ntfType = parameters[1].ParameterType;
+            if (!typeof(IMessage).IsAssignableFrom(ntfType))
+            {
+                throw new Exception($"MethodHandler 参数二必须实现IMessage：{method.Name}");
+            }
+
+            if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
+            {
+                throw new Exception($"MethodHandler 返回值必须是void或Task：{method.Name}");
+            }
+
             _method = method;
             _ntfType = ntfType;
         }
@@ -43,8 +54,9 @@ namespace Shared.Core.Network
                 ntf = Serializer.NonGeneric.Deserialize(_ntfType, ms);
 
             // 调用扩展方法
-            var task = (Task)_method.Invoke(null, new object[] { session, ntf })!;
-            await task;
+            var result = _method.Invoke(null, new object[] { session, ntf });
+            if (result is Task task)
+                await task;
 
             // 无响应
             return null;

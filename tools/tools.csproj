@@ -12,4 +12,10 @@
     <PackageReference Include="ClosedXML" Version="0.104.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\shared\Shared.csproj" />
+    <ProjectReference Include="..\client-logic\ClientLogic.csproj" />
+    <ProjectReference Include="..\server\Server.csproj" />
+  </ItemGroup>
+
 </Project>

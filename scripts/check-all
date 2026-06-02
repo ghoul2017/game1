@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+scripts/check-client-boundary
+
+if [ -f client/Assembly-CSharp.csproj ] &&
+   [ -f client/Assembly-CSharp-Editor.csproj ] &&
+   [ -f client/Assembly-CSharp-firstpass.csproj ]; then
+    dotnet build game1.sln
+else
+    echo "未发现 Unity 生成的 client/Assembly-CSharp*.csproj，跳过 game1.sln 构建。"
+    echo "请用 Unity 2021.3.26f1c1 打开 client 并执行 Assets > Refresh 后，再运行 dotnet build game1.sln。"
+    dotnet build shared/Shared.csproj
+    dotnet build client-logic/ClientLogic.csproj
+    dotnet build server/Server.csproj
+    dotnet build robot/Robot.csproj
+    dotnet build tools/tools.csproj
+fi
+
+scripts/check-protocol

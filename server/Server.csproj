@@ -26,12 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Remove="..\client\Assets\Scripts\Shared\**\bin\**\*.cs" />
-        <Compile Remove="..\client\Assets\Scripts\Shared\**\obj\**\*.cs" />
-        <Compile Include="..\client\Assets\Scripts\Shared\**\*.cs" />
-        <Compile Update="..\client\Assets\Scripts\Shared\Common\Enums\LogoutReason.cs">
-          <Link>Common\Enums\LogoutReason.cs</Link>
-        </Compile>
+        <ProjectReference Include="..\shared\Shared.csproj" />
     </ItemGroup>
 
 </Project>

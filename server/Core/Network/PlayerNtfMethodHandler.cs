@@ -33,8 +33,19 @@ public class PlayerNtfMethodHandler : AMethodHandler
             throw new Exception($"MethodHandler 参数1必须是PlayerEntity：{method.Name}");
         }
 
+        var ntfType = parameters[1].ParameterType;
+        if (!typeof(IMessage).IsAssignableFrom(ntfType))
+        {
+            throw new Exception($"MethodHandler 参数2必须实现IMessage：{method.Name}");
+        }
+
+        if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
+        {
+            throw new Exception($"MethodHandler 返回值必须是void或Task：{method.Name}");
+        }
+
         _method = method;
-        _ntfType = parameters[1].ParameterType;
+        _ntfType = ntfType;
     }
 
     public override async Task<IMessage?> HandleAsync(TcpSession session, byte[] payload)
@@ -51,8 +62,9 @@ public class PlayerNtfMethodHandler : AMethodHandler
         }
 
         // 调用扩展方法
-        var task = (Task)_method.Invoke(null, new object[] { player, ntf })!;
-        await task;
+        var result = _method.Invoke(null, new object[] { player, ntf });
+        if (result is Task task)
+            await task;
 
         // 无响应
         return null;

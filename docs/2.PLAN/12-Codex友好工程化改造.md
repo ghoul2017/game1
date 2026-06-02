@@ -78,6 +78,18 @@
 - `dotnet build game1.sln`
 - Unity Editor 验证 asmdef、StreamingAssets、Prefab/场景引用。
 
+## 完成记录
+
+2026-06-02 已落地以下内容：
+
+- 新增 `shared/Shared.csproj` 和 `client-logic/ClientLogic.csproj`，`server/Server.csproj`、`robot/Robot.csproj` 改为项目引用。
+- 新增 `Game.Shared`、`Game.ClientLogic`、`Game.ClientView` 和 `Game.ClientView.Editor` asmdef，保持 Logic/shared 无 UnityEngine 边界。
+- 新增 `scripts/check-server`、`scripts/check-robot`、`scripts/check-client-boundary`、`scripts/check-protocol`、`scripts/check-all`。
+- 客户端配置加载在 Editor 优先读取 `server/Data/Tables`，正式构建读取 `client/Assets/StreamingAssets/Tables`。
+- 新增协议一致性检查，覆盖消息标记、消息名、Handler 签名和旧 MsgId 残留。
+- 拆分 `MainPanel`、`TaskPanel` 和 `OtherPlayerManager` 的大文件，保留 Unity 入口类和 `.meta`。
+- Unity csproj 刷新风险改为通过 Unity batchmode/Editor 刷新和 `scripts/check-all` 提示处理。
+
 ## 风险
 
 - 独立项目和 asmdef 会影响 Unity 编译边界，必须小步迁移并保留 `.meta`。

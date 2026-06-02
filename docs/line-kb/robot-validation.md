@@ -1,7 +1,7 @@
 # Robot 和验证知识
 
 LINEKB:ROBOT:ROOT path=robot note="Robot 是独立 .NET 8 Console 项目，通过 TCP 模拟客户端请求验证服务端逻辑。"
-LINEKB:ROBOT:PROJECT path=robot/Robot.csproj note="Robot 项目文件，Compile Include 引用 shared/ 和 Logic/ 源码，并排除客户端 UI Handler。"
+LINEKB:ROBOT:PROJECT path=robot/Robot.csproj project=shared/Shared.csproj project=client-logic/ClientLogic.csproj note="Robot 项目文件，通过 ProjectReference 引用 Shared 和 ClientLogic，不引用 View/ 或 UnityEngine。"
 LINEKB:ROBOT:PROGRAM path=robot/Program.cs symbol=Program note="Robot 命令行入口，注册测试场景。"
 LINEKB:ROBOT:SESSION path=robot/RobotSession.cs symbol=RobotSession note="Robot TCP 连接和消息收发入口，自建 Socket，不使用 MessageRouter/TcpSession。"
 LINEKB:ROBOT:RUNNER path=robot/TestRunner.cs symbol=TestRunner note="测试场景加载、连接、执行和结果收集入口。"
@@ -20,6 +20,9 @@ LINEKB:VALIDATION:SERVER_BUILD doc=AGENTS.md command="dotnet build server/Server
 LINEKB:VALIDATION:ROBOT_BUILD doc=AGENTS.md command="dotnet build robot/Robot.csproj" note="修改 Robot 后运行。"
 LINEKB:VALIDATION:TOOLS_BUILD doc=AGENTS.md command="dotnet build tools/tools.csproj" note="修改工具后运行。"
 LINEKB:VALIDATION:SOLUTION_BUILD doc=AGENTS.md command="dotnet build game1.sln" note="修改客户端、Shared、整体结构或跨端协议后优先运行。"
+LINEKB:VALIDATION:CHECK_ALL command="scripts/check-all" note="统一验证入口，串联客户端边界、game1.sln 或分项目构建、协议一致性检查。"
+LINEKB:VALIDATION:CHECK_CLIENT_BOUNDARY command="scripts/check-client-boundary" note="检查 client/Assets/Scripts/Logic 和 shared 真实 UnityEngine 依赖。"
+LINEKB:VALIDATION:CHECK_PROTOCOL command="scripts/check-protocol" note="运行 tools check-protocol，检查消息标记、消息名、Handler 签名和旧协议残留。"
 LINEKB:VALIDATION:UNITY_VERSION doc=AGENTS.md version=2021.3.26f1c1 note="客户端 Unity 版本为 2021.3.26f1c1，URP 12.1.11。"
 LINEKB:VALIDATION:UNITY_META doc=AGENTS.md note="Unity 资源删除、移动或改名时必须同步处理对应 .meta。"
-LINEKB:VALIDATION:UNITY_CSPROJ doc=AGENTS.md note="Unity csproj 由 Editor 自动生成，新增或删除客户端文件后注意刷新。"
+LINEKB:VALIDATION:UNITY_CSPROJ command="/Applications/Unity/Hub/Editor/2021.3.26f1c1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath client -logFile /tmp/game1-unity-plan12.log" note="Unity csproj 由 Editor 自动生成，新增、删除、移动 .cs/.asmdef/资源后用 Editor Refresh 或 batchmode 刷新并检查日志。"

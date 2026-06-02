@@ -1,0 +1,17 @@
+{
+    "name": "Game.ClientView",
+    "rootNamespace": "",
+    "references": [
+        "Game.Shared",
+        "Game.ClientLogic"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

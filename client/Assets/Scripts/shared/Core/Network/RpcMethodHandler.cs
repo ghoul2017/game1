@@ -6,6 +6,7 @@ using Shared.Core;
 using ProtoBuf;
 using Shared.Core.Network;
 
+#nullable enable
 namespace Shared.Core.Network
 {
     /// <summary>
@@ -34,6 +35,21 @@ namespace Shared.Core.Network
 
             var reqType = parameters[1].ParameterType;
             var respType = parameters[2].ParameterType;
+            if (!typeof(IMessage).IsAssignableFrom(reqType))
+            {
+                throw new Exception($"MethodHandler 参数二必须实现IMessage：{method.Name}");
+            }
+
+            if (!typeof(IMessage).IsAssignableFrom(respType))
+            {
+                throw new Exception($"MethodHandler 参数三必须实现IMessage：{method.Name}");
+            }
+
+            if (method.ReturnType != typeof(Task<IMessage>))
+            {
+                throw new Exception($"MethodHandler 返回值必须是Task<IMessage>：{method.Name}");
+            }
+
             _method = method;
             _reqType = reqType;
             _respType = respType;

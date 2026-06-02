@@ -23,16 +23,21 @@ namespace Shared.Core.Event
 
         public void AutoRegister()
         {
-            AutoRegister(Assembly.GetExecutingAssembly());
+            AutoRegister(AppDomain.CurrentDomain.GetAssemblies());
         }
 
         public void AutoRegister(Assembly assembly)
+        {
+            AutoRegister(new[] { assembly });
+        }
+
+        public void AutoRegister(params Assembly[] assemblies)
         {
             var attrType = typeof(EventSubscriberAttribute);
             int syncCount = 0;
             int asyncCount = 0;
 
-            foreach (var method in assembly.GetTypes()
+            foreach (var method in assemblies.SelectMany(GetLoadableTypes)
                          .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public))
                          .Where(m => m.GetCustomAttribute(attrType) != null))
             {
@@ -90,6 +95,25 @@ namespace Shared.Core.Event
             }
 
             Log.Info($"EventSubscriber 自动注册完成，同步 {syncCount} 个，异步 {asyncCount} 个");
+        }
+
+        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        {
+            if (assembly.IsDynamic)
+                yield break;
+
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                types = ex.Types.Where(t => t != null).Cast<Type>().ToArray();
+            }
+
+            foreach (var type in types)
+                yield return type;
         }
 
         public void Publish<TEvent>(TEvent e) where TEvent : IEvent

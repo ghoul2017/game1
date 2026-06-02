@@ -14,7 +14,7 @@ namespace Client.View
             LogClientInitializer.Init();
             Debug.Log("[GameEntry] 游戏启动");
 
-            var tablesDir = Path.Combine(Application.dataPath, "..", "..", "server", "Data", "Tables");
+            var tablesDir = GetTablesDirectory();
             ConfigManager.Instance.LoadAll(tablesDir);
 
             // 初始化 NetClient（已从 View 迁移到 Logic，不再依赖 MonoBehaviour）
@@ -36,6 +36,16 @@ namespace Client.View
         private void OnDestroy()
         {
             _netClient?.Dispose();
+        }
+
+        private static string GetTablesDirectory()
+        {
+#if UNITY_EDITOR
+            var devTablesDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "server", "Data", "Tables"));
+            if (Directory.Exists(devTablesDir))
+                return devTablesDir;
+#endif
+            return Path.Combine(Application.streamingAssetsPath, "Tables");
         }
     }
 }

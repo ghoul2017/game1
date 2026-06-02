@@ -21,9 +21,14 @@ namespace Shared.Core.Network
         public void AutoRegister()
         {
             MessageRegistry.EnsureInitialized();
+            AutoRegister(AppDomain.CurrentDomain.GetAssemblies());
+        }
+
+        public void AutoRegister(params Assembly[] assemblies)
+        {
             var handlerAttrType = typeof(MessageHandlerAttribute);
 
-            foreach (var method in Assembly.GetExecutingAssembly().GetTypes()
+            foreach (var method in assemblies.SelectMany(GetLoadableTypes)
                          .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public))
                          .Where(m => m.GetCustomAttribute(handlerAttrType) != null))
             {
@@ -64,6 +69,25 @@ namespace Shared.Core.Network
             }
 
             Log.Info($"Handler 自动注册完成，共 {_handlers.Count} 个");
+        }
+
+        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        {
+            if (assembly.IsDynamic)
+                yield break;
+
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                types = ex.Types.Where(t => t != null).Cast<Type>().ToArray();
+            }
+
+            foreach (var type in types)
+                yield return type;
         }
 
         public async Task RouteAsync(TcpSession session, string messageName, byte[] payload)

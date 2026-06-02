@@ -34,9 +34,26 @@ public class PlayerRpcMethodHandler : AMethodHandler
             throw new Exception($"MethodHandler 参数1必须是PlayerEntity：{method.Name}");
         }
 
+        var reqType = parameters[1].ParameterType;
+        var respType = parameters[2].ParameterType;
+        if (!typeof(IMessage).IsAssignableFrom(reqType))
+        {
+            throw new Exception($"MethodHandler 参数2必须实现IMessage：{method.Name}");
+        }
+
+        if (!typeof(IMessage).IsAssignableFrom(respType))
+        {
+            throw new Exception($"MethodHandler 参数3必须实现IMessage：{method.Name}");
+        }
+
+        if (method.ReturnType != typeof(Task<IMessage>))
+        {
+            throw new Exception($"MethodHandler 返回值必须是Task<IMessage>：{method.Name}");
+        }
+
         _method = method;
-        _reqType = parameters[1].ParameterType;
-        _respType = parameters[2].ParameterType;
+        _reqType = reqType;
+        _respType = respType;
     }
 
     public override async Task<IMessage?> HandleAsync(TcpSession session, byte[] payload)
