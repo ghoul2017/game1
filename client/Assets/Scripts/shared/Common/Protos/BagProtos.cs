@@ -8,15 +8,15 @@ namespace Shared.Common.Protos
     #region 查询背包
 
     [ProtoContract]
+    [Message("Bag.QueryBagReq")]
     public class QueryBagReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.QueryBagReq;
     }
 
     [ProtoContract]
+    [Message("Bag.QueryBagAck")]
     public class QueryBagAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.QueryBagAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<BagItemInfo> Items { get; set; } = new List<BagItemInfo>();
         [ProtoMember(3)] public int Capacity { get; set; }
@@ -27,15 +27,15 @@ namespace Shared.Common.Protos
     #region 整理背包
 
     [ProtoContract]
+    [Message("Bag.BagTidyReq")]
     public class BagTidyReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.BagTidyReq;
     }
 
     [ProtoContract]
+    [Message("Bag.BagTidyAck")]
     public class BagTidyAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.BagTidyAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<BagItemInfo> Items { get; set; } = new List<BagItemInfo>();
     }
@@ -45,17 +45,17 @@ namespace Shared.Common.Protos
     #region 交换物品
 
     [ProtoContract]
+    [Message("Bag.BagSwapReq")]
     public class BagSwapReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.BagSwapReq;
         [ProtoMember(1)] public int Index1 { get; set; }
         [ProtoMember(2)] public int Index2 { get; set; }
     }
 
     [ProtoContract]
+    [Message("Bag.BagSwapAck")]
     public class BagSwapAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.BagSwapAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
     }
 
@@ -64,17 +64,17 @@ namespace Shared.Common.Protos
     #region 使用物品
 
     [ProtoContract]
+    [Message("Bag.BagUseItemReq")]
     public class BagUseItemReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.BagUseItemReq;
         [ProtoMember(1)] public int Index { get; set; }
         [ProtoMember(2)] public int Count { get; set; }
     }
 
     [ProtoContract]
+    [Message("Bag.BagUseItemAck")]
     public class BagUseItemAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.BagUseItemAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public int ConfigId { get; set; }
     }
@@ -84,9 +84,9 @@ namespace Shared.Common.Protos
     #region 物品变化通知
 
     [ProtoContract]
+    [Message("Bag.BagItemChangedNtf")]
     public class BagItemChangedNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.BagItemChangedNtf;
         [ProtoMember(1)] public List<BagItemInfo> ChangedItems { get; set; } = new List<BagItemInfo>();
         [ProtoMember(2)] public List<int> RemovedIndices { get; set; } = new List<int>();
     }

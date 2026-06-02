@@ -14,7 +14,7 @@ LINEKB:INDEX:001 kind=index file=architecture.md note="项目方向、分层边�
 LINEKB:INDEX:002 kind=index file=code-map.md note="目录结构、关键源文件、场景、测试和工具入口。"
 LINEKB:INDEX:003 kind=index file=server-domain.md note="服务端 ECS、玩家、地图、怪物、战斗、背包、邮件、任务、聊天和持久化规则。"
 LINEKB:INDEX:004 kind=index file=client-view.md note="客户端 Logic/View 分离、Controller、Handler、Panel、场景视图和 Unity 约束。"
-LINEKB:INDEX:005 kind=index file=protocol-config.md note="Protobuf 消息、MsgId、网络包、配置表和共享代码入口。"
+LINEKB:INDEX:005 kind=index file=protocol-config.md note="Protobuf 消息、MessageName、网络包、配置表和共享代码入口。"
 LINEKB:INDEX:006 kind=index file=robot-validation.md note="Robot 自动化测试、构建命令、验证范围和已知局限。"
 LINEKB:INDEX:007 kind=index file=docs-workflow.md note="AGENTS 单入口、需求计划、TODO、模块文档、遗留问题和规则维护入口。"
 LINEKB:INDEX:008 kind=index file=engineering-rules.md note="C# 编写约束、Git 边界、文件编码、Unity meta、脚本和历史坑点。"

@@ -1,9 +1,10 @@
 # 协议和配置知识
 
-LINEKB:PROTOCOL:PACKET doc=AGENTS.md path=client/Assets/Scripts/shared/Core/Network/PacketCodec.cs symbol=PacketCodec note="TCP 包格式为小端序 [MsgId:2B][Length:4B][Payload]。"
+LINEKB:PROTOCOL:PACKET path=client/Assets/Scripts/shared/Core/Network/PacketCodec.cs symbol=PacketCodec note="TCP 包格式为小端序 [FrameLength:4B][NameLength:2B][Name:UTF8][Payload]，FrameLength 不包含自身 4 字节。"
+LINEKB:PROTOCOL:MESSAGE_NAME_PLAN doc=docs/2.PLAN/11-字符串消息名协议.md note="协议路由从 ushort MsgId 迁移为显式字符串消息名，消息类型通过 MessageAttribute 和 MessageRegistry 注册。"
 LINEKB:PROTOCOL:MESSAGE_INTERFACE path=client/Assets/Scripts/shared/Core/Network/IMessage.cs symbol=IMessage note="共享消息接口。"
-LINEKB:PROTOCOL:MSG_ID path=client/Assets/Scripts/shared/Common/MsgIdConst.cs symbol=MsgIdConst note="消息 ID 常量入口。"
-LINEKB:PROTOCOL:MSG_ID_RANGE doc=AGENTS.md note="MsgId 分段为 10101=user，10201=misc，10301=bag，10401=mail，10501=chat，10601=task，10701=map，10801=fight。"
+LINEKB:PROTOCOL:MESSAGE_ATTRIBUTE path=client/Assets/Scripts/shared/Core/Network/MessageAttribute.cs symbol=MessageAttribute note="协议类使用 [Message(\"模块.消息名\")] 声明显式稳定消息名。"
+LINEKB:PROTOCOL:MESSAGE_REGISTRY path=client/Assets/Scripts/shared/Core/Network/MessageRegistry.cs symbol=MessageRegistry note="消息注册表扫描 IMessage 类型，建立 name->Type 和 Type->name 映射并校验重复或缺失消息名。"
 LINEKB:PROTOCOL:PROTOS path=client/Assets/Scripts/shared/Common/Protos note="Protobuf 消息定义目录，消息命名使用 Req、Res/Ack、Ntf 后缀。"
 LINEKB:PROTOCOL:NAMING doc=AGENTS.md note="消息命名为 *Req 请求、*Res/*Ack 响应、*Ntf 通知。"
 LINEKB:PROTOCOL:USER_PROTOS path=client/Assets/Scripts/shared/Common/Protos/UserProtos.cs note="用户和角色相关协议定义。"

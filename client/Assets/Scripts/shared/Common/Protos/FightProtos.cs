@@ -7,9 +7,9 @@ namespace Shared.Common.Protos
     #region 使用技能
 
     [ProtoContract]
+    [Message("Fight.UseSkillReq")]
     public class UseSkillReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.UseSkillReq;
         [ProtoMember(1)] public int SkillId { get; set; }
         [ProtoMember(2)] public int X { get; set; }
         [ProtoMember(3)] public int Y { get; set; }
@@ -26,9 +26,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
+    [Message("Fight.UseSkillAck")]
     public class UseSkillAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.UseSkillAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public long AttackerId { get; set; }
         [ProtoMember(3)] public int SkillId { get; set; }
@@ -55,9 +55,9 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
+    [Message("Fight.HpChangedNtf")]
     public class HpChangedNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.HpChangedNtf;
         [ProtoMember(1)] public long ObjectId { get; set; }
         [ProtoMember(2)] public int DeltaHp { get; set; }
         [ProtoMember(3)] public int Hp { get; set; }
@@ -69,9 +69,9 @@ namespace Shared.Common.Protos
     #region 被击杀通知
 
     [ProtoContract]
+    [Message("Fight.KilledByNtf")]
     public class KilledByNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.KilledByNtf;
         [ProtoMember(1)] public long KillerId { get; set; }
         [ProtoMember(2)] public string KillerName { get; set; } = "";
         [ProtoMember(3)] public bool IsMonster { get; set; }
@@ -90,16 +90,16 @@ namespace Shared.Common.Protos
     }
 
     [ProtoContract]
+    [Message("Fight.SetPkModeReq")]
     public class SetPkModeReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.SetPkModeReq;
         [ProtoMember(1)] public int PkMode { get; set; }
     }
 
     [ProtoContract]
+    [Message("Fight.PkModeChangedNtf")]
     public class PkModeChangedNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.PkModeChangedNtf;
         [ProtoMember(1)] public int PkMode { get; set; }
     }
 
@@ -111,9 +111,9 @@ namespace Shared.Common.Protos
     /// 经验变化通知
     /// </summary>
     [ProtoContract]
+    [Message("Fight.ExpChangedNtf")]
     public class ExpChangedNtf : IMessage
     {
-        ushort IMessage.MsgId => MsgIdConst.ExpChangedNtf;
         [ProtoMember(1)] public int Exp { get; set; }
 
         [ProtoMember(2)] public int Level { get; set; }
@@ -123,9 +123,9 @@ namespace Shared.Common.Protos
     /// 金币变化通知
     /// </summary>
     [ProtoContract]
+    [Message("Fight.GoldChangedNtf")]
     public class GoldChangedNtf : IMessage
     {
-        ushort IMessage.MsgId => MsgIdConst.GoldChangedNtf;
         [ProtoMember(1)] public int Gold { get; set; }
     }
 
@@ -133,9 +133,9 @@ namespace Shared.Common.Protos
     /// 升级通知
     /// </summary>
     [ProtoContract]
+    [Message("Fight.LevelUpNtf")]
     public class LevelUpNtf : IMessage
     {
-        ushort IMessage.MsgId => MsgIdConst.LevelUpNtf;
         [ProtoMember(1)] public int Level { get; set; }
 
         [ProtoMember(2)] public int MaxHp { get; set; }
@@ -147,9 +147,9 @@ namespace Shared.Common.Protos
     /// 物品获得通知
     /// </summary>
     [ProtoContract]
+    [Message("Fight.ItemGainNtf")]
     public class ItemGainNtf : IMessage
     {
-        ushort IMessage.MsgId => MsgIdConst.ItemGainNtf;
         [ProtoMember(1)] public int ConfigId { get; set; }
 
         [ProtoMember(2)] public int Count { get; set; }
@@ -159,9 +159,9 @@ namespace Shared.Common.Protos
     /// MP变化通知
     /// </summary>
     [ProtoContract]
+    [Message("Fight.MpChangedNtf")]
     public class MpChangedNtf : IMessage
     {
-        ushort IMessage.MsgId => MsgIdConst.MpChangedNtf;
         [ProtoMember(1)] public long ObjectId { get; set; }
 
         [ProtoMember(2)] public int DeltaMp { get; set; }

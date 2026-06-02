@@ -7,15 +7,15 @@ namespace Shared.Common.Protos
     #region 查询任务列表
 
     [ProtoContract]
+    [Message("Task.QueryTaskListReq")]
     public class QueryTaskListReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.QueryTaskListReq;
     }
 
     [ProtoContract]
+    [Message("Task.QueryTaskListAck")]
     public class QueryTaskListAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.QueryTaskListAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
     }
@@ -25,16 +25,16 @@ namespace Shared.Common.Protos
     #region 接取任务
 
     [ProtoContract]
+    [Message("Task.TaskAcceptReq")]
     public class TaskAcceptReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.TaskAcceptReq;
         [ProtoMember(1)] public int TaskId { get; set; }
     }
 
     [ProtoContract]
+    [Message("Task.TaskAcceptAck")]
     public class TaskAcceptAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.TaskAcceptAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public TaskInfo Task { get; set; } = new TaskInfo();
     }
@@ -44,16 +44,16 @@ namespace Shared.Common.Protos
     #region 提交任务
 
     [ProtoContract]
+    [Message("Task.TaskSubmitReq")]
     public class TaskSubmitReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.TaskSubmitReq;
         [ProtoMember(1)] public int TaskId { get; set; }
     }
 
     [ProtoContract]
+    [Message("Task.TaskSubmitAck")]
     public class TaskSubmitAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.TaskSubmitAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public int TaskId { get; set; }
         [ProtoMember(3)] public List<TaskRewardInfo> Rewards { get; set; } = new List<TaskRewardInfo>();
@@ -64,16 +64,16 @@ namespace Shared.Common.Protos
     #region 放弃任务
 
     [ProtoContract]
+    [Message("Task.TaskGiveUpReq")]
     public class TaskGiveUpReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.TaskGiveUpReq;
         [ProtoMember(1)] public int TaskId { get; set; }
     }
 
     [ProtoContract]
+    [Message("Task.TaskGiveUpAck")]
     public class TaskGiveUpAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.TaskGiveUpAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public int TaskId { get; set; }
     }
@@ -83,9 +83,9 @@ namespace Shared.Common.Protos
     #region 任务变更通知
 
     [ProtoContract]
+    [Message("Task.TaskChangedNtf")]
     public class TaskChangedNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.TaskChangedNtf;
         [ProtoMember(1)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
     }
 

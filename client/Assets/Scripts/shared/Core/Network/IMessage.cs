@@ -8,7 +8,6 @@ namespace Shared.Core.Network
     /// </summary>
     public interface IMessage
     {
-        ushort MsgId { get; }
     }
 
     /// <summary>

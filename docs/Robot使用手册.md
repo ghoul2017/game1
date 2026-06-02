@@ -193,7 +193,7 @@ Robot 使用共享的 `ILog` + `LogManager`。未初始化时使用 `ConsoleFall
 |------|---------|
 | 连接超时 | 服务端是否运行？端口是否正确？ |
 | 握手失败 | 检查服务端 NetworkComponent 是否正常监听 |
-| 等待响应超时 | 消息 MsgId 是否匹配？服务端 Handler 是否正确注册？ |
+| 等待响应超时 | 消息 MessageName 是否匹配？服务端 Handler 是否正确注册？ |
 | 登录失败 | 账号密码是否正确？数据库是否有该用户？ |
 | 编译失败 | `dotnet build robot/` 检查错误，确认 .NET 8 SDK 已安装 |
 

@@ -57,14 +57,15 @@ namespace Shared.Core.Network
 
         public void Send(IMessage msg)
         {
-            Send(msg.MsgId, msg.Serialize());
+            var messageName = MessageRegistry.GetName(msg.GetType());
+            Send(messageName, msg.Serialize());
         }
 
-        public void Send(ushort msgId, byte[] payload)
+        public void Send(string messageName, byte[] payload)
         {
             if (!IsConnected) return;
 
-            var packet = PacketCodec.Encode(msgId, payload);
+            var packet = PacketCodec.Encode(messageName, payload);
             try
             {
                 lock (_sendLock)
@@ -163,19 +164,19 @@ namespace Shared.Core.Network
                 // 收到任何消息都更新活跃时间
                 UpdateActiveTime();
 
-                var msgId = result.MsgId;
+                var messageName = result.MessageName;
                 var payload = result.Payload;
                 var self = this;
                 if (PostToMainThread != null)
                 {
                     PostToMainThread(() =>
                     {
-                        _ = _router.RouteAsync(self, msgId, payload);
+                        _ = _router.RouteAsync(self, messageName, payload);
                     });
                 }
                 else
                 {
-                    _ = _router.RouteAsync(self, msgId, payload);
+                    _ = _router.RouteAsync(self, messageName, payload);
                 }
             }
 

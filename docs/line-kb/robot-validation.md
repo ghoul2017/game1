@@ -11,7 +11,7 @@ LINEKB:ROBOT:UI path=robot/RobotClientUI.cs symbol=RobotClientUI note="IClientUI
 LINEKB:ROBOT:LOGIN_TEST path=robot/LoginTest.cs symbol=LoginTest note="示例测试场景，执行握手、登录和角色列表验证。"
 LINEKB:ROBOT:SEND_WAIT doc=AGENTS.md symbol=SendAndWaitAsync note="请求/响应使用 await Session.SendAndWaitAsync<TRes>(request)。"
 LINEKB:ROBOT:WAIT_NTF doc=AGENTS.md symbol=WaitForMsgAsync note="等待服务端推送使用 await Session.WaitForMsgAsync<T>(timeoutMs)。"
-LINEKB:ROBOT:LIMIT_SINGLE_HANDLER doc=AGENTS.md note="同一 MsgId 同时只能有一个等待者，并发请求同类型响应会覆盖，测试步骤应串行执行。"
+LINEKB:ROBOT:LIMIT_SINGLE_HANDLER doc=AGENTS.md note="同一 MessageName 同时只能有一个等待者，并发请求同类型响应会覆盖，测试步骤应串行执行。"
 LINEKB:ROBOT:SCENARIO_RULE doc=AGENTS.md note="Robot 测试场景文件放 robot/ 根目录，命名 XxxTest.cs，类名 XxxTest，继承 TestScenario，命名空间固定为 Robot。"
 LINEKB:ROBOT:REGISTER_RULE doc=AGENTS.md note="新增测试场景后必须在 Program.cs 注册。"
 LINEKB:ROBOT:FORBIDDEN_VIEW doc=AGENTS.md note="Robot 禁止引用 View/ 或 UnityEngine 相关代码，禁止修改 Shared 代码以适应 Robot。"

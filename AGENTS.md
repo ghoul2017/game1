@@ -40,7 +40,7 @@
 
 ## 工程约束
 
-- 项目是 Unity 客户端 + .NET 8 服务端 + Robot 自动化测试，TCP 二进制 Protobuf 通信，服务端权威。
+- 项目是 Unity 客户端 + .NET 8 服务端 + Robot 自动化测试，TCP 二进制 Protobuf 通信，服务端权威；包格式为小端序 `[FrameLength:4B][NameLength:2B][Name:UTF8][Payload]`，协议类使用 `[Message("模块.消息名")]` 声明显式字符串消息名。
 - 客户端 `Logic/` 零 `UnityEngine` 依赖；`View/` 可依赖 Logic，Logic 不可依赖 View。
 - 服务端采用 Entity + Component + System；Component 放数据，System 负责方法。
 - Shared 代码供客户端、服务端、Robot 共用，避免 Unity 不支持的新 C# / .NET API；客户端禁止引用 `server/` 业务代码。

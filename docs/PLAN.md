@@ -24,10 +24,11 @@ server/
 │   │   ├── TcpServer.cs              # TCP 监听 (BackgroundService)
 │   │   ├── TcpSession.cs             # 客户端会话
 │   │   ├── IMessageHandler.cs        # Handler 接口
-│   │   ├── MessageRouter.cs          # 消息路由 (MsgId → Handler)
+│   │   ├── MessageRouter.cs          # 消息路由 (MessageName → Handler)
 │   │   ├── PacketCodec.cs            # 编解码 (消息头 + Protobuf 体)
 │   │   ├── Messages/                 # 消息定义
-│   │   │   ├── MsgId.cs              # 消息 ID 常量
+│   │   │   ├── MessageAttribute.cs   # 消息名标记
+│   │   │   ├── MessageRegistry.cs    # 消息名注册表
 │   │   │   ├── HandshakeReq.cs
 │   │   │   └── HandshakeResp.cs
 │   │   └── Handlers/                 # Handler 实现
@@ -85,10 +86,11 @@ server/
 ## 协议格式
 
 ```
-[MsgId:2B][Length:4B][Payload: Length 字节的 Protobuf 数据]
+[FrameLength:4B][NameLength:2B][Name:UTF8][Payload]
 ```
-- MsgId: UInt16, 小端序 (x86 原生, Unity 端一致)
-- Length: Int32, 小端序
+- FrameLength: Int32，小端序，不包含自身 4 字节
+- NameLength: UInt16，小端序，消息名 UTF-8 字节长度
+- Name: 显式稳定消息名，例如 `User.LoginReq`
 - Payload: protobuf-net 序列化的消息体
 
 ---
@@ -106,24 +108,24 @@ class TcpServer : BackgroundService
 // TcpSession: 代表一个客户端连接
 class TcpSession : IDisposable
     - SessionId: ulong
-    - Send(ushort msgId, byte[] payload)
+    - Send(IMessage msg)
+    - Send(string messageName, byte[] payload)
     - Disconnect()
     - 内部: 接收循环 → PacketCodec 解包 → MessageRouter 分发
 
 // 消息处理器接口
 interface IMessageHandler
-    - MsgId: ushort
     - HandleAsync(TcpSession, byte[] payload) → byte[]
 
 // 消息路由器
 class MessageRouter
     - Register(IMessageHandler)
-    - RouteAsync(TcpSession, ushort msgId, byte[] payload)
+    - RouteAsync(TcpSession, string messageName, byte[] payload)
 
 // 编解码 (粘包处理)
 class PacketCodec
-    - Encode(ushort msgId, byte[] payload) → byte[]
-    - TryDecode(ReadOnlySpan<byte>) → (msgId, payload, consumed)
+    - Encode(string messageName, byte[] payload) → byte[]
+    - TryDecode(ReadOnlySpan<byte>) → (messageName, payload, consumed)
 ```
 
 ### 读表模块
@@ -188,7 +190,7 @@ class RedisManager
 - `TcpServer.cs` — TCP 监听 BackgroundService
 - `IMessageHandler.cs` — Handler 接口
 - `MessageRouter.cs` — 消息路由
-- `Messages/MsgId.cs` — 消息 ID 常量
+- `MessageAttribute.cs` / `MessageRegistry.cs` — 消息名声明和注册
 - Protobuf 消息类 (HandshakeReq/Resp)
 - `HandshakeHandler` — 示例 Handler
 

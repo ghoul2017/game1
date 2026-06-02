@@ -12,7 +12,7 @@ namespace Shared.Core.Network
     public class MessageRouter
     {
         private static readonly ILog Log = LogManager.GetLogger<MessageRouter>();
-        private readonly Dictionary<ushort, IMessageHandler> _handlers = new();
+        private readonly Dictionary<string, IMessageHandler> _handlers = new();
 
 
         /// <summary>
@@ -20,6 +20,7 @@ namespace Shared.Core.Network
         /// </summary>
         public void AutoRegister()
         {
+            MessageRegistry.EnsureInitialized();
             var handlerAttrType = typeof(MessageHandlerAttribute);
 
             foreach (var method in Assembly.GetExecutingAssembly().GetTypes()
@@ -52,25 +53,24 @@ namespace Shared.Core.Network
                     continue;
                 }
 
-                // 获取 MsgId（需要创建实例，因为 MsgId 是实例属性）
-                var reqInstance = (IMessage?)Activator.CreateInstance(reqType);
-                var msgId = reqInstance?.MsgId ?? 0;
-
+                var messageName = MessageRegistry.GetName(reqType);
+                if (_handlers.ContainsKey(messageName))
+                    throw new InvalidOperationException($"重复注册消息 Handler: {messageName}, {method.Name}");
 
                 var handler = (AMethodHandler)Activator.CreateInstance(handlerType)!;
                 handler.Init(method);
-                _handlers[msgId] = handler;
-                Log.Info($"自动注册Handler({handlerType.Name}): {method.Name} -> MsgId:{msgId}");
+                _handlers[messageName] = handler;
+                Log.Info($"自动注册Handler({handlerType.Name}): {method.Name} -> MessageName:{messageName}");
             }
 
             Log.Info($"Handler 自动注册完成，共 {_handlers.Count} 个");
         }
 
-        public async Task RouteAsync(TcpSession session, ushort msgId, byte[] payload)
+        public async Task RouteAsync(TcpSession session, string messageName, byte[] payload)
         {
-            if (!_handlers.TryGetValue(msgId, out var handler))
+            if (!_handlers.TryGetValue(messageName, out var handler))
             {
-                Log.Warn($"未注册的消息ID: {msgId}");
+                Log.Warn($"未注册的消息: {messageName}");
                 return;
             }
 
@@ -82,7 +82,7 @@ namespace Shared.Core.Network
             }
             catch (Exception ex)
             {
-                Log.Error($"处理消息 {msgId} 异常",ex);
+                Log.Error($"处理消息 {messageName} 异常", ex);
             }
         }
     }

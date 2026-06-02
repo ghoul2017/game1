@@ -17,18 +17,18 @@ namespace Shared.Common.Protos
     #region 发送聊天
 
     [ProtoContract]
+    [Message("Chat.ChatReq")]
     public class ChatReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.ChatReq;
         [ProtoMember(1)] public int Channel { get; set; }
         [ProtoMember(2)] public string Content { get; set; } = "";
         [ProtoMember(3)] public string TargetName { get; set; } = "";
     }
 
     [ProtoContract]
+    [Message("Chat.ChatAck")]
     public class ChatAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.ChatAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
     }
 
@@ -37,9 +37,9 @@ namespace Shared.Common.Protos
     #region 聊天消息通知
 
     [ProtoContract]
+    [Message("Chat.ChatNtf")]
     public class ChatNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.ChatNtf;
         [ProtoMember(1)] public int Channel { get; set; }
         [ProtoMember(2)] public long SenderId { get; set; }
         [ProtoMember(3)] public string SenderName { get; set; } = "";
@@ -52,9 +52,9 @@ namespace Shared.Common.Protos
     #region 系统广播通知
 
     [ProtoContract]
+    [Message("Chat.SystemChatNtf")]
     public class SystemChatNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.SystemChatNtf;
         [ProtoMember(1)] public string Content { get; set; } = "";
         [ProtoMember(2)] public long SendTime { get; set; }
     }

@@ -7,15 +7,15 @@ namespace Shared.Common.Protos
     #region 查询邮件列表
 
     [ProtoContract]
+    [Message("Mail.QueryMailListReq")]
     public class QueryMailListReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.QueryMailListReq;
     }
 
     [ProtoContract]
+    [Message("Mail.QueryMailListAck")]
     public class QueryMailListAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.QueryMailListAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<MailInfo> Mails { get; set; } = new List<MailInfo>();
     }
@@ -25,16 +25,16 @@ namespace Shared.Common.Protos
     #region 标记已读
 
     [ProtoContract]
+    [Message("Mail.MailReadReq")]
     public class MailReadReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.MailReadReq;
         [ProtoMember(1)] public List<long> MailIds { get; set; } = new List<long>();
     }
 
     [ProtoContract]
+    [Message("Mail.MailReadAck")]
     public class MailReadAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.MailReadAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<long> ReadMailIds { get; set; } = new List<long>();
     }
@@ -44,16 +44,16 @@ namespace Shared.Common.Protos
     #region 领取附件
 
     [ProtoContract]
+    [Message("Mail.MailGetItemReq")]
     public class MailGetItemReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.MailGetItemReq;
         [ProtoMember(1)] public List<long> MailIds { get; set; } = new List<long>();
     }
 
     [ProtoContract]
+    [Message("Mail.MailGetItemAck")]
     public class MailGetItemAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.MailGetItemAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<long> ClaimedMailIds { get; set; } = new List<long>();
         [ProtoMember(3)] public List<MailAttachmentInfo> Items { get; set; } = new List<MailAttachmentInfo>();
@@ -64,16 +64,16 @@ namespace Shared.Common.Protos
     #region 删除邮件
 
     [ProtoContract]
+    [Message("Mail.MailDeleteReq")]
     public class MailDeleteReq : IMessage
     {
-        public ushort MsgId => MsgIdConst.MailDeleteReq;
         [ProtoMember(1)] public List<long> MailIds { get; set; } = new List<long>();
     }
 
     [ProtoContract]
+    [Message("Mail.MailDeleteAck")]
     public class MailDeleteAck : IMessage
     {
-        public ushort MsgId => MsgIdConst.MailDeleteAck;
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<long> DeletedMailIds { get; set; } = new List<long>();
     }
@@ -83,9 +83,9 @@ namespace Shared.Common.Protos
     #region 新邮件通知
 
     [ProtoContract]
+    [Message("Mail.MailNewNtf")]
     public class MailNewNtf : IMessage
     {
-        public ushort MsgId => MsgIdConst.MailNewNtf;
         [ProtoMember(1)] public MailInfo Mail { get; set; } = new MailInfo();
     }
 

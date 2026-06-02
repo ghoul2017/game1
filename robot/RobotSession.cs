@@ -23,8 +23,8 @@ namespace Robot
         private readonly byte[] _recvBuffer = new byte[8192];
         private readonly MemoryStream _packetBuffer = new();
 
-        /// <summary>消息处理器：msgId → 处理 payload 的回调</summary>
-        private readonly ConcurrentDictionary<ushort, Action<byte[]>> _handlers = new();
+        /// <summary>消息处理器：消息名 → 处理 payload 的回调</summary>
+        private readonly ConcurrentDictionary<string, Action<byte[]>> _handlers = new();
 
         public bool IsConnected { get; private set; }
         public long UserId { get; set; }
@@ -53,7 +53,8 @@ namespace Robot
             if (!IsConnected || _stream == null)
                 throw new InvalidOperationException("未连接");
 
-            var packet = PacketCodec.Encode(msg.MsgId, msg.Serialize());
+            var messageName = MessageRegistry.GetName(msg.GetType());
+            var packet = PacketCodec.Encode(messageName, msg.Serialize());
             await _stream.WriteAsync(packet, 0, packet.Length);
         }
 
@@ -71,10 +72,10 @@ namespace Robot
             if (!IsConnected)
                 throw new InvalidOperationException("未连接");
 
-            var msgId = Activator.CreateInstance<T>().MsgId;
+            var messageName = MessageRegistry.GetName(typeof(T));
             var tcs = new TaskCompletionSource<T>();
 
-            _handlers[msgId] = payload =>
+            _handlers[messageName] = payload =>
             {
                 try
                 {
@@ -91,7 +92,7 @@ namespace Robot
             using var cts = new CancellationTokenSource(timeoutMs);
             cts.Token.Register(() =>
             {
-                _handlers.TryRemove(msgId, out _);
+                _handlers.TryRemove(messageName, out _);
                 tcs.TrySetCanceled();
             });
 
@@ -101,7 +102,7 @@ namespace Robot
             }
             catch (TaskCanceledException)
             {
-                throw new TimeoutException($"等待消息 {typeof(T).Name} 超时 ({timeoutMs}ms)");
+                throw new TimeoutException($"等待消息 {messageName} 超时 ({timeoutMs}ms)");
             }
         }
 
@@ -169,13 +170,13 @@ namespace Robot
 
                 offset += result.Consumed;
 
-                if (_handlers.TryGetValue(result.MsgId, out var handler))
+                if (_handlers.TryGetValue(result.MessageName, out var handler))
                 {
                     handler(result.Payload);
                 }
                 else
                 {
-                    Log.Warn($"Robot 未处理的消息 MsgId:{result.MsgId}");
+                    Log.Warn($"Robot 未处理的消息: {result.MessageName}");
                 }
             }
 

@@ -30,9 +30,6 @@ namespace Shared.Core.Network
     public abstract class MessageHandler<TReq> : IMessageHandler
         where TReq : class, IMessage, new()
     {
-        /// <summary>从 Req 类型自动获取 MsgId</summary>
-        public ushort ReqMsgId { get; } = new TReq().MsgId;
-
         /// <summary>业务逻辑 — 接收反序列化后的请求，返回响应（或 null 表示不回复）</summary>
         protected abstract Task<IMessage?> ExecuteAsync(TcpSession session, TReq req);
 
