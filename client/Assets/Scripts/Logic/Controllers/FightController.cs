@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -12,37 +13,52 @@ namespace Client.Logic
         public event Action OnPkModeChanged;
         public event Action<KilledByNtf> OnKilledBy;
 
-        public void UseSkill(int skillId, int x, int y, long targetId)
+        public async Task UseSkill(int skillId, int x, int y, long targetId)
         {
             var req = new UseSkillReq();
             req.SkillId = skillId;
             req.X = x;
             req.Y = y;
             req.TargetId = targetId;
-            NetClient.Instance.Send(req);
+            try
+            {
+                UseSkillAck ack = await NetClient.Instance.CallAsync<UseSkillAck>(req);
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("使用技能失败: " + ex.Message);
+            }
         }
 
-        public void TogglePkMode()
+        public async Task TogglePkMode()
         {
             int nextMode = (GameData.CurrentPkMode + 1) % 4;
             var req = new SetPkModeReq();
             req.PkMode = nextMode;
-            NetClient.Instance.Send(req);
+            try
+            {
+                PkModeChangedNtf ntf = await NetClient.Instance.CallAsync<PkModeChangedNtf>(req);
+                GameData.CurrentPkMode = ntf.PkMode;
+                OnPkModeChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("切换PK模式失败: " + ex.Message);
+            }
         }
 
-        public void RespawnAtCurrentMap()
+        public async Task RespawnAtCurrentMap()
         {
             var mapData = GameData.CurrentMap;
             if (mapData != null)
             {
-                var req = new EnterMapReq();
-                req.MapCfgId = mapData.MapCfgId;
-                req.Line = mapData.Line;
-                NetClient.Instance.Send(req);
+                await MapController.Instance.EnterMap(mapData.MapCfgId, mapData.Line);
             }
         }
 
-        public void HandleUseSkillAck(UseSkillAck ack)
+        public void ApplySkillEffect(UseSkillAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
@@ -67,10 +83,5 @@ namespace Client.Logic
             OnKilledBy?.Invoke(ntf);
         }
 
-        public void HandlePkModeChangedNtf(PkModeChangedNtf ntf)
-        {
-            GameData.CurrentPkMode = ntf.PkMode;
-            OnPkModeChanged?.Invoke();
-        }
     }
 }

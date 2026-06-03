@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -13,9 +14,24 @@ namespace Client.Logic
 
         public event Action OnDataChanged;
 
-        public void QueryTaskList()
+        public async Task QueryTaskList()
         {
-            NetClient.Instance.Send(new QueryTaskListReq());
+            try
+            {
+                QueryTaskListAck ack = await NetClient.Instance.CallAsync<QueryTaskListAck>(new QueryTaskListReq());
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                Tasks = ack.Tasks ?? new List<TaskInfo>();
+                SelectedTaskId = -1;
+                OnDataChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("查询任务失败: " + ex.Message);
+            }
         }
 
         public void SelectTask(int taskId)
@@ -31,85 +47,85 @@ namespace Client.Logic
             return null;
         }
 
-        public void AcceptTask(int taskId)
+        public async Task AcceptTask(int taskId)
         {
-            NetClient.Instance.Send(new TaskAcceptReq { TaskId = taskId });
-        }
-
-        public void SubmitTask(int taskId)
-        {
-            NetClient.Instance.Send(new TaskSubmitReq { TaskId = taskId });
-        }
-
-        public void GiveUpTask(int taskId)
-        {
-            NetClient.Instance.Send(new TaskGiveUpReq { TaskId = taskId });
-        }
-
-        public void HandleQueryTaskListAck(QueryTaskListAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            try
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
+                TaskAcceptAck ack = await NetClient.Instance.CallAsync<TaskAcceptAck>(
+                    new TaskAcceptReq { TaskId = taskId });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                if (ack.Task != null)
+                {
+                    Tasks.Add(ack.Task);
+                    OnDataChanged?.Invoke();
+                    Context.UI?.ShowToast("接取任务成功");
+                }
             }
-            Tasks = ack.Tasks ?? new List<TaskInfo>();
-            SelectedTaskId = -1;
-            OnDataChanged?.Invoke();
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("接取任务失败: " + ex.Message);
+            }
         }
 
-        public void HandleTaskAcceptAck(TaskAcceptAck ack)
+        public async Task SubmitTask(int taskId)
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            try
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
-            }
-            if (ack.Task != null)
-            {
-                Tasks.Add(ack.Task);
+                TaskSubmitAck ack = await NetClient.Instance.CallAsync<TaskSubmitAck>(
+                    new TaskSubmitReq { TaskId = taskId });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
+                if (SelectedTaskId == ack.TaskId)
+                    SelectedTaskId = -1;
                 OnDataChanged?.Invoke();
-                Context.UI?.ShowToast("接取任务成功");
+
+                if (ack.Rewards != null && ack.Rewards.Count > 0)
+                {
+                    var parts = new List<string>();
+                    foreach (var r in ack.Rewards)
+                        parts.Add("物品#" + r.ConfigId + " x" + r.Count);
+                    Context.UI?.ShowToast("提交成功，获得: " + string.Join(", ", parts.ToArray()));
+                }
+                else
+                {
+                    Context.UI?.ShowToast("提交成功");
+                }
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("提交任务失败: " + ex.Message);
             }
         }
 
-        public void HandleTaskSubmitAck(TaskSubmitAck ack)
+        public async Task GiveUpTask(int taskId)
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            try
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
+                TaskGiveUpAck ack = await NetClient.Instance.CallAsync<TaskGiveUpAck>(
+                    new TaskGiveUpReq { TaskId = taskId });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
+                if (SelectedTaskId == ack.TaskId)
+                    SelectedTaskId = -1;
+                OnDataChanged?.Invoke();
+                Context.UI?.ShowToast("已放弃任务");
             }
-            Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
-            if (SelectedTaskId == ack.TaskId)
-                SelectedTaskId = -1;
-            OnDataChanged?.Invoke();
-
-            if (ack.Rewards != null && ack.Rewards.Count > 0)
+            catch (Exception ex)
             {
-                var parts = new List<string>();
-                foreach (var r in ack.Rewards)
-                    parts.Add("物品#" + r.ConfigId + " x" + r.Count);
-                Context.UI?.ShowToast("提交成功，获得: " + string.Join(", ", parts.ToArray()));
+                Context.UI?.ShowToast("放弃任务失败: " + ex.Message);
             }
-            else
-            {
-                Context.UI?.ShowToast("提交成功");
-            }
-        }
-
-        public void HandleTaskGiveUpAck(TaskGiveUpAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
-            }
-            Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
-            if (SelectedTaskId == ack.TaskId)
-                SelectedTaskId = -1;
-            OnDataChanged?.Invoke();
-            Context.UI?.ShowToast("已放弃任务");
         }
 
         public void HandleTaskChangedNtf(TaskChangedNtf ntf)

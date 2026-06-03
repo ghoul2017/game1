@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -34,7 +35,7 @@ namespace Client.Logic
             OnDataChanged?.Invoke();
         }
 
-        public void CreateRole(string name, int job)
+        public async Task CreateRole(string name, int job)
         {
             if (string.IsNullOrEmpty(name))
             {
@@ -52,54 +53,68 @@ namespace Client.Logic
             }
             StatusText = "正在创建角色...";
             HasError = false;
-            NetClient.Instance.Send(new CreateRoleReq { Name = name, Job = job });
+            OnDataChanged?.Invoke();
+
+            try
+            {
+                CreateRoleRes res = await NetClient.Instance.CallAsync<CreateRoleRes>(
+                    new CreateRoleReq { Name = name, Job = job });
+
+                if (string.IsNullOrEmpty(res.ErrorMessage))
+                {
+                    var info = res.Role;
+                    Roles.Add(new RoleData
+                    {
+                        RoleId = info.RoleId,
+                        Name = info.Name,
+                        Level = info.Level,
+                        Job = GameData.GetJobName(info.Job)
+                    });
+                    SelectedRoleIndex = Roles.Count - 1;
+                    StatusText = string.Format("已创建并选择: {0} ({1})", info.Name, GameData.GetJobName(info.Job));
+                    HasError = false;
+                }
+                else
+                {
+                    StatusText = res.ErrorMessage;
+                    HasError = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText = "创建角色失败: " + ex.Message;
+                HasError = true;
+            }
+            OnDataChanged?.Invoke();
         }
 
-        public void EnterGame()
+        public async Task EnterGame()
         {
             if (SelectedRoleIndex < 0 || SelectedRoleIndex >= Roles.Count) return;
             var role = Roles[SelectedRoleIndex];
             StatusText = "正在进入游戏...";
             HasError = false;
             OnDataChanged?.Invoke();
-            NetClient.Instance.Send(new EnterGameReq { RoleId = role.RoleId });
-        }
-
-        public void HandleCreateRoleRes(CreateRoleRes res)
-        {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
+            try
             {
-                var info = res.Role;
-                Roles.Add(new RoleData
+                EnterGameRes res = await NetClient.Instance.CallAsync<EnterGameRes>(
+                    new EnterGameReq { RoleId = role.RoleId });
+
+                if (string.IsNullOrEmpty(res.ErrorMessage))
                 {
-                    RoleId = info.RoleId,
-                    Name = info.Name,
-                    Level = info.Level,
-                    Job = GameData.GetJobName(info.Job)
-                });
-                SelectedRoleIndex = Roles.Count - 1;
-                StatusText = string.Format("已创建并选择: {0} ({1})", info.Name, GameData.GetJobName(info.Job));
-                HasError = false;
+                    GameData.Token = res.Token;
+                    StatusText = "正在进入游戏...";
+                    HasError = false;
+                }
+                else
+                {
+                    StatusText = res.ErrorMessage;
+                    HasError = true;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                StatusText = res.ErrorMessage;
-                HasError = true;
-            }
-            OnDataChanged?.Invoke();
-        }
-
-        public void HandleEnterGameRes(EnterGameRes res)
-        {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
-            {
-                GameData.Token = res.Token;
-                StatusText = "正在进入游戏...";
-                HasError = false;
-            }
-            else
-            {
-                StatusText = res.ErrorMessage;
+                StatusText = "进入游戏失败: " + ex.Message;
                 HasError = true;
             }
             OnDataChanged?.Invoke();
@@ -117,26 +132,37 @@ namespace Client.Logic
             StatusText = "正在进入地图...";
             HasError = false;
             OnDataChanged?.Invoke();
-            // 发送进图请求
-            NetClient.Instance.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
+            _ = EnterInitialMapAsync();
         }
 
-        public void HandleEnterMapAck(EnterMapAck res)
+        private async Task EnterInitialMapAsync()
         {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
+            try
             {
-                GameData.CurrentMap = new EnterMapData
+                EnterMapAck ack = await NetClient.Instance.CallAsync<EnterMapAck>(
+                    new EnterMapReq { MapCfgId = 1, Line = 1 });
+
+                if (string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    MapCfgId = res.MapCfgId,
-                    Line = res.Line,
-                    SpawnX = res.X,
-                    SpawnY = res.Y
-                };
-                OnEnterMapSuccess?.Invoke();
+                    GameData.CurrentMap = new EnterMapData
+                    {
+                        MapCfgId = ack.MapCfgId,
+                        Line = ack.Line,
+                        SpawnX = ack.X,
+                        SpawnY = ack.Y
+                    };
+                    OnEnterMapSuccess?.Invoke();
+                }
+                else
+                {
+                    StatusText = "进入地图失败: " + ack.ErrorMessage;
+                    HasError = true;
+                    OnDataChanged?.Invoke();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                StatusText = "进入地图失败: " + res.ErrorMessage;
+                StatusText = "进入地图失败: " + ex.Message;
                 HasError = true;
                 OnDataChanged?.Invoke();
             }

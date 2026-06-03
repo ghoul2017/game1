@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -13,9 +14,24 @@ namespace Client.Logic
 
         public event Action OnDataChanged;
 
-        public void QueryMailList()
+        public async Task QueryMailList()
         {
-            NetClient.Instance.Send(new QueryMailListReq());
+            try
+            {
+                QueryMailListAck ack = await NetClient.Instance.CallAsync<QueryMailListAck>(new QueryMailListReq());
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                Mails = ack.Mails ?? new List<MailInfo>();
+                SelectedMailId = -1;
+                OnDataChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("查询邮件失败: " + ex.Message);
+            }
         }
 
         public void SelectMail(long mailId)
@@ -24,7 +40,7 @@ namespace Client.Logic
             OnDataChanged?.Invoke();
         }
 
-        public void ReadAll()
+        public async Task ReadAll()
         {
             var unreadIds = new List<long>();
             foreach (var m in Mails)
@@ -36,10 +52,32 @@ namespace Client.Logic
                 Context.UI?.ShowToast("没有未读邮件");
                 return;
             }
-            NetClient.Instance.Send(new MailReadReq { MailIds = unreadIds });
+            try
+            {
+                MailReadAck ack = await NetClient.Instance.CallAsync<MailReadAck>(
+                    new MailReadReq { MailIds = unreadIds });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                if (ack.ReadMailIds != null)
+                {
+                    foreach (var id in ack.ReadMailIds)
+                    {
+                        var mail = Mails.Find(m => m.MailId == id);
+                        if (mail != null) mail.State = 1;
+                    }
+                }
+                OnDataChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("读取邮件失败: " + ex.Message);
+            }
         }
 
-        public void ClaimAttachments()
+        public async Task ClaimAttachments()
         {
             var claimIds = new List<long>();
             if (SelectedMailId >= 0)
@@ -58,10 +96,32 @@ namespace Client.Logic
                 Context.UI?.ShowToast("没有可领取的附件");
                 return;
             }
-            NetClient.Instance.Send(new MailGetItemReq { MailIds = claimIds });
+            try
+            {
+                MailGetItemAck ack = await NetClient.Instance.CallAsync<MailGetItemAck>(
+                    new MailGetItemReq { MailIds = claimIds });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                if (ack.ClaimedMailIds != null)
+                {
+                    foreach (var id in ack.ClaimedMailIds)
+                    {
+                        var mail = Mails.Find(m => m.MailId == id);
+                        if (mail != null) mail.State = 2;
+                    }
+                }
+                OnDataChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("领取附件失败: " + ex.Message);
+            }
         }
 
-        public void DeleteRead()
+        public async Task DeleteRead()
         {
             var deleteIds = new List<long>();
             foreach (var m in Mails)
@@ -77,73 +137,29 @@ namespace Client.Logic
                 Context.UI?.ShowToast("没有可删除的邮件");
                 return;
             }
-            NetClient.Instance.Send(new MailDeleteReq { MailIds = deleteIds });
-        }
-
-        public void HandleQueryMailListAck(QueryMailListAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            try
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
-            }
-            Mails = ack.Mails ?? new List<MailInfo>();
-            SelectedMailId = -1;
-            OnDataChanged?.Invoke();
-        }
-
-        public void HandleMailReadAck(MailReadAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
-            }
-            if (ack.ReadMailIds != null)
-            {
-                foreach (var id in ack.ReadMailIds)
+                MailDeleteAck ack = await NetClient.Instance.CallAsync<MailDeleteAck>(
+                    new MailDeleteReq { MailIds = deleteIds });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    var mail = Mails.Find(m => m.MailId == id);
-                    if (mail != null) mail.State = 1;
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
                 }
-            }
-            OnDataChanged?.Invoke();
-        }
-
-        public void HandleMailGetItemAck(MailGetItemAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
-            }
-            if (ack.ClaimedMailIds != null)
-            {
-                foreach (var id in ack.ClaimedMailIds)
+                if (ack.DeletedMailIds != null)
                 {
-                    var mail = Mails.Find(m => m.MailId == id);
-                    if (mail != null) mail.State = 2;
+                    Mails.RemoveAll(m => ack.DeletedMailIds.Contains(m.MailId));
                 }
+                if (SelectedMailId >= 0 && !Mails.Exists(m => m.MailId == SelectedMailId))
+                {
+                    SelectedMailId = -1;
+                }
+                OnDataChanged?.Invoke();
             }
-            OnDataChanged?.Invoke();
-        }
-
-        public void HandleMailDeleteAck(MailDeleteAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            catch (Exception ex)
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
+                Context.UI?.ShowToast("删除邮件失败: " + ex.Message);
             }
-            if (ack.DeletedMailIds != null)
-            {
-                Mails.RemoveAll(m => ack.DeletedMailIds.Contains(m.MailId));
-            }
-            if (SelectedMailId >= 0 && !Mails.Exists(m => m.MailId == SelectedMailId))
-            {
-                SelectedMailId = -1;
-            }
-            OnDataChanged?.Invoke();
         }
 
         public void HandleMailNewNtf(MailNewNtf ntf)

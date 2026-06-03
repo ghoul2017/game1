@@ -144,7 +144,7 @@ namespace Client.Logic
                 float now = _currentTime;
                 if (now - _lastSendTime >= heartbeatInterval)
                 {
-                    SendHeartbeat();
+                    _ = SendHeartbeat();
                 }
 
                 if (now - _lastRecvTime > recvTimeout)
@@ -254,7 +254,7 @@ namespace Client.Logic
             _lastSendTime = _currentTime;
             Log.Info("[NetClient] TCP connected, sending handshake...");
 
-            Send(new HandshakeReq());
+            _ = StartHandshakeAsync();
         }
 
         private void HandleConnectFailed(string reason)
@@ -339,77 +339,87 @@ namespace Client.Logic
         }
 
         // ==================== Heartbeat ====================
-
-        private void SendHeartbeat()
+        private async Task SendHeartbeat()
         {
-            var req = new HeartbeatReq();
-            req.ClientTime = DateTime.UtcNow.Ticks;
-            Send(req);
-        }
-
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleHeartbeatRes(TcpSession session, HeartbeatRes res)
-        {
-            long nowTicks = DateTime.UtcNow.Ticks;
-            long rttTicks = nowTicks - res.ClientTime;
-            if (Instance != null)
-                Instance.PingMs = (int)(rttTicks / TimeSpan.TicksPerMillisecond);
+            try
+            {
+                var req = new HeartbeatReq();
+                req.ClientTime = DateTime.UtcNow.Ticks;
+                HeartbeatRes res = await CallAsync<HeartbeatRes>(req);
+                long nowTicks = DateTime.UtcNow.Ticks;
+                long rttTicks = nowTicks - res.ClientTime;
+                PingMs = (int)(rttTicks / TimeSpan.TicksPerMillisecond);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("[NetClient] 心跳失败: " + ex.Message);
+            }
         }
 
         // ==================== Handshake ====================
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleHandshakeRes(TcpSession session, HandshakeRes res)
+        private async Task StartHandshakeAsync()
         {
-            if (!string.IsNullOrEmpty(res.ErrorMessage))
+            try
             {
-                Log.Warn("[NetClient] Handshake failed: " + res.ErrorMessage);
-                if (Instance != null)
+                HandshakeRes res = await CallAsync<HandshakeRes>(new HandshakeReq());
+
+                if (!string.IsNullOrEmpty(res.ErrorMessage))
                 {
-                    Instance._hadSession = false;
-                    Instance.DisposeSession(LogoutReason.NetDisconnected, "Handshake rejected: " + res.ErrorMessage);
+                    Log.Warn("[NetClient] 握手失败: " + res.ErrorMessage);
+                    _hadSession = false;
+                    DisposeSession(LogoutReason.NetDisconnected, "握手被拒绝: " + res.ErrorMessage);
+                    return;
                 }
-                return;
-            }
 
-            if (Instance == null) return;
-
-            if (Instance._hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
-            {
-                Log.Info("[NetClient] Handshake OK, sending ReconnectReq...");
-                var req = new ReconnectReq();
-                req.Token = GameData.Token;
-                req.RoleId = GameData.CurrentRole.RoleId;
-                Instance.Send(req);
+                if (_hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
+                {
+                    await ReconnectAsync();
+                }
+                else
+                {
+                    Log.Info(string.Format("[NetClient] Handshake OK, connected to {0}:{1}", host, port));
+                    _state = ConnState.Connected;
+                    OnConnected?.Invoke();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Log.Info(string.Format("[NetClient] Handshake OK, connected to {0}:{1}", Instance.host, Instance.port));
-                Instance._state = ConnState.Connected;
-                Instance.OnConnected?.Invoke();
+                Log.Warn("[NetClient] 握手失败: " + ex.Message);
+                _hadSession = false;
+                DisposeSession(LogoutReason.NetDisconnected, "握手失败: " + ex.Message);
             }
         }
 
         // ==================== Reconnect ====================
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleReconnectRes(TcpSession session, ReconnectRes res)
+        private async Task ReconnectAsync()
         {
-            if (Instance == null) return;
-            Instance._hadSession = false;
+            Log.Info("[NetClient] Handshake OK, sending ReconnectReq...");
+            var req = new ReconnectReq();
+            req.Token = GameData.Token;
+            req.RoleId = GameData.CurrentRole.RoleId;
+            ReconnectRes res = await CallAsync<ReconnectRes>(req);
+            _hadSession = false;
 
             if (string.IsNullOrEmpty(res.ErrorMessage))
             {
                 Log.Info("[NetClient] Reconnect OK, sending EnterGameReq...");
                 GameData.Token = res.Token;
-                Instance._state = ConnState.Connected;
+                _state = ConnState.Connected;
 
                 if (GameData.CurrentRole != null)
                 {
-                    Instance.Send(new EnterGameReq { RoleId = GameData.CurrentRole.RoleId });
+                    EnterGameRes enterGameRes = await CallAsync<EnterGameRes>(
+                        new EnterGameReq { RoleId = GameData.CurrentRole.RoleId });
+                    if (!string.IsNullOrEmpty(enterGameRes.ErrorMessage))
+                    {
+                        OnReconnectFailed?.Invoke(enterGameRes.ErrorMessage);
+                        return;
+                    }
                 }
 
-                Instance.OnReconnected?.Invoke();
+                OnReconnected?.Invoke();
             }
             else
             {
@@ -418,8 +428,8 @@ namespace Client.Logic
                 GameData.CurrentRole = null;
                 GameData.CurrentMap = null;
 
-                Instance._state = ConnState.Connected;
-                Instance.OnReconnectFailed?.Invoke(res.ErrorMessage);
+                _state = ConnState.Connected;
+                OnReconnectFailed?.Invoke(res.ErrorMessage);
             }
         }
 

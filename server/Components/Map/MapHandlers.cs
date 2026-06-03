@@ -25,13 +25,12 @@ public static class MapHandlers
             res.Line = line;
             res.X = px;
             res.Y = py;
-            player.Online.Session?.Send(res);
             // 重新发送视野内对象
             var currentMap = Context.Map.GetMap(mapId, line);
             if (currentMap != null)
                 SendVisibleObjects(player.Id, currentMap, px, py);
             Log.Info($"玩家重进地图 RoleId:{player.Id} MapId:{mapId}");
-            return Task.FromResult<IMessage>(null!);
+            return Task.FromResult<IMessage>(res);
         }
 
         // 获取目标地图
@@ -56,7 +55,6 @@ public static class MapHandlers
         res.X = x;
         res.Y = y;
 
-        player.Online.Session?.Send(res);
         SendVisibleObjects(player.Id, map, x, y);
 
         EventBus.Instance.Publish(new EventType.PlayerEnterMapEvent
@@ -67,7 +65,7 @@ public static class MapHandlers
         });
 
         Log.Info($"玩家进入地图 RoleId:{player.Id} MapId:{req.MapCfgId}");
-        return Task.FromResult<IMessage>(null!);
+        return Task.FromResult<IMessage>(res);
     }
 
     [MessageHandler(typeof(PlayerRpcMethodHandler))]
@@ -106,8 +104,6 @@ public static class MapHandlers
         res.X = x;
         res.Y = y;
 
-        player.Online.Session?.Send(res);
-
         var objects = targetMap.GetObjectsInRange(x, y, 4);
         var ntf = new MapObjectsNtf
         {
@@ -129,7 +125,7 @@ public static class MapHandlers
         }
 
         Log.Info($"玩家切图 RoleId:{player.Id} → MapId:{req.TargetMapCfgId}");
-        return Task.FromResult<IMessage>(null!);
+        return Task.FromResult<IMessage>(res);
     }
 
     [MessageHandler(typeof(PlayerRpcMethodHandler))]

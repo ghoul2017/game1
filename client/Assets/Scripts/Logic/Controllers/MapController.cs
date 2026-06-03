@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -22,6 +23,84 @@ namespace Client.Logic
         public event Action<int> OnKicked;
         public event Action OnReconnected;
         public event Action<string> OnReconnectFailed;
+
+        public async Task Move(int x, int y)
+        {
+            try
+            {
+                MapMoveAck ack = await NetClient.Instance.CallAsync<MapMoveAck>(
+                    new MapMoveReq { X = x, Y = y });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    OnMapMoveCorrected?.Invoke(ack.X, ack.Y);
+                }
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("同步位置失败: " + ex.Message);
+            }
+        }
+
+        public async Task ChangeMap(int targetMapCfgId, int targetLine = 1, int x = 0, int y = 0)
+        {
+            try
+            {
+                ChangeMapAck ack = await NetClient.Instance.CallAsync<ChangeMapAck>(
+                    new ChangeMapReq
+                    {
+                        TargetMapCfgId = targetMapCfgId,
+                        TargetLine = targetLine,
+                        X = x,
+                        Y = y
+                    });
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    OnChangeMapFailed?.Invoke(ack.ErrorMessage);
+                    return;
+                }
+
+                GameData.CurrentMap = new EnterMapData
+                {
+                    MapCfgId = ack.MapCfgId,
+                    Line = ack.Line,
+                    SpawnX = ack.X,
+                    SpawnY = ack.Y
+                };
+                OnMapRebuild?.Invoke(ack.MapCfgId, ack.X, ack.Y);
+            }
+            catch (Exception ex)
+            {
+                OnChangeMapFailed?.Invoke(ex.Message);
+            }
+        }
+
+        public async Task EnterMap(int mapCfgId, int line)
+        {
+            try
+            {
+                EnterMapAck ack = await NetClient.Instance.CallAsync<EnterMapAck>(
+                    new EnterMapReq { MapCfgId = mapCfgId, Line = line });
+
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    OnChangeMapFailed?.Invoke(ack.ErrorMessage);
+                    return;
+                }
+
+                GameData.CurrentMap = new EnterMapData
+                {
+                    MapCfgId = ack.MapCfgId,
+                    Line = ack.Line,
+                    SpawnX = ack.X,
+                    SpawnY = ack.Y
+                };
+                OnMapRebuild?.Invoke(ack.MapCfgId, ack.X, ack.Y);
+            }
+            catch (Exception ex)
+            {
+                OnChangeMapFailed?.Invoke(ex.Message);
+            }
+        }
 
         // --- AOI Handlers ---
 
@@ -62,43 +141,14 @@ namespace Client.Logic
             OnMapObjectMove?.Invoke(ntf.ObjectId, ntf.X, ntf.Y);
         }
 
-        public void HandleMapMoveAck(MapMoveAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                OnMapMoveCorrected?.Invoke(ack.X, ack.Y);
-            }
-        }
-
-        public void HandleChangeMapAck(ChangeMapAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                OnChangeMapFailed?.Invoke(ack.ErrorMessage);
-                return;
-            }
-
-            GameData.CurrentMap = new EnterMapData
-            {
-                MapCfgId = ack.MapCfgId,
-                Line = ack.Line,
-                SpawnX = ack.X,
-                SpawnY = ack.Y
-            };
-            OnMapRebuild?.Invoke(ack.MapCfgId, ack.X, ack.Y);
-        }
-
         // --- Reconnect / Kick ---
 
-        public void HandleReconnected()
+        public async Task HandleReconnected()
         {
             var mapData = GameData.CurrentMap;
             if (mapData != null)
             {
-                var req = new EnterMapReq();
-                req.MapCfgId = mapData.MapCfgId;
-                req.Line = mapData.Line;
-                NetClient.Instance.Send(req);
+                await EnterMap(mapData.MapCfgId, mapData.Line);
             }
             OnReconnected?.Invoke();
         }

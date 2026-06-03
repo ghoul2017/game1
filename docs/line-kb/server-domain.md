@@ -4,6 +4,7 @@ LINEKB:SERVER:CONTEXT path=server/Context.cs symbol=Context note="服务端模�
 LINEKB:SERVER:MODULE_COMPONENT doc=AGENTS.md note="Module 级 Component 挂到 Context.Server，用于全局数据集合，例如 PlayerComponent、MapComponent、ChatComponent。"
 LINEKB:SERVER:PLAYER_COMPONENT doc=AGENTS.md note="PlayerEntity 级 Component 挂到 PlayerEntity，用于玩家数据，例如 Bag、Mail、Task、RoleAttribute、Online、RoleData。"
 LINEKB:SERVER:HANDLER_RPC doc=AGENTS.md note="RPC Handler 风格为 static async Task<IMessage> XxxHandler(TcpSession session, TReq req, TResp res)。"
+LINEKB:SERVER:HANDLER_RPC_RETURN path=server/Components symbol=PlayerRpcMethodHandler note="RPC Handler 必须返回响应对象让 TcpSession 封装 Network.RpcResponse；不要手动 session.Send(res) 后返回 null。"
 LINEKB:SERVER:HANDLER_NTF doc=AGENTS.md note="通知 Handler 风格为 static async Task XxxHandler(TcpSession session, TReq req)。"
 LINEKB:SERVER:SYSTEM_RULE doc=AGENTS.md note="System 是纯静态扩展方法类，不持有字段；静态类日志用 LogManager.GetLogger(nameof(XxxSystem))。"
 LINEKB:SERVER:MONGO_RULE doc=AGENTS.md note="MongoDB 集合名为类名蛇形，_id 为 entity.Id；实体实现 IEntity，Id 标 BsonId。"

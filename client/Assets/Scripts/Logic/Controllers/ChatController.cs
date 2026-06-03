@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -15,27 +16,30 @@ namespace Client.Logic
         public event Action OnMessageAdded;
         public event Action OnChannelChanged;
 
-        public void SendChat(string content)
+        public async Task SendChat(string content)
         {
             if (string.IsNullOrEmpty(content)) return;
             var req = new ChatReq();
             req.Channel = CurrentChannel;
             req.Content = content;
-            NetClient.Instance.Send(req);
+            try
+            {
+                ChatAck ack = await NetClient.Instance.CallAsync<ChatAck>(req);
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("发送聊天失败: " + ex.Message);
+            }
         }
 
         public void SwitchChannel(int channel)
         {
             CurrentChannel = channel;
             OnChannelChanged?.Invoke();
-        }
-
-        public void HandleChatAck(ChatAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-            }
         }
 
         public void HandleChatNtf(ChatNtf ntf)

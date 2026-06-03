@@ -51,16 +51,5 @@ namespace Client.Logic
             MapController.Instance.HandleMapObjectMoveNtf(ntf);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnMapMoveAck(TcpSession session, MapMoveAck ack)
-        {
-            MapController.Instance.HandleMapMoveAck(ack);
-        }
-
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void OnChangeMapAck(TcpSession session, ChangeMapAck ack)
-        {
-            MapController.Instance.HandleChangeMapAck(ack);
-        }
     }
 }

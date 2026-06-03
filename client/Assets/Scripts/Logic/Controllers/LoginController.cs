@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -72,29 +73,41 @@ namespace Client.Logic
         private void DoSendLogin(string username, string password)
         {
             ErrorMessage = "正在登录...";
-            NetClient.Instance.Send(new LoginReq { Username = username, Password = password });
+            _ = DoLoginAsync(username, password);
         }
 
-        public void HandleLoginRes(LoginRes res)
+        private async Task DoLoginAsync(string username, string password)
         {
-            if (string.IsNullOrEmpty(res.ErrorMessage))
+            try
             {
-                GameData.PlayerId = res.PlayerId;
-                GameData.Token = res.Token;
-                GameData.Roles = res.Roles.Select(r => new RoleData
+                LoginRes res = await NetClient.Instance.CallAsync<LoginRes>(
+                    new LoginReq { Username = username, Password = password });
+
+                if (string.IsNullOrEmpty(res.ErrorMessage))
                 {
-                    RoleId = r.RoleId,
-                    Name = r.Name,
-                    Level = r.Level,
-                    Job = GameData.GetJobName(r.Job)
-                }).ToList();
-                IsLoggingIn = false;
-                OnLoginCompleted?.Invoke(true, "");
+                    GameData.PlayerId = res.PlayerId;
+                    GameData.Token = res.Token;
+                    GameData.Roles = res.Roles.Select(r => new RoleData
+                    {
+                        RoleId = r.RoleId,
+                        Name = r.Name,
+                        Level = r.Level,
+                        Job = GameData.GetJobName(r.Job)
+                    }).ToList();
+                    IsLoggingIn = false;
+                    OnLoginCompleted?.Invoke(true, "");
+                }
+                else
+                {
+                    IsLoggingIn = false;
+                    ErrorMessage = res.ErrorMessage;
+                    OnLoginCompleted?.Invoke(false, ErrorMessage);
+                }
             }
-            else
+            catch (Exception ex)
             {
                 IsLoggingIn = false;
-                ErrorMessage = res.ErrorMessage;
+                ErrorMessage = "登录失败: " + ex.Message;
                 OnLoginCompleted?.Invoke(false, ErrorMessage);
             }
         }

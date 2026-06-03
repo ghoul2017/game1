@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Shared.Common.Protos;
 
 namespace Client.Logic
@@ -14,55 +15,68 @@ namespace Client.Logic
 
         public event Action OnDataChanged;
 
-        public void QueryBag()
+        public async Task QueryBag()
         {
-            NetClient.Instance.Send(new QueryBagReq());
-        }
-
-        public void UseItem(int index, int count)
-        {
-            NetClient.Instance.Send(new BagUseItemReq { Index = index, Count = count });
-        }
-
-        public void TidyBag()
-        {
-            NetClient.Instance.Send(new BagTidyReq());
-        }
-
-        public void HandleQueryBagAck(QueryBagAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            try
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
+                QueryBagAck ack = await NetClient.Instance.CallAsync<QueryBagAck>(new QueryBagReq());
+
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                Items = ack.Items ?? new List<BagItemInfo>();
+                Capacity = ack.Capacity;
+                RebuildMap();
             }
-            Items = ack.Items ?? new List<BagItemInfo>();
-            Capacity = ack.Capacity;
-            RebuildMap();
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("查询背包失败: " + ex.Message);
+            }
         }
 
-        public void HandleBagTidyAck(BagTidyAck ack)
+        public async Task UseItem(int index, int count)
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            try
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
+                BagUseItemAck ack = await NetClient.Instance.CallAsync<BagUseItemAck>(
+                    new BagUseItemReq { Index = index, Count = count });
+
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                var cfg = Shared.Core.Config.ConfigManager.Get<Shared.Common.Config.ItemConfig>(ack.ConfigId);
+                string itemName = cfg != null ? cfg.Name : "物品";
+                Context.UI?.ShowToast("使用了 " + itemName);
             }
-            Items = ack.Items ?? new List<BagItemInfo>();
-            RebuildMap();
-            Context.UI?.ShowToast("整理完成");
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("使用物品失败: " + ex.Message);
+            }
         }
 
-        public void HandleBagUseItemAck(BagUseItemAck ack)
+        public async Task TidyBag()
         {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
+            try
             {
-                Context.UI?.ShowToast(ack.ErrorMessage);
-                return;
+                BagTidyAck ack = await NetClient.Instance.CallAsync<BagTidyAck>(new BagTidyReq());
+
+                if (!string.IsNullOrEmpty(ack.ErrorMessage))
+                {
+                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    return;
+                }
+                Items = ack.Items ?? new List<BagItemInfo>();
+                RebuildMap();
+                Context.UI?.ShowToast("整理完成");
             }
-            var cfg = Shared.Core.Config.ConfigManager.Get<Shared.Common.Config.ItemConfig>(ack.ConfigId);
-            string itemName = cfg != null ? cfg.Name : "物品";
-            Context.UI?.ShowToast("使用了 " + itemName);
+            catch (Exception ex)
+            {
+                Context.UI?.ShowToast("整理背包失败: " + ex.Message);
+            }
         }
 
         public void HandleBagItemChangedNtf(BagItemChangedNtf ntf)

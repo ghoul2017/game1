@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Client.Logic;
-using Shared.Common.Protos;
 using Shared.Common.Config;
 using Shared.Core.Config;
 
@@ -116,13 +115,7 @@ namespace Client.View
 
         private void OnTeleport(int targetMapCfgId)
         {
-
-            var req = new ChangeMapReq();
-            req.TargetMapCfgId = targetMapCfgId;
-            req.TargetLine = 1;
-            req.X = 0;
-            req.Y = 0;
-            NetClient.Instance.Send(req);
+            _ = MapController.Instance.ChangeMap(targetMapCfgId);
 
             UIManager.Instance.HidePanel<ChangeMapPanel>();
             UIToast.Show("正在传送...");

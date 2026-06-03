@@ -6,9 +6,9 @@ namespace Client.Logic
     public static class FightHandlers
     {
         [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleUseSkillAck(TcpSession session, UseSkillAck ack)
+        public static void OnSkillEffect(TcpSession session, UseSkillAck ack)
         {
-            FightController.Instance.HandleUseSkillAck(ack);
+            FightController.Instance.ApplySkillEffect(ack);
         }
 
         [MessageHandler(typeof(NtfMethodHandler))]
@@ -23,10 +23,5 @@ namespace Client.Logic
             FightController.Instance.HandleKilledByNtf(ntf);
         }
 
-        [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandlePkModeChangedNtf(TcpSession session, PkModeChangedNtf ntf)
-        {
-            FightController.Instance.HandlePkModeChangedNtf(ntf);
-        }
     }
 }

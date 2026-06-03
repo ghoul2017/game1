@@ -6,12 +6,6 @@ namespace Client.Logic
     public static class ChatHandlers
     {
         [MessageHandler(typeof(NtfMethodHandler))]
-        public static void HandleChatAck(TcpSession session, ChatAck ack)
-        {
-            ChatController.Instance.HandleChatAck(ack);
-        }
-
-        [MessageHandler(typeof(NtfMethodHandler))]
         public static void HandleChatNtf(TcpSession session, ChatNtf ntf)
         {
             ChatController.Instance.HandleChatNtf(ntf);

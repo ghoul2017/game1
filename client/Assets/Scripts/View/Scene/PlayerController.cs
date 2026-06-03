@@ -1,6 +1,5 @@
 using UnityEngine;
 using Client.Logic;
-using Shared.Common.Protos;
 
 namespace Client.View
 {
@@ -72,7 +71,7 @@ namespace Client.View
 
         private void SendMoveReq(int x, int y)
         {
-            NetClient.Instance.Send(new MapMoveReq { X = x, Y = y });
+            _ = MapController.Instance.Move(x, y);
         }
 
         public void CorrectPosition(int serverX, int serverY)
