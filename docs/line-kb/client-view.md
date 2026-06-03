@@ -13,6 +13,8 @@ LINEKB:CLIENT:HANDLER_PATTERN doc=AGENTS.md path=client/Assets/Scripts/Logic/Han
 LINEKB:CLIENT:EVENT_ACTION doc=AGENTS.md note="event Action 不可在外部类直接触发；对外暴露明确方法，内部再触发事件。"
 LINEKB:CLIENT:PANEL_FLOW doc=AGENTS.md note="面板流程为 LoadingPanel -> LoginPanel -> RoleSelectPanel -> GameScene -> MainPanel。"
 LINEKB:CLIENT:LOGIN_PANEL path=client/Assets/Scripts/View/Panels/LoginPanel.cs symbol=LoginPanel note="登录面板入口。"
+LINEKB:CLIENT:LOGIN_BACKGROUND path=client/Assets/Resources/UI/LoginMenuBackground.png symbol=LoginPanel doc=docs/6.模块文档/User.md note="主菜单/登录页背景图，LoginPanel 通过 Resources.Load<Texture2D>(\"UI/LoginMenuBackground\") 加载，并用 AspectRatioFitter.EnvelopeParent 覆盖全屏。"
+LINEKB:CLIENT:LOGIN_UI_SKINS path=client/Assets/Resources/UI symbol=LoginPanel doc=docs/6.模块文档/User.md note="登录卡片、输入框、按钮、服务器条和徽记使用 LoginCardFrame/LoginInputFrame/LoginButtonFrame/LoginServerPanel/LoginCrest PNG 皮肤，运行时 Sprite.Create 后挂到 UGUI Image。"
 LINEKB:CLIENT:ROLE_SELECT_PANEL path=client/Assets/Scripts/View/Panels/RoleSelectPanel.cs symbol=RoleSelectPanel note="角色选择面板入口。"
 LINEKB:CLIENT:MAIN_PANEL path=client/Assets/Scripts/View/Panels/MainPanel.cs symbol=MainPanel note="主界面面板入口，聊天和战斗相关 partial 拆在同目录 MainPanel.Chat.cs、MainPanel.Fight.cs。"
 LINEKB:CLIENT:TASK_PANEL path=client/Assets/Scripts/View/Panels/TaskPanel.cs symbol=TaskPanel note="任务面板入口，刷新和按钮动作 partial 拆在同目录 TaskPanel.Refresh.cs。"

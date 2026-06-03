@@ -31,6 +31,16 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 
 ## 登录流程
 
+### 客户端主菜单 / 登录页
+
+客户端入口面板是 `client/Assets/Scripts/View/Panels/LoginPanel.cs`。当前主菜单与登录合并为同一界面：左侧展示游戏标题、服务器氛围和构建信息，右侧是“远征者通行证”式登录凭证，保留账号、密码、记住密码、错误提示和进入游戏按钮。
+
+背景图资源位于 `client/Assets/Resources/UI/LoginMenuBackground.png`，由 `LoginPanel` 通过 `Resources.Load<Texture2D>("UI/LoginMenuBackground")` 加载，并使用 `AspectRatioFitter.EnvelopeParent` 按比例覆盖全屏。背景右侧留暗区给登录卡片，底部留给版本和版权文本。
+
+登录控件皮肤也使用图片资源而不是线框拼接：`LoginCardFrame.png`、`LoginInputFrame.png`、`LoginButtonFrame.png`、`LoginServerPanel.png`、`LoginCrest.png` 位于 `client/Assets/Resources/UI/`。`LoginPanel` 运行时加载这些 Texture2D 并通过 `Sprite.Create` 设置到 UGUI `Image`，保留输入框和按钮原有交互逻辑。
+
+登录业务流程没有放进表现层：`LoginPanel` 只负责输入校验触发、连接事件桥接和 UI 状态切换，实际登录状态仍由 `LoginController` 管理。登录成功后继续进入 `RoleSelectPanel`。
+
 ```
 客户端                        服务端
   |  LoginReq(username,password)  |
