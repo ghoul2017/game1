@@ -16,24 +16,24 @@ namespace Client.Logic
 
         public void QueryBag()
         {
-            ClientContext.Network?.Send(new QueryBagReq());
+            NetClient.Instance.Send(new QueryBagReq());
         }
 
         public void UseItem(int index, int count)
         {
-            ClientContext.Network?.Send(new BagUseItemReq { Index = index, Count = count });
+            NetClient.Instance.Send(new BagUseItemReq { Index = index, Count = count });
         }
 
         public void TidyBag()
         {
-            ClientContext.Network?.Send(new BagTidyReq());
+            NetClient.Instance.Send(new BagTidyReq());
         }
 
         public void HandleQueryBagAck(QueryBagAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             Items = ack.Items ?? new List<BagItemInfo>();
@@ -45,24 +45,24 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             Items = ack.Items ?? new List<BagItemInfo>();
             RebuildMap();
-            ClientContext.UI?.ShowToast("整理完成");
+            Context.UI?.ShowToast("整理完成");
         }
 
         public void HandleBagUseItemAck(BagUseItemAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             var cfg = Shared.Core.Config.ConfigManager.Get<Shared.Common.Config.ItemConfig>(ack.ConfigId);
             string itemName = cfg != null ? cfg.Name : "物品";
-            ClientContext.UI?.ShowToast("使用了 " + itemName);
+            Context.UI?.ShowToast("使用了 " + itemName);
         }
 
         public void HandleBagItemChangedNtf(BagItemChangedNtf ntf)

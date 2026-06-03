@@ -5,7 +5,7 @@ using Client.Logic;
 
 namespace Client.View
 {
-    public class RoleSelectPanel : UIPanel, IRoleSelectPanel
+    public class RoleSelectPanel : UIPanel
     {
         private GameObject[] roleSlots = new GameObject[4];
         private Button enterBtn;

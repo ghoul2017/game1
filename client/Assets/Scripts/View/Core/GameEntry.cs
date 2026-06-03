@@ -7,7 +7,6 @@ namespace Client.View
 {
     public class GameEntry : MonoBehaviour
     {
-        private NetClient _netClient;
 
         private void Start()
         {
@@ -17,25 +16,21 @@ namespace Client.View
             var tablesDir = GetTablesDirectory();
             ConfigManager.Instance.LoadAll(tablesDir);
 
-            // 初始化 NetClient（已从 View 迁移到 Logic，不再依赖 MonoBehaviour）
-            _netClient = new NetClient();
-            _netClient.Initialize();
-            ClientContext.Network = _netClient;
-
+            Context.Start();
             UIManager.EnsureCreated();
-            ClientContext.UI = UIManager.Instance;
+            Context.UI = UIManager.Instance;
             NetworkStatusPanel.EnsureCreated();
             UIManager.Instance.ShowPanel<LoadingPanel>();
         }
 
         private void Update()
         {
-            _netClient?.Update(Time.deltaTime);
+            Context.Update(Time.deltaTime);
         }
 
         private void OnDestroy()
         {
-            _netClient?.Dispose();
+            Context.OnDestroy();
         }
 
         private static string GetTablesDirectory()

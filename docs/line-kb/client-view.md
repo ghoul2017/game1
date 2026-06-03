@@ -2,7 +2,7 @@
 
 LINEKB:CLIENT:LOGIC_ROOT path=client/Assets/Scripts/Logic note="客户端纯逻辑层，不能依赖 UnityEngine。"
 LINEKB:CLIENT:VIEW_ROOT path=client/Assets/Scripts/View note="Unity 表现层，可依赖 Logic，负责 UI 和场景表现。"
-LINEKB:CLIENT:CONTEXT path=client/Assets/Scripts/Logic/Context.cs symbol=ClientContext note="客户端逻辑上下文入口，包含网络和 UI 桥接。"
+LINEKB:CLIENT:CONTEXT path=client/Assets/Scripts/Logic/Context.cs symbol=Context note="客户端逻辑上下文入口，包含网络和 UI 桥接。"
 LINEKB:CLIENT:NET_CLIENT path=client/Assets/Scripts/Logic/NetClient.cs symbol=NetClient note="客户端网络管理器，普通 C# 类，由 GameEntry.Update 驱动。"
 LINEKB:CLIENT:GAME_ENTRY path=client/Assets/Scripts/View/Core/GameEntry.cs symbol=GameEntry note="Unity 客户端运行入口，负责驱动逻辑网络更新等生命周期。"
 LINEKB:CLIENT:UI_MANAGER path=client/Assets/Scripts/View/Core/UIManager.cs symbol=UIManager note="UI 栈式管理入口。"

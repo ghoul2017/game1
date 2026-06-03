@@ -14,7 +14,7 @@ namespace Robot
         {
             // 1. 握手
             Log("发送 HandshakeReq...");
-            var handshakeRes = await Session.SendAndWaitAsync<HandshakeRes>(new HandshakeReq());
+            var handshakeRes = await Session.CallAsync<HandshakeRes>(new HandshakeReq());
             Assertions.True(string.IsNullOrEmpty(handshakeRes.ErrorMessage), $"握手应成功: {handshakeRes.ErrorMessage}");
 
             // 2. 登录
@@ -24,7 +24,7 @@ namespace Robot
                 Username = "test",
                 Password = "123456"
             };
-            var loginRes = await Session.SendAndWaitAsync<LoginRes>(loginReq);
+            var loginRes = await Session.CallAsync<LoginRes>(loginReq);
             Assertions.True(string.IsNullOrEmpty(loginRes.ErrorMessage), $"登录应成功: {loginRes.ErrorMessage}");
             Assertions.True(loginRes.PlayerId > 0, "PlayerId 应大于 0");
             Assertions.NotNull(loginRes.Token, "Token 不应为 null");

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using ProtoBuf;
 
@@ -21,5 +22,24 @@ namespace Shared.Core.Network
             Serializer.Serialize(ms, msg);
             return ms.ToArray();
         }
+    }
+
+    [ProtoContract]
+    [Message("Network.RpcRequest")]
+    internal class RpcRequest : IMessage
+    {
+        [ProtoMember(1)] public long RpcId { get; set; }
+        [ProtoMember(2)] public string MessageName { get; set; } = "";
+        [ProtoMember(3)] public byte[] Payload { get; set; } = Array.Empty<byte>();
+    }
+
+    [ProtoContract]
+    [Message("Network.RpcResponse")]
+    internal class RpcResponse : IMessage
+    {
+        [ProtoMember(1)] public long RpcId { get; set; }
+        [ProtoMember(2)] public string MessageName { get; set; } = "";
+        [ProtoMember(3)] public byte[] Payload { get; set; } = Array.Empty<byte>();
+        [ProtoMember(4)] public string ErrorMessage { get; set; } = "";
     }
 }

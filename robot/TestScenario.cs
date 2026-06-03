@@ -11,7 +11,7 @@ namespace Robot
         /// <summary>场景名称</summary>
         public abstract string Name { get; }
 
-        /// <summary>Robot 会话（由 TestRunner 在运行前注入）</summary>
+        /// <summary>Robot 会话（由 TestRunner 通过 NetworkComponent 连接后注入）</summary>
         public RobotSession Session { get; set; } = null!;
 
         /// <summary>测试场景执行入口</summary>

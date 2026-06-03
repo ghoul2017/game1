@@ -6,7 +6,7 @@ using Client.Logic;
 
 namespace Client.View
 {
-    public class BagPanel : UIPanel, IBagPanel
+    public class BagPanel : UIPanel
     {
         private const int COLS = 8;
         private const int ROWS = 8;

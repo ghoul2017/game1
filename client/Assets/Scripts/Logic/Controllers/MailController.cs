@@ -15,7 +15,7 @@ namespace Client.Logic
 
         public void QueryMailList()
         {
-            ClientContext.Network?.Send(new QueryMailListReq());
+            NetClient.Instance.Send(new QueryMailListReq());
         }
 
         public void SelectMail(long mailId)
@@ -33,10 +33,10 @@ namespace Client.Logic
             }
             if (unreadIds.Count == 0)
             {
-                ClientContext.UI?.ShowToast("没有未读邮件");
+                Context.UI?.ShowToast("没有未读邮件");
                 return;
             }
-            ClientContext.Network?.Send(new MailReadReq { MailIds = unreadIds });
+            NetClient.Instance.Send(new MailReadReq { MailIds = unreadIds });
         }
 
         public void ClaimAttachments()
@@ -55,10 +55,10 @@ namespace Client.Logic
             }
             if (claimIds.Count == 0)
             {
-                ClientContext.UI?.ShowToast("没有可领取的附件");
+                Context.UI?.ShowToast("没有可领取的附件");
                 return;
             }
-            ClientContext.Network?.Send(new MailGetItemReq { MailIds = claimIds });
+            NetClient.Instance.Send(new MailGetItemReq { MailIds = claimIds });
         }
 
         public void DeleteRead()
@@ -74,17 +74,17 @@ namespace Client.Logic
             }
             if (deleteIds.Count == 0)
             {
-                ClientContext.UI?.ShowToast("没有可删除的邮件");
+                Context.UI?.ShowToast("没有可删除的邮件");
                 return;
             }
-            ClientContext.Network?.Send(new MailDeleteReq { MailIds = deleteIds });
+            NetClient.Instance.Send(new MailDeleteReq { MailIds = deleteIds });
         }
 
         public void HandleQueryMailListAck(QueryMailListAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             Mails = ack.Mails ?? new List<MailInfo>();
@@ -96,7 +96,7 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             if (ack.ReadMailIds != null)
@@ -114,7 +114,7 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             if (ack.ClaimedMailIds != null)
@@ -132,7 +132,7 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             if (ack.DeletedMailIds != null)
@@ -152,7 +152,7 @@ namespace Client.Logic
             {
                 Mails.Insert(0, ntf.Mail);
                 OnDataChanged?.Invoke();
-                ClientContext.UI?.ShowToast("收到新邮件: " + ntf.Mail.Title);
+                Context.UI?.ShowToast("收到新邮件: " + ntf.Mail.Title);
             }
         }
     }

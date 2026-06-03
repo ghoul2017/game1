@@ -21,7 +21,7 @@ namespace Client.Logic
             var req = new ChatReq();
             req.Channel = CurrentChannel;
             req.Content = content;
-            ClientContext.Network?.Send(req);
+            NetClient.Instance.Send(req);
         }
 
         public void SwitchChannel(int channel)
@@ -34,7 +34,7 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
             }
         }
 

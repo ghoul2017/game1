@@ -40,7 +40,7 @@ namespace Client.Logic
             _pendingUsername = username;
             _pendingPassword = password;
 
-            if (ClientContext.Network != null && ClientContext.Network.IsConnected)
+            if (NetClient.Instance.IsConnected)
             {
                 DoSendLogin(username, password);
                 return false;
@@ -72,7 +72,7 @@ namespace Client.Logic
         private void DoSendLogin(string username, string password)
         {
             ErrorMessage = "正在登录...";
-            ClientContext.Network?.Send(new LoginReq { Username = username, Password = password });
+            NetClient.Instance.Send(new LoginReq { Username = username, Password = password });
         }
 
         public void HandleLoginRes(LoginRes res)

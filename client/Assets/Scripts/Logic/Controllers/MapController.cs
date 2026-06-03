@@ -98,7 +98,7 @@ namespace Client.Logic
                 var req = new EnterMapReq();
                 req.MapCfgId = mapData.MapCfgId;
                 req.Line = mapData.Line;
-                ClientContext.Network?.Send(req);
+                NetClient.Instance.Send(req);
             }
             OnReconnected?.Invoke();
         }

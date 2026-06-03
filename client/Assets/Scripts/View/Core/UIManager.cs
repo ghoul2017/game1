@@ -223,7 +223,7 @@ namespace Client.View
             return null;
         }
 
-        // IClientUI 显式接口实现 —— 供 Logic 层通过 ClientContext.UI 调用
+        // IClientUI 显式接口实现 —— 供 Logic 层通过 Context.UI 调用
 
         T IClientUI.GetPanel<T>()
         {

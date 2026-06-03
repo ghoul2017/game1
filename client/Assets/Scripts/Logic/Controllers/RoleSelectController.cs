@@ -52,7 +52,7 @@ namespace Client.Logic
             }
             StatusText = "正在创建角色...";
             HasError = false;
-            ClientContext.Network?.Send(new CreateRoleReq { Name = name, Job = job });
+            NetClient.Instance.Send(new CreateRoleReq { Name = name, Job = job });
         }
 
         public void EnterGame()
@@ -62,7 +62,7 @@ namespace Client.Logic
             StatusText = "正在进入游戏...";
             HasError = false;
             OnDataChanged?.Invoke();
-            ClientContext.Network?.Send(new EnterGameReq { RoleId = role.RoleId });
+            NetClient.Instance.Send(new EnterGameReq { RoleId = role.RoleId });
         }
 
         public void HandleCreateRoleRes(CreateRoleRes res)
@@ -118,7 +118,7 @@ namespace Client.Logic
             HasError = false;
             OnDataChanged?.Invoke();
             // 发送进图请求
-            ClientContext.Network?.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
+            NetClient.Instance.Send(new EnterMapReq { MapCfgId = 1, Line = 1 });
         }
 
         public void HandleEnterMapAck(EnterMapAck res)

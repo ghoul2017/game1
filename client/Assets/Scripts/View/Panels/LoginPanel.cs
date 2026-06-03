@@ -4,7 +4,7 @@ using Client.Logic;
 
 namespace Client.View
 {
-    public class LoginPanel : UIPanel, ILoginPanel
+    public class LoginPanel : UIPanel
     {
         private InputField usernameInput;
         private InputField passwordInput;

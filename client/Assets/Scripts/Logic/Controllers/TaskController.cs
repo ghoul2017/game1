@@ -15,7 +15,7 @@ namespace Client.Logic
 
         public void QueryTaskList()
         {
-            ClientContext.Network?.Send(new QueryTaskListReq());
+            NetClient.Instance.Send(new QueryTaskListReq());
         }
 
         public void SelectTask(int taskId)
@@ -33,24 +33,24 @@ namespace Client.Logic
 
         public void AcceptTask(int taskId)
         {
-            ClientContext.Network?.Send(new TaskAcceptReq { TaskId = taskId });
+            NetClient.Instance.Send(new TaskAcceptReq { TaskId = taskId });
         }
 
         public void SubmitTask(int taskId)
         {
-            ClientContext.Network?.Send(new TaskSubmitReq { TaskId = taskId });
+            NetClient.Instance.Send(new TaskSubmitReq { TaskId = taskId });
         }
 
         public void GiveUpTask(int taskId)
         {
-            ClientContext.Network?.Send(new TaskGiveUpReq { TaskId = taskId });
+            NetClient.Instance.Send(new TaskGiveUpReq { TaskId = taskId });
         }
 
         public void HandleQueryTaskListAck(QueryTaskListAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             Tasks = ack.Tasks ?? new List<TaskInfo>();
@@ -62,14 +62,14 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             if (ack.Task != null)
             {
                 Tasks.Add(ack.Task);
                 OnDataChanged?.Invoke();
-                ClientContext.UI?.ShowToast("接取任务成功");
+                Context.UI?.ShowToast("接取任务成功");
             }
         }
 
@@ -77,7 +77,7 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
@@ -90,11 +90,11 @@ namespace Client.Logic
                 var parts = new List<string>();
                 foreach (var r in ack.Rewards)
                     parts.Add("物品#" + r.ConfigId + " x" + r.Count);
-                ClientContext.UI?.ShowToast("提交成功，获得: " + string.Join(", ", parts.ToArray()));
+                Context.UI?.ShowToast("提交成功，获得: " + string.Join(", ", parts.ToArray()));
             }
             else
             {
-                ClientContext.UI?.ShowToast("提交成功");
+                Context.UI?.ShowToast("提交成功");
             }
         }
 
@@ -102,14 +102,14 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
             if (SelectedTaskId == ack.TaskId)
                 SelectedTaskId = -1;
             OnDataChanged?.Invoke();
-            ClientContext.UI?.ShowToast("已放弃任务");
+            Context.UI?.ShowToast("已放弃任务");
         }
 
         public void HandleTaskChangedNtf(TaskChangedNtf ntf)

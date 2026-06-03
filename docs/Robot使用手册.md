@@ -11,9 +11,9 @@ Robot 是独立于 Unity 的命令行测试工具，通过 TCP 连接服务端�
 
 ```
 robot/
-├── Robot.csproj         # .NET 8 Console，Compile Include 引用 shared/ + Logic/
+├── Robot.csproj         # .NET 8 Console，ProjectReference 引用 shared/ + Logic/
 ├── Program.cs           # 入口，命令行解析，注册测试场景
-├── RobotSession.cs      # TCP 连接 + 消息收发（SendAndWaitAsync / WaitForMsgAsync）
+├── RobotSession.cs      # NetworkComponent + TcpSession 薄包装（CallAsync / WaitForAsync）
 ├── TestRunner.cs        # 加载场景 → 执行 → 收集 PASS/FAIL 结果
 ├── TestScenario.cs      # 测试场景抽象基类
 ├── Assertions.cs        # 断言工具（Equal / True / NotNull / Fail）
@@ -85,11 +85,11 @@ namespace Robot
         public override async Task Run()
         {
             // 1. 握手
-            var handshakeRes = await Session.SendAndWaitAsync<HandshakeRes>(new HandshakeReq());
+            var handshakeRes = await Session.CallAsync<HandshakeRes>(new HandshakeReq());
             Assertions.True(string.IsNullOrEmpty(handshakeRes.ErrorMessage), "握手失败");
 
             // 2. 登录
-            var loginRes = await Session.SendAndWaitAsync<LoginRes>(new LoginReq
+            var loginRes = await Session.CallAsync<LoginRes>(new LoginReq
             {
                 Username = "test",
                 Password = "123456"
@@ -112,14 +112,17 @@ runner.AddScenario(new MyTest());
 ### 消息收发
 
 ```csharp
-// 请求/响应：发送请求，等待指定类型响应
-var res = await Session.SendAndWaitAsync<LoginRes>(new LoginReq { ... });
+// RPC：发送请求，等待指定类型响应
+var res = await Session.CallAsync<LoginRes>(new LoginReq { ... });
 
 // 等待服务端推送（如 EnterGameNtf）
-var ntf = await Session.WaitForMsgAsync<EnterGameNtf>();
+var ntf = await Session.WaitForAsync<EnterGameNtf>();
 
 // 仅发送（不等待响应）
 await Session.SendAsync(new HeartbeatReq());
+
+// 旧接口仍可用，但新测试优先使用 CallAsync / WaitForAsync
+var legacyRes = await Session.SendAndWaitAsync<LoginRes>(new LoginReq { ... });
 ```
 
 ### 断言
@@ -154,11 +157,11 @@ public class EnterGameTest : TestScenario
     public override async Task Run()
     {
         // 握手
-        var handshakeRes = await Session.SendAndWaitAsync<HandshakeRes>(new HandshakeReq());
+        var handshakeRes = await Session.CallAsync<HandshakeRes>(new HandshakeReq());
         Assertions.True(string.IsNullOrEmpty(handshakeRes.ErrorMessage), "握手失败");
 
         // 登录
-        var loginRes = await Session.SendAndWaitAsync<LoginRes>(new LoginReq
+        var loginRes = await Session.CallAsync<LoginRes>(new LoginReq
         {
             Username = "test",
             Password = "123456"
@@ -168,7 +171,7 @@ public class EnterGameTest : TestScenario
 
         // 进入游戏
         var role = loginRes.Roles[0];
-        var enterRes = await Session.SendAndWaitAsync<EnterGameRes>(new EnterGameReq
+        var enterRes = await Session.CallAsync<EnterGameRes>(new EnterGameReq
         {
             RoleId = role.RoleId
         });
@@ -199,8 +202,8 @@ Robot 使用共享的 `ILog` + `LogManager`。未初始化时使用 `ConsoleFall
 
 ## 设计决策
 
-- **不用 MessageRouter**：Robot 自建 Socket + 直接调用 PacketCodec，避免与客户端 Handler 耦合
-- **不用 TcpSession**：TcpSession 需要 MessageRouter，Robot 需要的是简单的请求/响应模式
-- **Compile Include 而非 ProjectReference**：与 server/ 引用 shared/ 的方式一致，避免中间 .csproj
-- **排除 Logic/Handlers/**：客户端 Handler 依赖 UI 面板接口（ILoginPanel 等），Robot 的 RobotClientUI.GetPanel 返回 null，Handler 无实际作用
+- **复用共享网络层**：RobotSession 通过 NetworkComponent.ConnectAsync 创建 TcpSession，不再自建 Socket、PacketCodec 和消息等待字典
+- **RPC 优先**：请求/响应测试优先使用 TcpSession.CallAsync，经 Network.RpcRequest/Network.RpcResponse 自动关联响应
+- **业务消息零额外字段**：LoginReq、EnterGameReq 等业务协议不携带 RpcId，RPC 关联信息只存在网络层内部 Envelope
+- **ProjectReference 引用 shared/ + Logic/**：Robot 引用 Shared 和 ClientLogic，不引用 View/ 或 UnityEngine
 - **每个场景独立连接**：TestRunner 为每个场景创建新 RobotSession，运行后 Disconnect，保证场景间隔离

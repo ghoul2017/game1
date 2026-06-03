@@ -4,7 +4,7 @@ using Client.Logic;
 using Robot;
 
 // 设置 Robot UI 桥接
-ClientContext.UI = new RobotClientUI();
+Context.UI = new RobotClientUI();
 
 Console.WriteLine("Robot 自动化测试框架");
 Console.WriteLine("=====================");

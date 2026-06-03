@@ -1,119 +1,94 @@
 using System;
-using System.Collections.Concurrent;
-using System.IO;
-using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
-using ProtoBuf;
+using Shared.Common.Enums;
 using Shared.Core.Log;
 using Shared.Core.Network;
 
 namespace Robot
 {
     /// <summary>
-    /// Robot 客户端会话。管理 TCP 连接、消息收发，提供请求/响应等待。
+    /// Robot 客户端会话。通过 NetworkComponent 创建 TcpSession，复用共享网络层。
     /// </summary>
     public class RobotSession : IDisposable
     {
         private static readonly ILog Log = LogManager.GetLogger<RobotSession>();
 
-        private Socket? _socket;
-        private NetworkStream? _stream;
-        private CancellationTokenSource? _cts;
-        private readonly byte[] _recvBuffer = new byte[8192];
-        private readonly MemoryStream _packetBuffer = new();
+        private NetworkComponent? _network;
+        private TcpSession? _session;
 
-        /// <summary>消息处理器：消息名 → 处理 payload 的回调</summary>
-        private readonly ConcurrentDictionary<string, Action<byte[]>> _handlers = new();
+        public bool IsConnected => _session != null && _session.IsConnected;
 
-        public bool IsConnected { get; private set; }
-        public long UserId { get; set; }
-        public long RoleId { get; set; }
+        public long UserId
+        {
+            get => CurrentSession.UserId;
+            set => CurrentSession.UserId = value;
+        }
+
+        public long RoleId
+        {
+            get => CurrentSession.RoleId;
+            set => CurrentSession.RoleId = value;
+        }
+
+        private TcpSession CurrentSession
+        {
+            get
+            {
+                if (_session == null)
+                    throw new InvalidOperationException("未连接");
+                return _session;
+            }
+        }
 
         /// <summary>连接服务器</summary>
         public async Task ConnectAsync(string host, int port)
         {
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            await Task.Factory.FromAsync(
-                (callback, state) => _socket.BeginConnect(host, port, callback, state),
-                _socket.EndConnect,
-                null);
-            _stream = new NetworkStream(_socket);
-            _cts = new CancellationTokenSource();
-            IsConnected = true;
+            _network = new NetworkComponent();
+            _session = await _network.ConnectAsync(host, port);
 
             Log.Info($"Robot 连接 {host}:{port}");
-
-            _ = ReceiveLoopAsync(_cts.Token);
         }
 
-        /// <summary>发送消息</summary>
-        public async Task SendAsync(IMessage msg)
+        /// <summary>发送消息，不等待响应</summary>
+        public Task SendAsync(IMessage msg)
         {
-            if (!IsConnected || _stream == null)
-                throw new InvalidOperationException("未连接");
-
-            var messageName = MessageRegistry.GetName(msg.GetType());
-            var packet = PacketCodec.Encode(messageName, msg.Serialize());
-            await _stream.WriteAsync(packet, 0, packet.Length);
+            CurrentSession.Send(msg);
+            return Task.CompletedTask;
         }
 
-        /// <summary>发送请求并等待指定类型的响应</summary>
-        public async Task<T> SendAndWaitAsync<T>(IMessage req, int timeoutMs = 5000) where T : IMessage
+        /// <summary>发送请求并等待指定类型响应</summary>
+        public Task<T> CallAsync<T>(IMessage req, int timeoutMs = 5000) where T : IMessage
         {
-            var waitTask = WaitForMsgAsync<T>(timeoutMs);
-            await SendAsync(req);
-            return await waitTask;
+            return CurrentSession.CallAsync<T>(req, timeoutMs);
         }
 
-        /// <summary>等待指定类型的消息（请求响应或服务端推送）</summary>
-        public async Task<T> WaitForMsgAsync<T>(int timeoutMs = 5000) where T : IMessage
+        /// <summary>兼容旧测试命名：发送请求并等待指定类型响应</summary>
+        public Task<T> SendAndWaitAsync<T>(IMessage req, int timeoutMs = 5000) where T : IMessage
         {
-            if (!IsConnected)
-                throw new InvalidOperationException("未连接");
+            return CallAsync<T>(req, timeoutMs);
+        }
 
-            var messageName = MessageRegistry.GetName(typeof(T));
-            var tcs = new TaskCompletionSource<T>();
+        /// <summary>等待指定类型的服务端推送或裸响应</summary>
+        public Task<T> WaitForAsync<T>(int timeoutMs = 5000) where T : IMessage
+        {
+            return CurrentSession.WaitForAsync<T>(timeoutMs);
+        }
 
-            _handlers[messageName] = payload =>
-            {
-                try
-                {
-                    using var ms = new MemoryStream(payload);
-                    var msg = Serializer.Deserialize<T>(ms);
-                    tcs.TrySetResult(msg);
-                }
-                catch (Exception ex)
-                {
-                    tcs.TrySetException(ex);
-                }
-            };
-
-            using var cts = new CancellationTokenSource(timeoutMs);
-            cts.Token.Register(() =>
-            {
-                _handlers.TryRemove(messageName, out _);
-                tcs.TrySetCanceled();
-            });
-
-            try
-            {
-                return await tcs.Task;
-            }
-            catch (TaskCanceledException)
-            {
-                throw new TimeoutException($"等待消息 {messageName} 超时 ({timeoutMs}ms)");
-            }
+        /// <summary>兼容旧测试命名：等待指定类型的消息</summary>
+        public Task<T> WaitForMsgAsync<T>(int timeoutMs = 5000) where T : IMessage
+        {
+            return WaitForAsync<T>(timeoutMs);
         }
 
         /// <summary>断开连接</summary>
         public void Disconnect()
         {
-            IsConnected = false;
-            _cts?.Cancel();
+            if (_session == null)
+                return;
 
-            try { _stream?.Close(); } catch { }
-            try { _socket?.Close(); } catch { }
+            _session.Disconnect(LogoutReason.NetDisconnected);
+            _session = null;
+            _network = null;
 
             Log.Info("Robot 断开连接");
         }
@@ -121,71 +96,6 @@ namespace Robot
         public void Dispose()
         {
             Disconnect();
-            _cts?.Dispose();
-            _stream?.Dispose();
-            _packetBuffer.Dispose();
-        }
-
-        private async Task ReceiveLoopAsync(CancellationToken ct)
-        {
-            try
-            {
-                while (!ct.IsCancellationRequested && IsConnected)
-                {
-                    var bytesRead = await _socket!.ReceiveAsync(new ArraySegment<byte>(_recvBuffer), SocketFlags.None);
-                    if (bytesRead == 0)
-                    {
-                        Disconnect();
-                        return;
-                    }
-
-                    _packetBuffer.Write(_recvBuffer, 0, bytesRead);
-                    ProcessBuffer();
-                }
-            }
-            catch (SocketException)
-            {
-                Disconnect();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Robot 接收异常: {ex.Message}");
-                Disconnect();
-            }
-        }
-
-        private void ProcessBuffer()
-        {
-            var data = _packetBuffer.ToArray();
-            var offset = 0;
-
-            while (offset < data.Length)
-            {
-                var result = PacketCodec.TryDecode(data, offset, data.Length - offset);
-                if (result == null)
-                    break;
-
-                offset += result.Consumed;
-
-                if (_handlers.TryGetValue(result.MessageName, out var handler))
-                {
-                    handler(result.Payload);
-                }
-                else
-                {
-                    Log.Warn($"Robot 未处理的消息: {result.MessageName}");
-                }
-            }
-
-            if (offset > 0)
-            {
-                _packetBuffer.SetLength(0);
-                if (offset < data.Length)
-                    _packetBuffer.Write(data, offset, data.Length - offset);
-            }
         }
     }
 }

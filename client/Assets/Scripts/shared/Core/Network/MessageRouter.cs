@@ -90,9 +90,20 @@ namespace Shared.Core.Network
                 yield return type;
         }
 
+        public bool HasHandler(string messageName)
+        {
+            return _handlers.ContainsKey(messageName);
+        }
+
+        public async Task<IMessage?> HandleAsync(TcpSession session, string messageName, byte[] payload)
+        {
+            var handler = _handlers[messageName];
+            return await handler.HandleAsync(session, payload);
+        }
+
         public async Task RouteAsync(TcpSession session, string messageName, byte[] payload)
         {
-            if (!_handlers.TryGetValue(messageName, out var handler))
+            if (!HasHandler(messageName))
             {
                 Log.Warn($"未注册的消息: {messageName}");
                 return;
@@ -100,7 +111,7 @@ namespace Shared.Core.Network
 
             try
             {
-                var res = await handler.HandleAsync(session, payload);
+                var res = await HandleAsync(session, messageName, payload);
                 if (res != null)
                     session.Send(res);
             }

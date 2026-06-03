@@ -19,7 +19,7 @@ namespace Client.Logic
             req.X = x;
             req.Y = y;
             req.TargetId = targetId;
-            ClientContext.Network?.Send(req);
+            NetClient.Instance.Send(req);
         }
 
         public void TogglePkMode()
@@ -27,7 +27,7 @@ namespace Client.Logic
             int nextMode = (GameData.CurrentPkMode + 1) % 4;
             var req = new SetPkModeReq();
             req.PkMode = nextMode;
-            ClientContext.Network?.Send(req);
+            NetClient.Instance.Send(req);
         }
 
         public void RespawnAtCurrentMap()
@@ -38,7 +38,7 @@ namespace Client.Logic
                 var req = new EnterMapReq();
                 req.MapCfgId = mapData.MapCfgId;
                 req.Line = mapData.Line;
-                ClientContext.Network?.Send(req);
+                NetClient.Instance.Send(req);
             }
         }
 
@@ -46,7 +46,7 @@ namespace Client.Logic
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
-                ClientContext.UI?.ShowToast(ack.ErrorMessage);
+                Context.UI?.ShowToast(ack.ErrorMessage);
                 return;
             }
             OnSkillCasted?.Invoke(ack);

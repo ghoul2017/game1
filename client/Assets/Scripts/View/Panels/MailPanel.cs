@@ -8,7 +8,7 @@ using Client.Logic;
 
 namespace Client.View
 {
-    public class MailPanel : UIPanel, IMailPanel
+    public class MailPanel : UIPanel
     {
         private const float MAIL_ITEM_H = 60f;
         private const float MAIL_ITEM_GAP = 4f;

@@ -72,10 +72,7 @@ namespace Client.View
 
         private void SendMoveReq(int x, int y)
         {
-            var network = ClientContext.Network;
-            if (network == null || !network.IsConnected) return;
-
-            network.Send(new MapMoveReq { X = x, Y = y });
+            NetClient.Instance.Send(new MapMoveReq { X = x, Y = y });
         }
 
         public void CorrectPosition(int serverX, int serverY)

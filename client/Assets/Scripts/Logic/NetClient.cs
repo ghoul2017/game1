@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using Shared.Common;
 using Shared.Common.Enums;
 using Shared.Common.Protos;
@@ -12,7 +13,7 @@ namespace Client.Logic
     /// 客户端网络管理器。基于 NetworkComponent + TcpSession，
     /// 负责连接、心跳、断线重连。消息处理由 NetworkComponent 的 MessageRouter 统一分发。
     /// </summary>
-    public class NetClient : INetworkSender
+    public class NetClient
     {
         public static NetClient Instance { get; private set; }
 
@@ -195,6 +196,27 @@ namespace Client.Logic
 
             _session?.Send(msg);
             _lastSendTime = _currentTime;
+        }
+
+        public Task<TRes> CallAsync<TRes>(IMessage req, int timeoutMs = 5000) where TRes : IMessage
+        {
+            if (_state != ConnState.Connected && _state != ConnState.Handshaking)
+            {
+                Log.Warn("[NetClient] Cannot call: not connected");
+                var tcs = new TaskCompletionSource<TRes>();
+                tcs.SetException(new InvalidOperationException("网络未连接"));
+                return tcs.Task;
+            }
+
+            if (_session == null)
+            {
+                var tcs = new TaskCompletionSource<TRes>();
+                tcs.SetException(new InvalidOperationException("网络会话不存在"));
+                return tcs.Task;
+            }
+
+            _lastSendTime = _currentTime;
+            return _session.CallAsync<TRes>(req, timeoutMs);
         }
 
         // ==================== Connect / Disconnect ====================

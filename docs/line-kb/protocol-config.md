@@ -5,6 +5,8 @@ LINEKB:PROTOCOL:MESSAGE_NAME_PLAN doc=docs/2.PLAN/11-字符串消息名协议.md
 LINEKB:PROTOCOL:MESSAGE_INTERFACE path=client/Assets/Scripts/shared/Core/Network/IMessage.cs symbol=IMessage note="共享消息接口。"
 LINEKB:PROTOCOL:MESSAGE_ATTRIBUTE path=client/Assets/Scripts/shared/Core/Network/MessageAttribute.cs symbol=MessageAttribute note="协议类使用 [Message(\"模块.消息名\")] 声明显式稳定消息名。"
 LINEKB:PROTOCOL:MESSAGE_REGISTRY path=client/Assets/Scripts/shared/Core/Network/MessageRegistry.cs symbol=MessageRegistry note="消息注册表扫描 IMessage 类型，建立 name->Type 和 Type->name 映射并校验重复或缺失消息名。"
+LINEKB:PROTOCOL:RPC path=client/Assets/Scripts/shared/Core/Network/TcpSession.cs symbol=CallAsync note="TcpSession.CallAsync<TRes>() 使用 Network.RpcRequest/Network.RpcResponse 内部 Envelope 关联 RpcId，业务消息体不增加 RpcId 字段。"
+LINEKB:PROTOCOL:WAIT path=client/Assets/Scripts/shared/Core/Network/TcpSession.cs symbol=WaitForAsync note="TcpSession.WaitForAsync<T>() 等待指定业务消息名的下一条裸消息或服务端推送。"
 LINEKB:PROTOCOL:PROTOS path=client/Assets/Scripts/shared/Common/Protos note="Protobuf 消息定义目录，消息命名使用 Req、Res/Ack、Ntf 后缀。"
 LINEKB:PROTOCOL:NAMING doc=AGENTS.md note="消息命名为 *Req 请求、*Res/*Ack 响应、*Ntf 通知。"
 LINEKB:PROTOCOL:USER_PROTOS path=client/Assets/Scripts/shared/Common/Protos/UserProtos.cs note="用户和角色相关协议定义。"

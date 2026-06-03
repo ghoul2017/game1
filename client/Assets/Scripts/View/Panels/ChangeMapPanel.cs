@@ -116,19 +116,13 @@ namespace Client.View
 
         private void OnTeleport(int targetMapCfgId)
         {
-            var network = ClientContext.Network;
-            if (network == null || !network.IsConnected)
-            {
-                UIToast.Show("网络未连接");
-                return;
-            }
 
             var req = new ChangeMapReq();
             req.TargetMapCfgId = targetMapCfgId;
             req.TargetLine = 1;
             req.X = 0;
             req.Y = 0;
-            network.Send(req);
+            NetClient.Instance.Send(req);
 
             UIManager.Instance.HidePanel<ChangeMapPanel>();
             UIToast.Show("正在传送...");

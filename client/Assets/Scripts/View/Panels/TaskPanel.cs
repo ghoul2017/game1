@@ -6,7 +6,7 @@ using Client.Logic;
 
 namespace Client.View
 {
-    public partial class TaskPanel : UIPanel, ITaskPanel
+    public partial class TaskPanel : UIPanel
     {
         private const float TASK_ITEM_H = 55f;
         private const float TASK_ITEM_GAP = 4f;
