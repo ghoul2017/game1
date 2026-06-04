@@ -46,7 +46,11 @@ AOI 事件回调到 `MapAoiNotifier`，按 `ObjectType` 自动分发通知：
 | `GameMap.cs` | 地图实例（含 AOI + 怪物管理） |
 | `MapPlayerEntity.cs` | 玩家地图投影实体 |
 | `MapAoiNotifier.cs` | AOI 事件 → 网络通知（按 ObjectType 分发） |
-| `MapHandlers.cs` | 消息处理 + 事件订阅 |
+| `MapHandlers.cs` | PlayerOfflineEvent 订阅 + 视野推送辅助 |
+| `EnterMapReqHandler.cs` | 进入地图消息处理 |
+| `LeaveMapReqHandler.cs` | 离开地图消息处理 |
+| `ChangeMapReqHandler.cs` | 切换地图消息处理 |
+| `MapMoveReqHandler.cs` | 地图移动消息处理 |
 | `IMapObject.cs` | 地图对象接口 + 对象类型常量 |
 
 已删除：`MapPositionComponent.cs`（坐标直接放在 MapObjectEntity）、`MapPlayerInfoComponent.cs`（Name 直接放在 MapObjectEntity）、`PlayerRefComponent.cs`（直接字段引用 PlayerEntity）。

@@ -86,21 +86,18 @@ PlayerSystem.EnterGame(roleId, userId, session, name, level, job)
 
 RoleAttributeComponent 的 `ToFightAttribute()` 方法是 Player → Fight 的数据桥梁，将持久化属性转换为战斗属性。
 
-## PlayerRpcMethodHandler
+## PlayerRpcMessageHandler
 
-Player 模块提供 `PlayerRpcMethodHandler`，让 Handler 首参直接用 `PlayerEntity` 替代 `TcpSession`：
+Player 模块提供继承式 Player 级 RPC Handler，让业务处理直接使用 `PlayerEntity`：
 
 ```csharp
-// 普通 Handler
-[MessageHandler(typeof(RpcMethodHandler))]
-static Task<IMessage> Handler(TcpSession session, Req req, Res res)
-
-// Player Handler — 自动从 session.RoleId 查找 PlayerEntity
-[MessageHandler(typeof(PlayerRpcMethodHandler))]
-static Task<IMessage> Handler(PlayerEntity player, Req req, Res res)
+public sealed class XxxReqHandler : PlayerRpcMessageHandler<XxxReq, XxxRes>
+{
+    protected override Task ExecuteAsync(PlayerEntity player, XxxReq req, XxxRes res)
+}
 ```
 
-Bag/Mail/Task/Chat/Fight/Map 模块的 Handler 均使用 PlayerRpcMethodHandler。
+`PlayerRpcMessageHandler` 自动从 `session.RoleId` 查找 `PlayerEntity`，找不到时尽量写入 `ErrorMessage=玩家不在线` 并返回响应。
 
 ## 跨模块协作
 

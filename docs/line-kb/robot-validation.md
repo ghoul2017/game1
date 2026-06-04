@@ -24,5 +24,5 @@ LINEKB:VALIDATION:CHECK_ALL command="scripts/check-all" note="统一验证入口
 LINEKB:VALIDATION:CHECK_CLIENT_BOUNDARY command="scripts/check-client-boundary" note="检查 client/Assets/Scripts/Logic 和 shared 真实 UnityEngine 依赖。"
 LINEKB:VALIDATION:CHECK_PROTOCOL command="scripts/check-protocol" note="运行 tools check-protocol，检查消息标记、消息名、Handler 签名和旧协议残留。"
 LINEKB:VALIDATION:UNITY_VERSION doc=AGENTS.md version=2021.3.26f1c1 note="客户端 Unity 版本为 2021.3.26f1c1，URP 12.1.11。"
-LINEKB:VALIDATION:UNITY_META doc=AGENTS.md note="Unity 资源删除、移动或改名时必须同步处理对应 .meta。"
-LINEKB:VALIDATION:UNITY_CSPROJ command="/Applications/Unity/Hub/Editor/2021.3.26f1c1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath client -logFile /tmp/game1-unity-plan12.log" note="Unity csproj 由 Editor 自动生成，新增、删除、移动 .cs/.asmdef/资源后用 Editor Refresh 或 batchmode 刷新并检查日志。"
+LINEKB:VALIDATION:UNITY_META doc=AGENTS.md note="不要手动新增、编辑或补齐 .meta；需要更新时使用 Unity 2021.3.26f1c1 batchmode 生成。"
+LINEKB:VALIDATION:UNITY_CSPROJ command="/Applications/Unity/Hub/Editor/2021.3.26f1c1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath client -logFile /tmp/game1-unity-plan12.log" note="Unity csproj 由 Editor 自动生成，不能手动修改；新增、删除、移动 .cs/.asmdef/资源后用 Unity 2021.3.26f1c1 batchmode 生成并检查日志。"

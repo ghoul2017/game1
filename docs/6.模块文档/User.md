@@ -25,7 +25,11 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 | 文件 | 职责 |
 |------|------|
 | `UserComponent.cs` | Module 级 Component，全局用户索引 |
-| `UserHandler.cs` | 消息处理（登录/创建角色/进入游戏/重连）+ 事件订阅 |
+| `UserHandler.cs` | 事件订阅 + 踢人下线工具方法 |
+| `LoginReqHandler.cs` | 登录消息处理 |
+| `CreateRoleReqHandler.cs` | 创建角色消息处理 |
+| `EnterGameReqHandler.cs` | 进入游戏消息处理 |
+| `ReconnectReqHandler.cs` | 断线重连消息处理 |
 | `User.cs` | 账号实体（IEntity 持久化） |
 | `UserRole.cs` | 角色索引实体（IEntity 持久化） |
 

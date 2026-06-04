@@ -25,7 +25,8 @@ ChatComponent 挂载在 `Context.Server` 上，只维护世界聊天冷却记录
 |------|------|
 | `ChatComponent.cs` | Module 级 Component，世界聊天冷却记录 |
 | `ChatSystem.cs` | 聊天逻辑扩展方法 |
-| `ChatHandlers.cs` | 消息处理 + PlayerOfflineEvent 订阅 |
+| `ChatReqHandler.cs` | ChatReq 消息处理 |
+| `ChatHandlers.cs` | PlayerOfflineEvent 订阅 |
 
 ## 聊天处理
 

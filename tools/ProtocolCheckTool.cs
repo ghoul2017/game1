@@ -86,9 +86,10 @@ public class ProtocolCheckTool : ITool
         List<string> errors)
     {
         var handlerCount = 0;
-        var handledMessageNames = new Dictionary<string, MethodInfo>();
+        var handledMessageNames = new Dictionary<string, string>();
+        var types = assemblies.Distinct().SelectMany(GetLoadableTypes).ToArray();
 
-        foreach (var method in assemblies.SelectMany(GetLoadableTypes)
+        foreach (var method in types
                      .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public)))
         {
             var attr = method.GetCustomAttribute<MessageHandlerAttribute>();
@@ -108,19 +109,126 @@ public class ProtocolCheckTool : ITool
             if (parameters.Length < 2 || !typeof(IMessage).IsAssignableFrom(parameters[1].ParameterType))
                 continue;
 
-            if (!messageTypeToName.TryGetValue(parameters[1].ParameterType, out var messageName))
+            RegisterHandledMessage(
+                domainName,
+                handledMessageNames,
+                messageTypeToName,
+                parameters[1].ParameterType,
+                FormatMethod(method),
+                errors);
+        }
+
+        foreach (var type in types.Where(IsClassHandlerType))
+        {
+            handlerCount++;
+            if (!TryGetClassHandlerMessageType(domainName, type, errors, out var messageType) || messageType == null)
                 continue;
 
-            if (handledMessageNames.TryGetValue(messageName, out var existingHandler))
-            {
-                errors.Add($"{domainName} 重复注册 Handler: {messageName}, {FormatMethod(existingHandler)}, {FormatMethod(method)}");
-                continue;
-            }
-
-            handledMessageNames[messageName] = method;
+            ValidateClassHandlerDefinition(domainName, type, messageTypeToName, errors);
+            ValidateMessageParameter(domainName, FormatType(type), messageType, "消息", messageTypeToName, errors);
+            RegisterHandledMessage(
+                domainName,
+                handledMessageNames,
+                messageTypeToName,
+                messageType,
+                FormatType(type),
+                errors);
         }
 
         return handlerCount;
+    }
+
+    private static void ValidateClassHandlerDefinition(
+        string domainName,
+        Type type,
+        Dictionary<Type, string> messageTypeToName,
+        List<string> errors)
+    {
+        if (TryGetGenericBase(type, typeof(RpcMessageHandler<,>), out var rpcBase)
+            || TryGetGenericBase(type, typeof(PlayerRpcMessageHandler<,>), out rpcBase))
+        {
+            var genericArguments = rpcBase!.GetGenericArguments();
+            ValidateMessageParameter(domainName, FormatType(type), genericArguments[0], "请求", messageTypeToName, errors);
+            ValidateMessageParameter(domainName, FormatType(type), genericArguments[1], "响应", messageTypeToName, errors);
+            return;
+        }
+
+        if (TryGetGenericBase(type, typeof(NtfMessageHandler<>), out var ntfBase)
+            || TryGetGenericBase(type, typeof(PlayerNtfMessageHandler<>), out ntfBase))
+        {
+            var genericArguments = ntfBase!.GetGenericArguments();
+            ValidateMessageParameter(domainName, FormatType(type), genericArguments[0], "通知", messageTypeToName, errors);
+            return;
+        }
+    }
+
+    private static bool TryGetGenericBase(Type type, Type genericTypeDefinition, out Type? genericBase)
+    {
+        for (var current = type; current != null; current = current.BaseType)
+        {
+            if (current.IsGenericType && current.GetGenericTypeDefinition() == genericTypeDefinition)
+            {
+                genericBase = current;
+                return true;
+            }
+        }
+
+        genericBase = null;
+        return false;
+    }
+
+    private static bool IsClassHandlerType(Type type)
+    {
+        return !type.IsAbstract
+               && !type.IsInterface
+               && !type.ContainsGenericParameters
+               && typeof(IClassMessageHandler).IsAssignableFrom(type);
+    }
+
+    private static bool TryGetClassHandlerMessageType(
+        string domainName,
+        Type type,
+        List<string> errors,
+        out Type? messageType)
+    {
+        messageType = null;
+        if (type.GetConstructor(Type.EmptyTypes) == null)
+        {
+            errors.Add($"{domainName} 继承式 Handler 必须有无参构造: {FormatType(type)}");
+            return false;
+        }
+
+        try
+        {
+            var handler = (IClassMessageHandler)Activator.CreateInstance(type)!;
+            messageType = handler.MessageType;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"{domainName} 继承式 Handler 创建失败: {FormatType(type)}, error={ex.Message}");
+            return false;
+        }
+    }
+
+    private static void RegisterHandledMessage(
+        string domainName,
+        Dictionary<string, string> handledMessageNames,
+        Dictionary<Type, string> messageTypeToName,
+        Type messageType,
+        string source,
+        List<string> errors)
+    {
+        if (!messageTypeToName.TryGetValue(messageType, out var messageName))
+            return;
+
+        if (handledMessageNames.TryGetValue(messageName, out var existingHandler))
+        {
+            errors.Add($"{domainName} 重复注册 Handler: {messageName}, {existingHandler}, {source}");
+            return;
+        }
+
+        handledMessageNames[messageName] = source;
     }
 
     private static void ValidateHandlerSignature(
@@ -174,8 +282,8 @@ public class ProtocolCheckTool : ITool
         if (parameters[0].ParameterType != firstParamType)
             errors.Add($"{domainName} RPC Handler 参数1必须是 {firstParamType.Name}: {FormatMethod(method)}");
 
-        ValidateMessageParameter(domainName, method, parameters[1].ParameterType, "请求", messageTypeToName, errors);
-        ValidateMessageParameter(domainName, method, parameters[2].ParameterType, "响应", messageTypeToName, errors);
+        ValidateMessageParameter(domainName, FormatMethod(method), parameters[1].ParameterType, "请求", messageTypeToName, errors);
+        ValidateMessageParameter(domainName, FormatMethod(method), parameters[2].ParameterType, "响应", messageTypeToName, errors);
 
         if (method.ReturnType != typeof(Task<IMessage>))
             errors.Add($"{domainName} RPC Handler 返回值必须是 Task<IMessage>: {FormatMethod(method)}, returnType={method.ReturnType.FullName}");
@@ -198,7 +306,7 @@ public class ProtocolCheckTool : ITool
         if (parameters[0].ParameterType != firstParamType)
             errors.Add($"{domainName} NTF Handler 参数1必须是 {firstParamType.Name}: {FormatMethod(method)}");
 
-        ValidateMessageParameter(domainName, method, parameters[1].ParameterType, "通知", messageTypeToName, errors);
+        ValidateMessageParameter(domainName, FormatMethod(method), parameters[1].ParameterType, "通知", messageTypeToName, errors);
 
         if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
             errors.Add($"{domainName} NTF Handler 返回值必须是 void 或 Task: {FormatMethod(method)}, returnType={method.ReturnType.FullName}");
@@ -206,7 +314,7 @@ public class ProtocolCheckTool : ITool
 
     private static void ValidateMessageParameter(
         string domainName,
-        MethodInfo method,
+        string source,
         Type type,
         string label,
         Dictionary<Type, string> messageTypeToName,
@@ -214,12 +322,12 @@ public class ProtocolCheckTool : ITool
     {
         if (!typeof(IMessage).IsAssignableFrom(type))
         {
-            errors.Add($"{domainName} Handler {label}参数必须实现 IMessage: {FormatMethod(method)}, type={type.FullName}");
+            errors.Add($"{domainName} Handler {label}类型必须实现 IMessage: {source}, type={type.FullName}");
             return;
         }
 
         if (!messageTypeToName.ContainsKey(type))
-            errors.Add($"{domainName} Handler {label}类型未注册消息名: {FormatMethod(method)}, type={type.FullName}");
+            errors.Add($"{domainName} Handler {label}类型未注册消息名: {source}, type={type.FullName}");
     }
 
     private static void CheckLegacyProtocolResidue(List<string> errors)
@@ -271,5 +379,10 @@ public class ProtocolCheckTool : ITool
     private static string FormatMethod(MethodInfo method)
     {
         return $"{method.DeclaringType?.FullName}.{method.Name}";
+    }
+
+    private static string FormatType(Type type)
+    {
+        return type.FullName ?? type.Name;
     }
 }

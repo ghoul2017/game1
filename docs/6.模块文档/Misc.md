@@ -20,7 +20,9 @@ TCP 连接建立后，客户端发送 `HandshakeReq` 确认连接可用。当前
 
 | 文件 | 职责 |
 |------|------|
-| `MiscHandlers.cs` | 握手 + 心跳处理 + 心跳检测定时器 |
+| `MiscHandlers.cs` | 心跳检测定时器 |
+| `HandshakeReqHandler.cs` | 握手消息处理 |
+| `HeartbeatReqHandler.cs` | 心跳消息处理 |
 
 ## 协议
 
@@ -55,7 +57,7 @@ TCP 连接建立后，客户端发送 `HandshakeReq` 确认连接可用。当前
 
 | 交互方 | 方向 | 内容 |
 |--------|------|------|
-| Network | 单向 | RpcMethodHandler / TcpSession / DoHeartbeatCheck |
+| Network | 单向 | RpcMessageHandler / TcpSession / DoHeartbeatCheck |
 | GameTimer | 单向 | 心跳检测定时器 |
 
 Misc 不被任何业务模块依赖。

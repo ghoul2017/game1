@@ -24,7 +24,11 @@ Bag 模块管理玩家的物品背包——增删改查、整理交换、使用�
 |------|------|
 | `RoleBagComponent.cs` | 背包 Component（IEntity 持久化，Dictionary 主结构） |
 | `RoleBagSystem.cs` | 背包操作扩展方法（增删查改、整理、交换） |
-| `RoleBagHandlers.cs` | 消息处理 + PlayerOnlineEvent 订阅 |
+| `RoleBagHandlers.cs` | PlayerOnlineEvent 订阅 + BagItemInfo 转换 |
+| `QueryBagReqHandler.cs` | 查询背包消息处理 |
+| `BagTidyReqHandler.cs` | 整理背包消息处理 |
+| `BagSwapReqHandler.cs` | 交换背包格子消息处理 |
+| `BagUseItemReqHandler.cs` | 使用物品消息处理 |
 | `BagItem.cs` | 物品数据类 |
 | `ItemEffectSystem.cs` | 物品使用效果（HP/MP 恢复、复活） |
 

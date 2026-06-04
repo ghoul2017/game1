@@ -45,7 +45,11 @@ GameTask 模块管理玩家任务——接取、进度追踪、提交领奖、�
 |------|------|
 | `RoleTaskComponent.cs` | 任务 Component（IEntity 持久化，Dictionary 主结构） |
 | `RoleTaskSystem.cs` | 任务操作扩展方法 |
-| `RoleTaskHandlers.cs` | 消息处理 + 多事件订阅 |
+| `RoleTaskHandlers.cs` | PlayerOnlineEvent 和任务进度事件订阅 |
+| `QueryTaskListReqHandler.cs` | 查询任务列表消息处理 |
+| `TaskAcceptReqHandler.cs` | 接取任务消息处理 |
+| `TaskSubmitReqHandler.cs` | 提交任务消息处理 |
+| `TaskGiveUpReqHandler.cs` | 放弃任务消息处理 |
 | `RoleTask.cs` | 任务/目标数据类 + 目标类型常量 |
 
 ## 任务操作

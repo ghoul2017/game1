@@ -35,7 +35,8 @@ FightSystem 检测到怪物死亡后，直接调用 `map.OnMonsterKilled()` 处�
 | `FightUnitComponent.cs` | 战斗单元 Component（属性/技能/冷却/仇恨） |
 | `FightAttribute.cs` | 战斗属性数据结构（ProtoContract，兼容网络序列化） |
 | `Skill.cs` | 技能数据类 |
-| `FightHandlers.cs` | 消息处理 + 事件订阅 |
+| `UseSkillReqHandler.cs` | UseSkillReq 消息处理 |
+| `SetPkModeReqHandler.cs` | SetPkModeReq 消息处理 |
 
 已删除：`FightComponent.cs`（逻辑迁入 FightSystem，FightUnitComponent 改为 MapObjectEntity 级）。
 

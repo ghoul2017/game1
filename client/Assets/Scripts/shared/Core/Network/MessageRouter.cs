@@ -27,8 +27,9 @@ namespace Shared.Core.Network
         public void AutoRegister(params Assembly[] assemblies)
         {
             var handlerAttrType = typeof(MessageHandlerAttribute);
+            var types = assemblies.Distinct().SelectMany(GetLoadableTypes).ToArray();
 
-            foreach (var method in assemblies.SelectMany(GetLoadableTypes)
+            foreach (var method in types
                          .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public))
                          .Where(m => m.GetCustomAttribute(handlerAttrType) != null))
             {
@@ -59,16 +60,50 @@ namespace Shared.Core.Network
                 }
 
                 var messageName = MessageRegistry.GetName(reqType);
-                if (_handlers.ContainsKey(messageName))
-                    throw new InvalidOperationException($"重复注册消息 Handler: {messageName}, {method.Name}");
-
                 var handler = (AMethodHandler)Activator.CreateInstance(handlerType)!;
                 handler.Init(method);
-                _handlers[messageName] = handler;
+                RegisterHandler(messageName, handler, method.Name);
                 Log.Info($"自动注册Handler({handlerType.Name}): {method.Name} -> MessageName:{messageName}");
             }
 
+            foreach (var type in types.Where(IsClassHandlerType))
+            {
+                if (type.GetConstructor(Type.EmptyTypes) == null)
+                {
+                    Log.Warn($"继承式 Handler 必须有无参构造: {type.FullName}");
+                    continue;
+                }
+
+                var handler = (IClassMessageHandler)Activator.CreateInstance(type)!;
+                var messageType = handler.MessageType;
+                if (!typeof(IMessage).IsAssignableFrom(messageType))
+                {
+                    Log.Warn($"继承式 Handler 的 MessageType 必须实现 IMessage: {type.FullName}");
+                    continue;
+                }
+
+                var messageName = MessageRegistry.GetName(messageType);
+                RegisterHandler(messageName, handler, type.FullName ?? type.Name);
+                Log.Info($"自动注册Handler({type.Name}) -> MessageName:{messageName}");
+            }
+
             Log.Info($"Handler 自动注册完成，共 {_handlers.Count} 个");
+        }
+
+        private static bool IsClassHandlerType(Type type)
+        {
+            return !type.IsAbstract
+                   && !type.IsInterface
+                   && !type.ContainsGenericParameters
+                   && typeof(IClassMessageHandler).IsAssignableFrom(type);
+        }
+
+        private void RegisterHandler(string messageName, IMessageHandler handler, string source)
+        {
+            if (_handlers.ContainsKey(messageName))
+                throw new InvalidOperationException($"重复注册消息 Handler: {messageName}, {source}");
+
+            _handlers[messageName] = handler;
         }
 
         private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
@@ -111,9 +146,7 @@ namespace Shared.Core.Network
 
             try
             {
-                var res = await HandleAsync(session, messageName, payload);
-                if (res != null)
-                    session.Send(res);
+                await HandleAsync(session, messageName, payload);
             }
             catch (Exception ex)
             {
