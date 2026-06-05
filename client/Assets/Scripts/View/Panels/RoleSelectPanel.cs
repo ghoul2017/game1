@@ -104,14 +104,14 @@ namespace Client.View
         public override void OnShow()
         {
             RoleSelectController.Instance.OnDataChanged += OnControllerDataChanged;
-            RoleSelectController.Instance.OnEnterMapSuccess += OnEnterMapSuccessHandler;
+            MapController.Instance.OnEnterMapReady += OnEnterMapReadyHandler;
             RoleSelectController.Instance.LoadRoles();
         }
 
         public override void OnHide()
         {
             RoleSelectController.Instance.OnDataChanged -= OnControllerDataChanged;
-            RoleSelectController.Instance.OnEnterMapSuccess -= OnEnterMapSuccessHandler;
+            MapController.Instance.OnEnterMapReady -= OnEnterMapReadyHandler;
             HideCreateDialog();
         }
 
@@ -120,7 +120,7 @@ namespace Client.View
             RefreshSlots();
         }
 
-        private void OnEnterMapSuccessHandler()
+        private void OnEnterMapReadyHandler()
         {
             Debug.Log("[RoleSelectPanel] 进图成功");
             UIManager.Instance.ClearAll();

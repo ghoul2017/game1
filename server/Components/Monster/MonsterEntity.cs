@@ -2,6 +2,7 @@ using Game.Components.Fight;
 using Game.Components.Map;
 using Game.Entities;
 using Shared.Common.Config;
+using Shared.Common.Const;
 using Shared.Core.ECS;
 
 namespace Game.Components.Monster;

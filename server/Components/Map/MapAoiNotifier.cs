@@ -1,5 +1,5 @@
-using Game.Components.Player;
 using System.Collections.Generic;
+using Game.Components.Player;
 using Game.Core.Aoi;
 using Shared.Core.Log;
 using Shared.Common.Protos;
@@ -8,7 +8,7 @@ namespace Game.Components.Map;
 
 /// <summary>
 /// AOI 事件通知器。将 AOI 事件转换为网络消息发送给客户端。
-/// 按 ObjectType 分发：Player 走 MapPlayerXxxNtf，其他走 MapObjectXxxNtf。
+/// 进入和离开视野统一走 MapObjectsNtf，移动统一走 MapObjectMoveNtf。
 /// </summary>
 public class MapAoiNotifier : IAoiEventListener
 {
@@ -65,83 +65,25 @@ public class MapAoiNotifier : IAoiEventListener
         }
     }
 
-    #region 通知分发
 
     private static void SendEnterNotification(long watcherId, IMapObject mapObj)
     {
-        if (mapObj.ObjectType == MapObjectType.Player)
-        {
-            Context.Players.SendToPlayer(watcherId, new MapPlayerEnterNtf
-            {
-                Player = ToMapObjectInfo(mapObj)
-            });
-        }
-        else
-        {
-            Context.Players.SendToPlayer(watcherId, new MapObjectEnterNtf
-            {
-                ObjectId = mapObj.ObjectId,
-                CfgId = mapObj.CfgId,
-                Name = mapObj.Name ?? "",
-                X = mapObj.X,
-                Y = mapObj.Y,
-                ObjectType = mapObj.ObjectType,
-            });
-        }
+        MapHelper.SendVisibleObject(watcherId, mapObj);
     }
 
     private static void SendLeaveNotification(long watcherId, IMapObject mapObj)
     {
-        if (mapObj.ObjectType == MapObjectType.Player)
-        {
-            Context.Players.SendToPlayer(watcherId, new MapPlayerLeaveNtf
-            {
-                RoleId = mapObj.ObjectId
-            });
-        }
-        else
-        {
-            Context.Players.SendToPlayer(watcherId, new MapObjectLeaveNtf
-            {
-                ObjectId = mapObj.ObjectId
-            });
-        }
+        MapHelper.SendObjectRemove(watcherId, mapObj.ObjectId);
     }
 
     private static void SendMoveNotification(long watcherId, IMapObject mapObj)
     {
-        if (mapObj.ObjectType == MapObjectType.Player)
+        Context.Players.SendToPlayer(watcherId, new MapObjectMoveNtf
         {
-            Context.Players.SendToPlayer(watcherId, new MapPlayerMoveNtf
-            {
-                RoleId = mapObj.ObjectId,
-                X = mapObj.X,
-                Y = mapObj.Y
-            });
-        }
-        else
-        {
-            Context.Players.SendToPlayer(watcherId, new MapObjectMoveNtf
-            {
-                ObjectId = mapObj.ObjectId,
-                X = mapObj.X,
-                Y = mapObj.Y
-            });
-        }
-    }
-
-    #endregion
-
-    private static MapObjectInfo ToMapObjectInfo(IMapObject obj)
-    {
-        return new MapObjectInfo
-        {
-            ObjectId = obj.ObjectId,
-            ObjectType = obj.ObjectType,
-            Name = obj.Name ?? "",
-            X = obj.X,
-            Y = obj.Y,
-            CfgId = obj.CfgId,
-        };
+            ObjectId = mapObj.ObjectId,
+            X = mapObj.X,
+            Y = mapObj.Y,
+            ObjectType = mapObj.ObjectType
+        });
     }
 }

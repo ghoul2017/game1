@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Client.Logic;
+using Shared.Common.Const;
 using Shared.Common.Protos;
 using Shared.Common.Config;
 using Shared.Core.Config;
@@ -30,12 +31,7 @@ namespace Client.View
             InitializeScene();
 
             // 订阅 MapController 事件
-            MapController.Instance.OnMapObjectsSpawned += HandleMapObjectsSpawned;
-            MapController.Instance.OnMapPlayerEnter += HandleMapPlayerEnter;
-            MapController.Instance.OnMapPlayerLeave += HandleMapPlayerLeave;
-            MapController.Instance.OnMapPlayerMove += HandleMapPlayerMove;
-            MapController.Instance.OnMapObjectEnter += HandleMapObjectEnter;
-            MapController.Instance.OnMapObjectLeave += HandleMapObjectLeave;
+            MapController.Instance.OnMapObjectsChanged += HandleMapObjectsChanged;
             MapController.Instance.OnMapObjectMove += HandleMapObjectMove;
             MapController.Instance.OnMapMoveCorrected += HandleMapMoveCorrected;
             MapController.Instance.OnMapRebuild += HandleMapRebuild;
@@ -43,6 +39,7 @@ namespace Client.View
             MapController.Instance.OnKicked += HandleKickedEvent;
             MapController.Instance.OnReconnected += HandleReconnectedEvent;
             MapController.Instance.OnReconnectFailed += HandleReconnectFailedEvent;
+            MapController.Instance.MarkMapViewReady();
 
             // Wire NetClient events to MapController
             var nc = NetClient.Instance;
@@ -63,12 +60,7 @@ namespace Client.View
         private void OnDestroy()
         {
             // 取消订阅 MapController 事件
-            MapController.Instance.OnMapObjectsSpawned -= HandleMapObjectsSpawned;
-            MapController.Instance.OnMapPlayerEnter -= HandleMapPlayerEnter;
-            MapController.Instance.OnMapPlayerLeave -= HandleMapPlayerLeave;
-            MapController.Instance.OnMapPlayerMove -= HandleMapPlayerMove;
-            MapController.Instance.OnMapObjectEnter -= HandleMapObjectEnter;
-            MapController.Instance.OnMapObjectLeave -= HandleMapObjectLeave;
+            MapController.Instance.OnMapObjectsChanged -= HandleMapObjectsChanged;
             MapController.Instance.OnMapObjectMove -= HandleMapObjectMove;
             MapController.Instance.OnMapMoveCorrected -= HandleMapMoveCorrected;
             MapController.Instance.OnMapRebuild -= HandleMapRebuild;
@@ -76,6 +68,7 @@ namespace Client.View
             MapController.Instance.OnKicked -= HandleKickedEvent;
             MapController.Instance.OnReconnected -= HandleReconnectedEvent;
             MapController.Instance.OnReconnectFailed -= HandleReconnectFailedEvent;
+            MapController.Instance.MarkMapViewClosed();
 
             // 取消订阅 NetClient 事件
             var nc = NetClient.Instance;
@@ -215,9 +208,19 @@ namespace Client.View
 
         // ==================== MapController Event Handlers ====================
 
-        private void HandleMapObjectsSpawned(List<MapObjectInfo> objects)
+        private void HandleMapObjectsChanged(List<MapObjectInfo> objects, List<long> removeObjectIds)
         {
+            if (removeObjectIds != null)
+            {
+                foreach (var objectId in removeObjectIds)
+                {
+                    OtherPlayerManager.Instance.RemovePlayer(objectId);
+                    MonsterEntityManager.Instance.Remove(objectId);
+                }
+            }
+
             if (objects == null) return;
+
             foreach (var obj in objects)
             {
                 if (obj.ObjectType == MapObjectType.Player)
@@ -231,35 +234,21 @@ namespace Client.View
             }
         }
 
-        private void HandleMapPlayerEnter(MapObjectInfo player)
+        private void HandleMapObjectMove(MapObjectMoveNtf ntf)
         {
-            if (player != null)
-                OtherPlayerManager.Instance.SpawnPlayer(player);
-        }
-
-        private void HandleMapPlayerLeave(long roleId)
-        {
-            OtherPlayerManager.Instance.RemovePlayer(roleId);
-        }
-
-        private void HandleMapPlayerMove(long roleId, int x, int y)
-        {
-            OtherPlayerManager.Instance.MovePlayer(roleId, x, y);
-        }
-
-        private void HandleMapObjectEnter(long objectId, int cfgId, int objectType, string name, int x, int y)
-        {
-            MonsterEntityManager.Instance.Spawn(objectId, cfgId, objectType, name, x, y);
-        }
-
-        private void HandleMapObjectLeave(long objectId)
-        {
-            MonsterEntityManager.Instance.Remove(objectId);
-        }
-
-        private void HandleMapObjectMove(long objectId, int x, int y)
-        {
-            MonsterEntityManager.Instance.Move(objectId, x, y);
+            if (ntf.ObjectType == MapObjectType.Player)
+            {
+                OtherPlayerManager.Instance.MovePlayer(ntf.ObjectId, ntf.X, ntf.Y);
+            }
+            else if (ntf.ObjectType == MapObjectType.Monster || ntf.ObjectType == MapObjectType.Npc)
+            {
+                MonsterEntityManager.Instance.Move(ntf.ObjectId, ntf.X, ntf.Y);
+            }
+            else
+            {
+                Debug.LogWarning(string.Format("[GameSceneEntry] 未知地图对象类型，忽略移动 ObjectId:{0} ObjectType:{1}",
+                    ntf.ObjectId, ntf.ObjectType));
+            }
         }
 
         private void HandleMapMoveCorrected(int x, int y)
@@ -319,8 +308,7 @@ namespace Client.View
 
         private void HandleReconnectedEvent()
         {
-            Debug.Log("[GameSceneEntry] 重连成功，清除旧的视野数据");
-            OtherPlayerManager.Instance.ClearAll();
+            Debug.Log("[GameSceneEntry] 重连成功");
         }
 
         private void HandleReconnectFailedEvent(string msg)

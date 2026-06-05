@@ -15,7 +15,6 @@ namespace Client.Logic
         public bool HasError { get; private set; }
 
         public event Action OnDataChanged;
-        public event Action OnEnterMapSuccess;
 
         public void LoadRoles()
         {
@@ -144,14 +143,9 @@ namespace Client.Logic
 
                 if (string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    GameData.CurrentMap = new EnterMapData
-                    {
-                        MapCfgId = ack.MapCfgId,
-                        Line = ack.Line,
-                        SpawnX = ack.X,
-                        SpawnY = ack.Y
-                    };
-                    OnEnterMapSuccess?.Invoke();
+                    StatusText = "正在加载地图...";
+                    HasError = false;
+                    OnDataChanged?.Invoke();
                 }
                 else
                 {

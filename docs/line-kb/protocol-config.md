@@ -11,6 +11,8 @@ LINEKB:PROTOCOL:PROTOS path=client/Assets/Scripts/shared/Common/Protos note="Pro
 LINEKB:PROTOCOL:NAMING doc=AGENTS.md note="消息命名为 *Req 请求、*Res/*Ack 响应、*Ntf 通知。"
 LINEKB:PROTOCOL:USER_PROTOS path=client/Assets/Scripts/shared/Common/Protos/UserProtos.cs note="用户和角色相关协议定义。"
 LINEKB:PROTOCOL:MAP_PROTOS path=client/Assets/Scripts/shared/Common/Protos/MapProtos.cs note="地图相关协议定义。"
+LINEKB:PROTOCOL:ENTER_MAP_NTF path=client/Assets/Scripts/shared/Common/Protos/MapProtos.cs symbol=EnterMapNtf note="地图切换完成由 EnterMapNtf 驱动；主动进图、主动切图和服务端被动传送都不依赖 Req/Ack 完成客户端换图流程。"
+LINEKB:PROTOCOL:MAP_OBJECT_NTF path=client/Assets/Scripts/shared/Common/Protos/MapProtos.cs symbol=MapObjectsNtf,MapObjectMoveNtf note="地图 AOI 对象通知收束为两消息：MapObjectsNtf 负责对象快照/进入/离开，MapObjectMoveNtf 负责移动。"
 LINEKB:PROTOCOL:FIGHT_PROTOS path=client/Assets/Scripts/shared/Common/Protos/FightProtos.cs note="战斗相关协议定义。"
 LINEKB:PROTOCOL:ERROR_MESSAGE doc=AGENTS.md note="Ack/Res 使用 ErrorMessage，成功为空字符串，失败填中文错误文本。"
 LINEKB:PROTOCOL:ROUTER path=client/Assets/Scripts/shared/Core/Network/MessageRouter.cs symbol=MessageRouter note="共享消息路由入口，只扫描 IClassMessageHandler 继承式 Handler；AMethodHandler/[MessageHandler] 方法适配器已删除。"

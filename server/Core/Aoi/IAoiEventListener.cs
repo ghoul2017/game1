@@ -13,7 +13,7 @@ public interface IAoiEventListener
     /// <summary>对象离开灯塔视野</summary>
     void OnObjectLeave(IAoiObject obj, IReadOnlyDictionary<long, IAoiObject> watchers);
 
-    /// <summary>对象在同一灯塔内移动</summary>
+    /// <summary>对象移动；updateWatchers 表示移动前后都仍能看到该对象的观察者</summary>
     void OnObjectMove(IAoiObject obj, IReadOnlyDictionary<long, IAoiObject> oldWatchers,
         IReadOnlyDictionary<long, IAoiObject> updateWatchers, IReadOnlyDictionary<long, IAoiObject> newWatchers);
 

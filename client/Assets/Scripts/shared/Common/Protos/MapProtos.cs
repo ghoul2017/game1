@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 namespace Shared.Common.Protos
 {
-    #region 进入地图
 
     [ProtoContract]
     [Message("Map.EnterMapReq")]
@@ -25,9 +24,17 @@ namespace Shared.Common.Protos
         [ProtoMember(5)] public int Y { get; set; }
     }
 
-    #endregion
+    [ProtoContract]
+    [Message("Map.EnterMapNtf")]
+    public class EnterMapNtf : IMessage
+    {
+        [ProtoMember(1)] public int MapCfgId { get; set; }
+        [ProtoMember(2)] public int Line { get; set; }
+        [ProtoMember(3)] public int X { get; set; }
+        [ProtoMember(4)] public int Y { get; set; }
+    }
 
-    #region 离开地图
+
 
     [ProtoContract]
     [Message("Map.LeaveMapReq")]
@@ -42,9 +49,7 @@ namespace Shared.Common.Protos
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
     }
 
-    #endregion
 
-    #region 切换地图
 
     [ProtoContract]
     [Message("Map.ChangeMapReq")]
@@ -67,9 +72,7 @@ namespace Shared.Common.Protos
         [ProtoMember(5)] public int Y { get; set; }
     }
 
-    #endregion
 
-    #region 地图移动
 
     [ProtoContract]
     [Message("Map.MapMoveReq")]
@@ -88,9 +91,7 @@ namespace Shared.Common.Protos
         [ProtoMember(3)] public int Y { get; set; }
     }
 
-    #endregion
 
-    #region 地图对象信息
 
     [ProtoContract]
     public class MapObjectInfo
@@ -103,62 +104,17 @@ namespace Shared.Common.Protos
         [ProtoMember(6)] public int CfgId { get; set; }  // 怪物/NPC配置ID
     }
 
-    #endregion
 
-    #region 地图通知消息
 
     [ProtoContract]
     [Message("Map.MapObjectsNtf")]
     public class MapObjectsNtf : IMessage
     {
         [ProtoMember(1)] public List<MapObjectInfo> Objects { get; set; } = new List<MapObjectInfo>();
+        [ProtoMember(2)] public List<long> RemoveObjectIds { get; set; } = new List<long>();
     }
 
-    [ProtoContract]
-    [Message("Map.MapPlayerEnterNtf")]
-    public class MapPlayerEnterNtf : IMessage
-    {
-        [ProtoMember(1)] public MapObjectInfo Player { get; set; } = new MapObjectInfo();
-    }
 
-    [ProtoContract]
-    [Message("Map.MapPlayerLeaveNtf")]
-    public class MapPlayerLeaveNtf : IMessage
-    {
-        [ProtoMember(1)] public long RoleId { get; set; }
-    }
-
-    [ProtoContract]
-    [Message("Map.MapPlayerMoveNtf")]
-    public class MapPlayerMoveNtf : IMessage
-    {
-        [ProtoMember(1)] public long RoleId { get; set; }
-        [ProtoMember(2)] public int X { get; set; }
-        [ProtoMember(3)] public int Y { get; set; }
-    }
-
-    #endregion
-
-    #region NPC通知消息
-
-    [ProtoContract]
-    [Message("Map.MapObjectEnterNtf")]
-    public class MapObjectEnterNtf : IMessage
-    {
-        [ProtoMember(1)] public long ObjectId { get; set; }
-        [ProtoMember(2)] public int CfgId { get; set; }
-        [ProtoMember(3)] public string Name { get; set; } = "";
-        [ProtoMember(4)] public int X { get; set; }
-        [ProtoMember(5)] public int Y { get; set; }
-        [ProtoMember(6)] public int ObjectType { get; set; }
-    }
-
-    [ProtoContract]
-    [Message("Map.MapObjectLeaveNtf")]
-    public class MapObjectLeaveNtf : IMessage
-    {
-        [ProtoMember(1)] public long ObjectId { get; set; }
-    }
 
     [ProtoContract]
     [Message("Map.MapObjectMoveNtf")]
@@ -167,11 +123,10 @@ namespace Shared.Common.Protos
         [ProtoMember(1)] public long ObjectId { get; set; }
         [ProtoMember(2)] public int X { get; set; }
         [ProtoMember(3)] public int Y { get; set; }
+        [ProtoMember(4)] public int ObjectType { get; set; }
     }
 
-    #endregion
 
-    #region 怪物掉落通知
 
     [ProtoContract]
     [Message("Map.MonsterDropNtf")]
@@ -189,5 +144,4 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public int Count { get; set; }
     }
 
-    #endregion
 }

@@ -37,7 +37,7 @@ namespace Client.Logic
         public static string Token { get; set; } = "";
 
         /// <summary>
-        /// 进图数据缓存（EnterMapAck 返回后填充）
+        /// 进图数据缓存（EnterMapNtf 到达后填充）
         /// </summary>
         public static EnterMapData CurrentMap { get; set; }
 

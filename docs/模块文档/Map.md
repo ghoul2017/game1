@@ -29,11 +29,14 @@ TowerAoi（九宫格灯塔）提供一站式 API：`AddAoiEntity` / `RemoveAoiEn
 - 玩家：viewRange=4（既被看到，也看到别人）
 - 怪物：viewRange=0（只被看到，不观察）
 
-### MapAoiNotifier 按类型分发
+### MapAoiNotifier 通知收束
 
-AOI 事件回调到 `MapAoiNotifier`，按 `ObjectType` 自动分发通知：
-- Player → `MapPlayerEnterNtf` / `MapPlayerLeaveNtf` / `MapPlayerMoveNtf`
-- Monster → `MapObjectEnterNtf` / `MapObjectLeaveNtf` / `MapObjectMoveNtf`
+AOI 事件回调到 `MapAoiNotifier` 后，只使用两个地图对象通知：
+
+- `MapObjectsNtf`：视野快照、对象进入视野、对象离开视野；`Objects` 表示新增对象，`RemoveObjectIds` 表示移除对象。
+- `MapObjectMoveNtf`：地图对象移动，玩家、怪物和 NPC 共用，通过 `ObjectType` 区分类型。
+
+地图切换完成不依赖请求 ACK 驱动，统一由 `EnterMapNtf` 通知客户端重建地图。主动进图、主动切图和服务端被动传送都应先完成服务端地图状态切换，再按顺序发送 `EnterMapNtf` 和当前视野 `MapObjectsNtf`。
 
 业务代码不要手动广播，否则导致双通知。
 
@@ -45,13 +48,15 @@ AOI 事件回调到 `MapAoiNotifier`，按 `ObjectType` 自动分发通知：
 | `MapSystem.cs` | 地图操作扩展方法 |
 | `GameMap.cs` | 地图实例（含 AOI + 怪物管理） |
 | `MapPlayerEntity.cs` | 玩家地图投影实体 |
-| `MapAoiNotifier.cs` | AOI 事件 → 网络通知（按 ObjectType 分发） |
-| `MapHandlers.cs` | PlayerOfflineEvent 订阅 + 视野推送辅助 |
+| `MapAoiNotifier.cs` | AOI 事件 → 地图对象网络通知 |
+| `MapHelper.cs` | 地图对象通知构造和发送辅助 |
+| `MapHandlers.cs` | PlayerOfflineEvent 订阅 |
 | `EnterMapReqHandler.cs` | 进入地图消息处理 |
 | `LeaveMapReqHandler.cs` | 离开地图消息处理 |
 | `ChangeMapReqHandler.cs` | 切换地图消息处理 |
 | `MapMoveReqHandler.cs` | 地图移动消息处理 |
-| `IMapObject.cs` | 地图对象接口 + 对象类型常量 |
+| `IMapObject.cs` | 地图对象接口 |
+| `MapObjectType.cs` | shared 地图对象类型常量 |
 
 已删除：`MapPositionComponent.cs`（坐标直接放在 MapObjectEntity）、`MapPlayerInfoComponent.cs`（Name 直接放在 MapObjectEntity）、`PlayerRefComponent.cs`（直接字段引用 PlayerEntity）。
 
@@ -95,13 +100,14 @@ QuitMap(roleId)
 
 ```
 进入地图：
-  1. EnterMapAck → 告知客户端地图坐标
-  2. SendVisibleObjects() → MapObjectsNtf（视野内所有对象快照）
-  3. AOI 自动通知后续的进入/离开/移动
+  1. EnterMapReq/ChangeMapReq → Ack 只表示请求结果
+  2. EnterMapNtf → 告知客户端地图和坐标，客户端据此加载或重建地图
+  3. MapObjectsNtf → 当前视野内所有对象快照
+  4. AOI 自动通知后续的进入、离开和移动
 
 移动：
   1. MapMoveAck → 确认坐标
-  2. AOI UpdateAoiEntity → 自动触发 OnObjectMove + OnWatcherUpdate
+  2. AOI UpdateAoiEntity → OnObjectMove 发 MapObjectMoveNtf，OnWatcherUpdate 发 MapObjectsNtf 增删
 ```
 
 ### 默认地图

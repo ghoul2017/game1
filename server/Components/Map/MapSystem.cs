@@ -88,6 +88,38 @@ public static class MapSystem
         return true;
     }
 
+    /// <summary>玩家进入地图并通知客户端完成地图切换。被动传送也应走这个入口。</summary>
+    public static bool EnterMapAndNotify(this MapComponent self, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
+    {
+        if (!self.EnterMap(cfgId, line, x, y, playerEntity))
+            return false;
+
+        self.SendEnterMapSnapshot(playerEntity.Id, cfgId, line, x, y);
+        return true;
+    }
+
+    /// <summary>玩家切图并通知客户端完成地图切换。被动传送也应走这个入口。</summary>
+    public static bool ChangeMapAndNotify(this MapComponent self, int newCfgId, int newLine, int newX, int newY, PlayerEntity playerEntity)
+    {
+        if (!self.ChangeMap(newCfgId, newLine, newX, newY, playerEntity))
+            return false;
+
+        self.SendEnterMapSnapshot(playerEntity.Id, newCfgId, newLine, newX, newY);
+        return true;
+    }
+
+    /// <summary>玩家已在地图内时，重新发送地图切换通知和当前视野快照。</summary>
+    public static bool NotifyCurrentMap(this MapComponent self, long roleId)
+    {
+        var currentPos = self.GetPlayerPosition(roleId);
+        if (currentPos == null)
+            return false;
+
+        var (mapId, line, x, y) = currentPos.Value;
+        self.SendEnterMapSnapshot(roleId, mapId, line, x, y);
+        return true;
+    }
+
     /// <summary>玩家离开地图</summary>
     public static bool QuitMap(this MapComponent self, long roleId)
     {
@@ -109,6 +141,13 @@ public static class MapSystem
     /// <summary>玩家切图（从当前地图移动到新地图）</summary>
     public static bool ChangeMap(this MapComponent self, int newCfgId, int newLine, int newX, int newY, PlayerEntity playerEntity)
     {
+        var map = self.GetMap(newCfgId, newLine);
+        if (map == null)
+        {
+            Log.Warn($"地图不存在 CfgId:{newCfgId} Line:{newLine}");
+            return false;
+        }
+
         QuitMapInternal(self, playerEntity.Id);
         return EnterMapInternal(self, newCfgId, newLine, newX, newY, playerEntity);
     }
@@ -124,6 +163,15 @@ public static class MapSystem
 
         self.PlayerMapEntities[playerEntity.Id] = mapPlayer;
         return true;
+    }
+
+    private static void SendEnterMapSnapshot(this MapComponent self, long roleId, int mapCfgId, int line, int x, int y)
+    {
+        MapHelper.SendEnterMap(roleId, mapCfgId, line, x, y);
+
+        var map = self.GetMap(mapCfgId, line);
+        if (map != null)
+            MapHelper.SendVisibleObjectList(roleId, map, x, y);
     }
 
     /// <summary>玩家移动（同地图内）</summary>

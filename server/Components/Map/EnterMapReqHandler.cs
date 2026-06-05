@@ -21,9 +21,7 @@ public sealed class EnterMapReqHandler : PlayerRpcMessageHandler<EnterMapReq, En
             res.Line = line;
             res.X = px;
             res.Y = py;
-            var currentMap = Context.Map.GetMap(mapId, line);
-            if (currentMap != null)
-                MapHandlers.SendVisibleObjects(player.Id, currentMap, px, py);
+            Context.Map.NotifyCurrentMap(player.Id);
             Log.Info($"玩家重进地图 RoleId:{player.Id} MapId:{mapId}");
             return Task.CompletedTask;
         }
@@ -38,7 +36,7 @@ public sealed class EnterMapReqHandler : PlayerRpcMessageHandler<EnterMapReq, En
         int x = map.BirthX;
         int y = map.BirthY;
 
-        if (!Context.Map.EnterMap(req.MapCfgId, req.Line, x, y, player))
+        if (!Context.Map.EnterMapAndNotify(req.MapCfgId, req.Line, x, y, player))
         {
             res.ErrorMessage = "目标地图不存在";
             return Task.CompletedTask;
@@ -48,8 +46,6 @@ public sealed class EnterMapReqHandler : PlayerRpcMessageHandler<EnterMapReq, En
         res.Line = req.Line;
         res.X = x;
         res.Y = y;
-
-        MapHandlers.SendVisibleObjects(player.Id, map, x, y);
 
         EventBus.Instance.Publish(new EventType.PlayerEnterMapEvent
         {

@@ -1,6 +1,7 @@
 using Game.Components.Fight;
 using Game.Components.Player;
 using Game.Entities;
+using Shared.Common.Const;
 using Shared.Core.ECS;
 
 namespace Game.Components.Map;

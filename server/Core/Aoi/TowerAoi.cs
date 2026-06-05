@@ -62,7 +62,6 @@ public class TowerAoi
         _listeners.Remove(listener);
     }
 
-    #region 一站式 API
 
     /// <summary>
     /// 添加 AOI 实体（一站式操作，同时处理对象和观察者）
@@ -124,9 +123,7 @@ public class TowerAoi
         return true;
     }
 
-    #endregion
 
-    #region 对象管理
 
     /// <summary>
     /// 添加对象到 AOI 系统
@@ -194,37 +191,38 @@ public class TowerAoi
 
         if (oldTower == null) return false;
 
+        var oldWatchers = oldTower.Watchers.ToDictionary(kv => kv.Key, kv => kv.Value);
+        var newWatchers = newTower.Watchers.ToDictionary(kv => kv.Key, kv => kv.Value);
+        var updateWatchers = oldWatchers
+            .Where(kv => newWatchers.ContainsKey(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var leaveWatchers = oldWatchers
+            .Where(kv => !newWatchers.ContainsKey(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var enterWatchers = newWatchers
+            .Where(kv => !oldWatchers.ContainsKey(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+
         oldTower.RemoveObject(obj);
         newTower.AddObject(obj);
         _objectTowerMap[obj.ObjectId] = newCoord;
 
-        // 计算灯塔变更
-        var change = GetTowerChange(oldCoord, newCoord);
-
-        // 通知离开的灯塔中的观察者
-        foreach (var pos in change.Removed)
+        foreach (var listener in _listeners)
         {
-            var t = GetTower(pos.tx, pos.ty);
-            if (t != null)
-                foreach (var listener in _listeners)
-                    listener.OnObjectLeave(obj, t.Watchers);
-        }
+            if (updateWatchers.Count > 0)
+                listener.OnObjectMove(obj, oldWatchers, updateWatchers, newWatchers);
 
-        // 通知新增的灯塔中的观察者
-        foreach (var pos in change.Added)
-        {
-            var t = GetTower(pos.tx, pos.ty);
-            if (t != null)
-                foreach (var listener in _listeners)
-                    listener.OnObjectEnter(obj, t.Watchers);
+            if (leaveWatchers.Count > 0)
+                listener.OnObjectLeave(obj, leaveWatchers);
+
+            if (enterWatchers.Count > 0)
+                listener.OnObjectEnter(obj, enterWatchers);
         }
 
         return true;
     }
 
-    #endregion
 
-    #region 观察者管理
 
     /// <summary>
     /// 添加观察者到 AOI 系统
@@ -235,21 +233,11 @@ public class TowerAoi
         var center = ToTowerCoord(watcher.X, watcher.Y);
         _watcherInfoMap[watcher.ObjectId] = new WatcherInfo(center.tx, center.ty, range);
 
-        var addedObjects = new List<IAoiObject>();
-
         // 将观察者添加到视野范围内的所有灯塔
         ForEachTowerInRange(center.tx, center.ty, range, (tower) =>
         {
             tower.AddWatcher(watcher);
-            addedObjects.AddRange(tower.GetAllObjects());
         });
-
-        // 通知观察者：看到了哪些对象
-        if (addedObjects.Count > 0)
-        {
-            foreach (var listener in _listeners)
-                listener.OnWatcherUpdate(watcher, addedObjects, Array.Empty<IAoiObject>());
-        }
 
         return true;
     }
@@ -335,9 +323,7 @@ public class TowerAoi
         return true;
     }
 
-    #endregion
 
-    #region 查询
 
     /// <summary>
     /// 获取指定坐标范围内的所有对象
@@ -395,9 +381,7 @@ public class TowerAoi
         return _watcherInfoMap.ContainsKey(objectId);
     }
 
-    #endregion
 
-    #region 内部方法
 
     /// <summary>格子坐标转灯塔坐标</summary>
     private (int tx, int ty) ToTowerCoord(int x, int y)
@@ -439,21 +423,6 @@ public class TowerAoi
         }
     }
 
-    /// <summary>计算对象跨塔时的灯塔变更（range=0，只看所在灯塔）</summary>
-    private TowerChangeResult GetTowerChange((int tx, int ty) oldCoord, (int tx, int ty) newCoord)
-    {
-        var added = new List<(int tx, int ty)>();
-        var removed = new List<(int tx, int ty)>();
-
-        if (!oldCoord.Equals(newCoord))
-        {
-            removed.Add(oldCoord);
-            added.Add(newCoord);
-        }
-
-        return new TowerChangeResult(added, removed);
-    }
-
     /// <summary>计算观察者跨塔时的视野变更（考虑观察者的 range）</summary>
     private TowerChangeResult GetWatcherTowerChange((int tx, int ty) oldCenter, (int tx, int ty) newCenter, int range)
     {
@@ -474,5 +443,4 @@ public class TowerAoi
 
     private record TowerChangeResult(List<(int tx, int ty)> Added, List<(int tx, int ty)> Removed);
 
-    #endregion
 }

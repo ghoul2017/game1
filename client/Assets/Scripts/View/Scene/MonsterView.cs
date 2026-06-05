@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Shared.Common.Const;
 using Shared.Common.Protos;
 using UnityEngine;
 using UnityEngine.UI;

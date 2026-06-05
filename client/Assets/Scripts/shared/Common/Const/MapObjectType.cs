@@ -1,4 +1,4 @@
-namespace Client.Logic
+namespace Shared.Common.Const
 {
     /// <summary>
     /// 地图对象类型常量

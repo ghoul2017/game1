@@ -13,29 +13,6 @@ public static class MapHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(MapHandlers));
 
-    internal static void SendVisibleObjects(long roleId, GameMap map, int x, int y)
-    {
-        var objects = map.GetObjectsInRange(x, y, 4);
-        var ntf = new MapObjectsNtf
-        {
-            Objects = objects
-                .Where(o => o.ObjectId != roleId)
-                .Select(o => new MapObjectInfo
-                {
-                    ObjectId = o.ObjectId,
-                    ObjectType = o.ObjectType,
-                    Name = o.Name,
-                    X = o.X,
-                    Y = o.Y,
-                    CfgId = o.CfgId
-                }).ToList()
-        };
-
-        if (ntf.Objects.Count > 0)
-        {
-            Context.Players.SendToPlayer(roleId, ntf);
-        }
-    }
 
     [EventSubscriber]
     public static void OnPlayerOffline(EventType.PlayerOfflineEvent e)
