@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using Game.Components.Player;
 using Shared.Core.Network;
 
 namespace Tools;
@@ -88,35 +87,6 @@ public class ProtocolCheckTool : ITool
         var handlerCount = 0;
         var handledMessageNames = new Dictionary<string, string>();
         var types = assemblies.Distinct().SelectMany(GetLoadableTypes).ToArray();
-
-        foreach (var method in types
-                     .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public)))
-        {
-            var attr = method.GetCustomAttribute<MessageHandlerAttribute>();
-            if (attr == null)
-                continue;
-
-            handlerCount++;
-            if (!typeof(AMethodHandler).IsAssignableFrom(attr.type))
-            {
-                errors.Add($"{domainName} Handler 类型必须继承 AMethodHandler: {FormatMethod(method)}, handlerType={attr.type.FullName}");
-                continue;
-            }
-
-            ValidateHandlerSignature(domainName, method, attr.type, messageTypeToName, errors);
-
-            var parameters = method.GetParameters();
-            if (parameters.Length < 2 || !typeof(IMessage).IsAssignableFrom(parameters[1].ParameterType))
-                continue;
-
-            RegisterHandledMessage(
-                domainName,
-                handledMessageNames,
-                messageTypeToName,
-                parameters[1].ParameterType,
-                FormatMethod(method),
-                errors);
-        }
 
         foreach (var type in types.Where(IsClassHandlerType))
         {
@@ -231,87 +201,6 @@ public class ProtocolCheckTool : ITool
         handledMessageNames[messageName] = source;
     }
 
-    private static void ValidateHandlerSignature(
-        string domainName,
-        MethodInfo method,
-        Type handlerType,
-        Dictionary<Type, string> messageTypeToName,
-        List<string> errors)
-    {
-        if (handlerType == typeof(RpcMethodHandler))
-        {
-            ValidateRpcSignature(domainName, method, typeof(TcpSession), messageTypeToName, errors);
-            return;
-        }
-
-        if (handlerType == typeof(NtfMethodHandler))
-        {
-            ValidateNtfSignature(domainName, method, typeof(TcpSession), messageTypeToName, errors);
-            return;
-        }
-
-        if (handlerType == typeof(PlayerRpcMethodHandler))
-        {
-            ValidateRpcSignature(domainName, method, typeof(PlayerEntity), messageTypeToName, errors);
-            return;
-        }
-
-        if (handlerType == typeof(PlayerNtfMethodHandler))
-        {
-            ValidateNtfSignature(domainName, method, typeof(PlayerEntity), messageTypeToName, errors);
-            return;
-        }
-
-        errors.Add($"{domainName} 未知 Handler 适配器: {FormatMethod(method)}, handlerType={handlerType.FullName}");
-    }
-
-    private static void ValidateRpcSignature(
-        string domainName,
-        MethodInfo method,
-        Type firstParamType,
-        Dictionary<Type, string> messageTypeToName,
-        List<string> errors)
-    {
-        var parameters = method.GetParameters();
-        if (parameters.Length != 3)
-        {
-            errors.Add($"{domainName} RPC Handler 参数必须为3个: {FormatMethod(method)}");
-            return;
-        }
-
-        if (parameters[0].ParameterType != firstParamType)
-            errors.Add($"{domainName} RPC Handler 参数1必须是 {firstParamType.Name}: {FormatMethod(method)}");
-
-        ValidateMessageParameter(domainName, FormatMethod(method), parameters[1].ParameterType, "请求", messageTypeToName, errors);
-        ValidateMessageParameter(domainName, FormatMethod(method), parameters[2].ParameterType, "响应", messageTypeToName, errors);
-
-        if (method.ReturnType != typeof(Task<IMessage>))
-            errors.Add($"{domainName} RPC Handler 返回值必须是 Task<IMessage>: {FormatMethod(method)}, returnType={method.ReturnType.FullName}");
-    }
-
-    private static void ValidateNtfSignature(
-        string domainName,
-        MethodInfo method,
-        Type firstParamType,
-        Dictionary<Type, string> messageTypeToName,
-        List<string> errors)
-    {
-        var parameters = method.GetParameters();
-        if (parameters.Length != 2)
-        {
-            errors.Add($"{domainName} NTF Handler 参数必须为2个: {FormatMethod(method)}");
-            return;
-        }
-
-        if (parameters[0].ParameterType != firstParamType)
-            errors.Add($"{domainName} NTF Handler 参数1必须是 {firstParamType.Name}: {FormatMethod(method)}");
-
-        ValidateMessageParameter(domainName, FormatMethod(method), parameters[1].ParameterType, "通知", messageTypeToName, errors);
-
-        if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
-            errors.Add($"{domainName} NTF Handler 返回值必须是 void 或 Task: {FormatMethod(method)}, returnType={method.ReturnType.FullName}");
-    }
-
     private static void ValidateMessageParameter(
         string domainName,
         string source,
@@ -374,11 +263,6 @@ public class ProtocolCheckTool : ITool
 
         foreach (var type in types)
             yield return type;
-    }
-
-    private static string FormatMethod(MethodInfo method)
-    {
-        return $"{method.DeclaringType?.FullName}.{method.Name}";
     }
 
     private static string FormatType(Type type)

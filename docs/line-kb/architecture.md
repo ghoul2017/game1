@@ -12,7 +12,6 @@ LINEKB:ARCH:SERVER_THREAD path=server/Core/GameSynchronizationContext.cs symbol=
 LINEKB:ARCH:NETWORK_PROTOCOL doc=AGENTS.md path=client/Assets/Scripts/shared/Core/Network/PacketCodec.cs note="通信包格式为小端序 [FrameLength:4B][NameLength:2B][Name:UTF8][Payload]，Payload 使用 protobuf-net 序列化。"
 LINEKB:ARCH:ROBOT_ROOT path=robot note="独立 .NET 8 Console 自动化测试项目，通过 TCP 模拟客户端请求验证服务端逻辑。"
 LINEKB:ARCH:CLIENT_VIEW_ASMDEF path=client/Assets/Scripts/View/Game.ClientView.asmdef note="Unity View 编译边界，引用 Game.Shared 和 Game.ClientLogic；Editor 代码使用 View/Editor 下独立 asmdef。"
-LINEKB:ARCH:DOCS_ROOT path=docs note="需求、计划、TODO、模块文档、遗留问题、迁移说明和行式知识库的文档根目录。"
-LINEKB:ARCH:CODEX_ENGINEERING_PLAN doc=docs/2.PLAN/12-Codex友好工程化改造.md note="已通过独立共享项目、Unity asmdef、固定验证脚本、协议一致性检查和大 View 拆分提升 Codex 自动编程稳定性。"
+LINEKB:ARCH:DOCS_ROOT path=docs note="模块文档、遗留问题、Robot 手册、测试手册和行式知识库的文档根目录。"
 LINEKB:ARCH:RULE_ENTRY path=AGENTS.md note="唯一活跃规则入口；不再读取 codex/ 或 .claude/ 作为规则来源。"
 LINEKB:ARCH:LINE_KB path=docs/line-kb note="行式知识库是辅助导航层，代码、Unity 资源、配置、测试和正式文档才是权威来源。"

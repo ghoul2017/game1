@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Threading.Tasks;
 
 #nullable enable
@@ -22,9 +21,4 @@ namespace Shared.Core.Network
         Type MessageType { get; }
     }
 
-    public abstract class AMethodHandler : IMessageHandler
-    {
-        public abstract Task<IMessage?> HandleAsync(TcpSession session, byte[] payload);
-        public abstract void Init(MethodInfo method);
-    }
 }

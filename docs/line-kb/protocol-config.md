@@ -1,7 +1,6 @@
 # 协议和配置知识
 
 LINEKB:PROTOCOL:PACKET path=client/Assets/Scripts/shared/Core/Network/PacketCodec.cs symbol=PacketCodec note="TCP 包格式为小端序 [FrameLength:4B][NameLength:2B][Name:UTF8][Payload]，FrameLength 不包含自身 4 字节。"
-LINEKB:PROTOCOL:MESSAGE_NAME_PLAN doc=docs/2.PLAN/11-字符串消息名协议.md note="协议路由从 ushort MsgId 迁移为显式字符串消息名，消息类型通过 MessageAttribute 和 MessageRegistry 注册。"
 LINEKB:PROTOCOL:MESSAGE_INTERFACE path=client/Assets/Scripts/shared/Core/Network/IMessage.cs symbol=IMessage note="共享消息接口。"
 LINEKB:PROTOCOL:MESSAGE_ATTRIBUTE path=client/Assets/Scripts/shared/Core/Network/MessageAttribute.cs symbol=MessageAttribute note="协议类使用 [Message(\"模块.消息名\")] 声明显式稳定消息名。"
 LINEKB:PROTOCOL:MESSAGE_REGISTRY path=client/Assets/Scripts/shared/Core/Network/MessageRegistry.cs symbol=MessageRegistry note="消息注册表扫描 IMessage 类型，建立 name->Type 和 Type->name 映射并校验重复或缺失消息名。"
@@ -14,7 +13,7 @@ LINEKB:PROTOCOL:USER_PROTOS path=client/Assets/Scripts/shared/Common/Protos/User
 LINEKB:PROTOCOL:MAP_PROTOS path=client/Assets/Scripts/shared/Common/Protos/MapProtos.cs note="地图相关协议定义。"
 LINEKB:PROTOCOL:FIGHT_PROTOS path=client/Assets/Scripts/shared/Common/Protos/FightProtos.cs note="战斗相关协议定义。"
 LINEKB:PROTOCOL:ERROR_MESSAGE doc=AGENTS.md note="Ack/Res 使用 ErrorMessage，成功为空字符串，失败填中文错误文本。"
-LINEKB:PROTOCOL:ROUTER path=client/Assets/Scripts/shared/Core/Network/MessageRouter.cs symbol=MessageRouter note="共享消息路由入口，同时扫描 [MessageHandler] 静态方法适配器和 IClassMessageHandler 继承式 Handler。"
+LINEKB:PROTOCOL:ROUTER path=client/Assets/Scripts/shared/Core/Network/MessageRouter.cs symbol=MessageRouter note="共享消息路由入口，只扫描 IClassMessageHandler 继承式 Handler；AMethodHandler/[MessageHandler] 方法适配器已删除。"
 LINEKB:PROTOCOL:NTF_CLASS_HANDLER path=client/Assets/Scripts/shared/Core/Network/NtfMessageHandler.cs symbol=NtfMessageHandler note="继承式通知 Handler 基类，按泛型通知类型注册，HandleAsync 反序列化后返回 null。"
 LINEKB:PROTOCOL:RPC_CLASS_HANDLER path=client/Assets/Scripts/shared/Core/Network/RpcMessageHandler.cs symbol=RpcMessageHandler note="继承式 RPC Handler 基类，按泛型请求类型注册，HandleAsync 反序列化请求并创建响应对象。"
 LINEKB:PROTOCOL:PLAYER_NTF_CLASS_HANDLER path=server/Core/Network/PlayerNtfMessageHandler.cs symbol=PlayerNtfMessageHandler note="服务端 Player 通知继承式 Handler 基类，根据 session.RoleId 查找 PlayerEntity 后执行业务逻辑。"
