@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Shared.Common;
 using Shared.Common.Enums;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
 
@@ -80,13 +81,17 @@ namespace Client.Logic
         private bool _userDisconnect;
         private bool _hadSession;
 
-        // --- Events ---
-        public event Action OnConnected;
-        public event Action OnDisconnected;
-        public event Action<string> OnError;
-        public event Action OnReconnected;
-        public event Action<string> OnReconnectFailed;
-        public event Action<int> OnKicked;
+        internal bool UserDisconnect
+        {
+            get => _userDisconnect;
+            set => _userDisconnect = value;
+        }
+
+        internal bool HadSession
+        {
+            get => _hadSession;
+            set => _hadSession = value;
+        }
 
         public void Initialize()
         {
@@ -232,7 +237,7 @@ namespace Client.Logic
             }
             catch (Exception ex)
             {
-                _mainQueue.Enqueue(() => HandleConnectFailed(ex.Message));
+                _mainQueue.Enqueue(() => ProcessConnectFailure(ex.Message));
             }
         }
 
@@ -257,7 +262,7 @@ namespace Client.Logic
             _ = StartHandshakeAsync();
         }
 
-        private void HandleConnectFailed(string reason)
+        private void ProcessConnectFailure(string reason)
         {
             Log.Warn("[NetClient] Connect failed: " + reason);
 
@@ -274,7 +279,7 @@ namespace Client.Logic
             else
             {
                 _state = ConnState.Disconnected;
-                OnError?.Invoke(reason);
+                EventBus.Instance.Publish(new EventType.NetErrorEvent { Reason = reason });
             }
         }
 
@@ -287,11 +292,11 @@ namespace Client.Logic
                     _hadSession = true;
 
                 _session = null;
-                HandlePostDisconnect();
+                ProcessPostDisconnect();
             });
         }
 
-        private void DisposeSession(LogoutReason reason, string debugMsg)
+        internal void DisposeSession(LogoutReason reason, string debugMsg)
         {
             if (_session != null)
             {
@@ -306,17 +311,17 @@ namespace Client.Logic
                 Log.Info("[NetClient] DisposeSession: " + debugMsg);
             }
 
-            HandlePostDisconnect();
+            ProcessPostDisconnect();
         }
 
         /// <summary>断开后的状态处理：重连或通知</summary>
-        private void HandlePostDisconnect()
+        private void ProcessPostDisconnect()
         {
             if (_userDisconnect)
             {
                 _state = ConnState.Disconnected;
                 Log.Info("[NetClient] Disconnected by user");
-                OnDisconnected?.Invoke();
+                EventBus.Instance.Publish(new EventType.NetDisconnectedEvent());
                 return;
             }
 
@@ -334,7 +339,7 @@ namespace Client.Logic
             {
                 _state = ConnState.Disconnected;
                 Log.Info("[NetClient] Disconnected");
-                OnDisconnected?.Invoke();
+                EventBus.Instance.Publish(new EventType.NetDisconnectedEvent());
             }
         }
 
@@ -380,7 +385,7 @@ namespace Client.Logic
                 {
                     Log.Info(string.Format("[NetClient] Handshake OK, connected to {0}:{1}", host, port));
                     _state = ConnState.Connected;
-                    OnConnected?.Invoke();
+                    EventBus.Instance.Publish(new EventType.NetConnectedEvent());
                 }
             }
             catch (Exception ex)
@@ -414,12 +419,12 @@ namespace Client.Logic
                         new EnterGameReq { RoleId = GameData.CurrentRole.RoleId });
                     if (!string.IsNullOrEmpty(enterGameRes.ErrorMessage))
                     {
-                        OnReconnectFailed?.Invoke(enterGameRes.ErrorMessage);
+                        EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = enterGameRes.ErrorMessage });
                         return;
                     }
                 }
 
-                OnReconnected?.Invoke();
+                EventBus.Instance.Publish(new EventType.NetReconnectedEvent());
             }
             else
             {
@@ -429,21 +434,10 @@ namespace Client.Logic
                 GameData.CurrentMap = null;
 
                 _state = ConnState.Connected;
-                OnReconnectFailed?.Invoke(res.ErrorMessage);
+                EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = res.ErrorMessage });
             }
         }
 
-        public void HandleKickNtf(KickNtf ntf)
-        {
-            Log.Info(string.Format("[NetClient] Kicked, reason={0}", ntf.Reason));
-
-            _userDisconnect = true;
-            _hadSession = false;
-            GameData.Token = "";
-            GameData.CurrentRole = null;
-            GameData.CurrentMap = null;
-            OnKicked?.Invoke(ntf.Reason);
-            DisposeSession(LogoutReason.NetDisconnected, "Kicked by server");
-        }
     }
+
 }

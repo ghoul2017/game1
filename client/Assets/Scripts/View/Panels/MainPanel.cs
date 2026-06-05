@@ -56,25 +56,10 @@ namespace Client.View
             UpdatePkModeDisplay();
             RefreshChatDisplay();
             RefreshChannelDisplay();
-
-            // 订阅 Controller 事件
-            ChatController.Instance.OnMessageAdded += RefreshChatDisplay;
-            ChatController.Instance.OnChannelChanged += RefreshChannelDisplay;
-            FightController.Instance.OnHpChanged += HandleHpChangedEvent;
-            FightController.Instance.OnPkModeChanged += UpdatePkModeDisplay;
-            FightController.Instance.OnKilledBy += HandleKilledByEvent;
-            FightController.Instance.OnSkillCasted += HandleSkillCastedEvent;
         }
 
         public override void OnHide()
         {
-            // 取消订阅 Controller 事件
-            ChatController.Instance.OnMessageAdded -= RefreshChatDisplay;
-            ChatController.Instance.OnChannelChanged -= RefreshChannelDisplay;
-            FightController.Instance.OnHpChanged -= HandleHpChangedEvent;
-            FightController.Instance.OnPkModeChanged -= UpdatePkModeDisplay;
-            FightController.Instance.OnKilledBy -= HandleKilledByEvent;
-            FightController.Instance.OnSkillCasted -= HandleSkillCastedEvent;
         }
 
         private void Update()

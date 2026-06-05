@@ -7,7 +7,7 @@ LINEKB:ROBOT:SESSION path=robot/RobotSession.cs symbol=RobotSession note="Robot 
 LINEKB:ROBOT:RUNNER path=robot/TestRunner.cs symbol=TestRunner note="测试场景加载、连接、执行和结果收集入口。"
 LINEKB:ROBOT:SCENARIO path=robot/TestScenario.cs symbol=TestScenario note="测试场景抽象基类。"
 LINEKB:ROBOT:ASSERTIONS path=robot/Assertions.cs symbol=Assertions note="断言工具，失败抛出 TestFailedException。"
-LINEKB:ROBOT:UI path=robot/RobotClientUI.cs symbol=RobotClientUI note="IClientUI 空实现，UI 操作转控制台输出。"
+LINEKB:ROBOT:UI path=robot/Handlers/RobotClientUIEventHandler.cs symbol=RobotClientUIEventHandler note="客户端 UI EventBus 事件处理器，Toast 等表现事件转控制台输出。"
 LINEKB:ROBOT:LOGIN_TEST path=robot/LoginTest.cs symbol=LoginTest note="示例测试场景，执行握手、登录和角色列表验证。"
 LINEKB:ROBOT:SEND_WAIT path=robot/RobotSession.cs symbol=CallAsync note="请求/响应优先使用 await Session.CallAsync<TRes>(request)，旧 SendAndWaitAsync 仅作兼容别名。"
 LINEKB:ROBOT:WAIT_NTF path=robot/RobotSession.cs symbol=WaitForAsync note="等待服务端推送使用 await Session.WaitForAsync<T>(timeoutMs)，旧 WaitForMsgAsync 仅作兼容别名。"

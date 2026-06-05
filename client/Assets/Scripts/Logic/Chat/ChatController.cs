@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 
 namespace Client.Logic
 {
@@ -13,9 +14,6 @@ namespace Client.Logic
         public System.Collections.Generic.List<ChatLineData> ChatLines { get; private set; } = new();
         public int CurrentChannel { get; private set; } = ChatChannel.World;
 
-        public event Action OnMessageAdded;
-        public event Action OnChannelChanged;
-
         public async Task SendChat(string content)
         {
             if (string.IsNullOrEmpty(content)) return;
@@ -27,46 +25,21 @@ namespace Client.Logic
                 ChatAck ack = await NetClient.Instance.CallAsync<ChatAck>(req);
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                 }
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("发送聊天失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("发送聊天失败: " + ex.Message);
             }
         }
 
         public void SwitchChannel(int channel)
         {
             CurrentChannel = channel;
-            OnChannelChanged?.Invoke();
+            EventBus.Instance.Publish(new EventType.ChatChannelChangedEvent());
         }
 
-        public void HandleChatNtf(ChatNtf ntf)
-        {
-            string line = string.Format("[{0}][{1}] {2}",
-                ntf.Channel == ChatChannel.World ? "世界" : "私聊",
-                ntf.SenderName, ntf.Content);
-            AppendLine(line);
-        }
-
-        public void HandleSystemChatNtf(SystemChatNtf ntf)
-        {
-            string line = string.Format("[系统] {0}", ntf.Content);
-            AppendLine(line);
-        }
-
-        private void AppendLine(string line)
-        {
-            ChatLines.Add(new ChatLineData
-            {
-                Channel = CurrentChannel,
-                DisplayText = line
-            });
-            if (ChatLines.Count > MaxChatLines)
-                ChatLines.RemoveAt(0);
-            OnMessageAdded?.Invoke();
-        }
     }
 
     public struct ChatLineData

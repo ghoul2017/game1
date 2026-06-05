@@ -8,15 +8,9 @@ namespace Client.View
 {
     public partial class TaskPanel
     {
-        private void OnTaskDataChanged()
-        {
-            RefreshList();
-            RefreshDetail();
-        }
-
         // ==================== UI Refresh ====================
 
-        private void RefreshList()
+        internal void RefreshList()
         {
             var tasks = TaskController.Instance.Tasks;
 
@@ -112,7 +106,7 @@ namespace Client.View
             TaskController.Instance.SelectTask(taskId);
         }
 
-        private void RefreshDetail()
+        internal void RefreshDetail()
         {
             var task = TaskController.Instance.Tasks.Find(t => t.TaskId == TaskController.Instance.SelectedTaskId);
             if (task == null)

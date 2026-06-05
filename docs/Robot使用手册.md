@@ -17,7 +17,8 @@ robot/
 ├── TestRunner.cs        # 加载场景 → 执行 → 收集 PASS/FAIL 结果
 ├── TestScenario.cs      # 测试场景抽象基类
 ├── Assertions.cs        # 断言工具（Equal / True / NotNull / Fail）
-├── RobotClientUI.cs     # 客户端 UI 接口的空实现（控制台输出）
+├── Handlers/
+│   └── RobotClientUIEventHandler.cs # 客户端 UI 事件处理器（控制台输出）
 └── LoginTest.cs         # 示例：登录流程测试
 ```
 

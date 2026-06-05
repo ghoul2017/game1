@@ -135,16 +135,14 @@ namespace Client.View
 
         public override void OnShow()
         {
-            BagController.Instance.OnDataChanged += RefreshGrid;
             BagController.Instance.QueryBag();
         }
 
         public override void OnHide()
         {
-            BagController.Instance.OnDataChanged -= RefreshGrid;
         }
 
-        private void RefreshGrid()
+        internal void RefreshGrid()
         {
             var items = BagController.Instance.Items;
             var itemMap = BagController.Instance.ItemMap;

@@ -132,105 +132,9 @@ namespace Client.View
             FightController.Instance.TogglePkMode();
         }
 
-        // ==================== Fight Event Handlers ====================
-
-        private void HandleSkillCastedEvent(UseSkillAck ack)
-        {
-            if (!string.IsNullOrEmpty(ack.ErrorMessage))
-            {
-                UIToast.Show(ack.ErrorMessage);
-                return;
-            }
-
-            long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;
-
-            if (ack.AttackerId != selfId)
-            {
-                // 其他玩家释放技能，播放攻击动作
-                OtherPlayerManager.Instance.PlayAttack(ack.AttackerId, ack.SkillId);
-            }
-
-            // 对所有命中目标显示伤害数字
-            foreach (var target in ack.Targets)
-            {
-                if (target.TargetId == selfId)
-                    continue; // 自身伤害通过 HpChangedNtf 显示
-
-                OtherPlayerManager.Instance.ShowDamage(
-                    target.TargetId,
-                    -target.DeltaHp,
-                    target.IsCritical);
-            }
-
-            Debug.Log(string.Format("[MainPanel] 技能释放成功 Attacker={0} Skill={1} Target={2} Hits={3}",
-                ack.AttackerId, ack.SkillId, ack.MainTargetId, ack.Targets.Count));
-        }
-
-        private void HandleHpChangedEvent(HpChangedNtf ntf)
-        {
-            long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;
-
-            if (ntf.ObjectId == selfId)
-            {
-                // 自己的血量变化
-                UpdateHpDisplay();
-
-                // 同步更新PlayerView的HP条
-                var pv = GameSceneEntry.PlayerController != null
-                    ? GameSceneEntry.PlayerController.GetComponent<PlayerView>() : null;
-                if (pv != null)
-                    pv.UpdateHp(ntf.Hp, GameData.MaxHp);
-            }
-            else
-            {
-                // 其他玩家或怪物的血量变化
-                var monsterView = MonsterEntityManager.Instance.GetView(ntf.ObjectId);
-                if (monsterView != null)
-                {
-                    // 怪物HP变化
-                    monsterView.UpdateHp(ntf.Hp, 100);
-
-                    // 显示伤害数字
-                    if (ntf.DeltaHp != 0)
-                    {
-                        monsterView.ShowDamageNumber(-ntf.DeltaHp, false);
-                        if (ntf.DeltaHp < 0)
-                            monsterView.PlayHitFlash();
-                    }
-
-                    // 死亡/复活
-                    if (ntf.Reason == HpChangeReason.Killed && ntf.Hp <= 0)
-                        monsterView.PlayDeath();
-                    else if (ntf.Reason == HpChangeReason.Revive)
-                        monsterView.PlayRevive();
-                }
-                else
-                {
-                    // 其他玩家的血量变化
-                    OtherPlayerManager.Instance.UpdatePlayerHp(ntf.ObjectId, ntf.Hp, 100);
-
-                    // 死亡/复活表现
-                    if (ntf.Reason == HpChangeReason.Killed && ntf.Hp <= 0)
-                        OtherPlayerManager.Instance.PlayDeath(ntf.ObjectId);
-                    else if (ntf.Reason == HpChangeReason.Revive)
-                        OtherPlayerManager.Instance.PlayRevive(ntf.ObjectId);
-                }
-            }
-        }
-
-        private void HandleKilledByEvent(KilledByNtf ntf)
-        {
-            string killerDesc = ntf.IsMonster ? "怪物" : ntf.KillerName;
-            UIMessageBox.Show("阵亡", string.Format("你被 {0} 击杀了！", killerDesc),
-                () =>
-                {
-                    FightController.Instance.RespawnAtCurrentMap();
-                }, showCancel: false, confirmText: "回城复活");
-        }
-
         // ==================== Fight UI Updates ====================
 
-        private void UpdateHpDisplay()
+        internal void UpdateHpDisplay()
         {
             int hp = GameData.CurrentHp;
             int maxHp = GameData.MaxHp;
@@ -240,7 +144,7 @@ namespace Client.View
                 hpText.text = string.Format("{0}/{1}", hp, maxHp);
         }
 
-        private void UpdatePkModeDisplay()
+        public void UpdatePkModeDisplay()
         {
             if (pkModeText != null)
                 pkModeText.text = "[ " + GetPkModeName(GameData.CurrentPkMode) + " ]";

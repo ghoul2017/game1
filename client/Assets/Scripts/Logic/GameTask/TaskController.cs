@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 
 namespace Client.Logic
 {
@@ -12,8 +13,6 @@ namespace Client.Logic
         public List<TaskInfo> Tasks { get; private set; } = new();
         public int SelectedTaskId { get; private set; } = -1;
 
-        public event Action OnDataChanged;
-
         public async Task QueryTaskList()
         {
             try
@@ -21,23 +20,23 @@ namespace Client.Logic
                 QueryTaskListAck ack = await NetClient.Instance.CallAsync<QueryTaskListAck>(new QueryTaskListReq());
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 Tasks = ack.Tasks ?? new List<TaskInfo>();
                 SelectedTaskId = -1;
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("查询任务失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("查询任务失败: " + ex.Message);
             }
         }
 
         public void SelectTask(int taskId)
         {
             SelectedTaskId = taskId;
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
         }
 
         public string ValidateAcceptInput(string text)
@@ -55,19 +54,19 @@ namespace Client.Logic
                     new TaskAcceptReq { TaskId = taskId });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 if (ack.Task != null)
                 {
                     Tasks.Add(ack.Task);
-                    OnDataChanged?.Invoke();
-                    Context.UI?.ShowToast("接取任务成功");
+                    PublishDataChanged();
+                    ClientUiEventPublisher.ShowToast("接取任务成功");
                 }
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("接取任务失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("接取任务失败: " + ex.Message);
             }
         }
 
@@ -79,29 +78,29 @@ namespace Client.Logic
                     new TaskSubmitReq { TaskId = taskId });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
                 if (SelectedTaskId == ack.TaskId)
                     SelectedTaskId = -1;
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
 
                 if (ack.Rewards != null && ack.Rewards.Count > 0)
                 {
                     var parts = new List<string>();
                     foreach (var r in ack.Rewards)
                         parts.Add("物品#" + r.ConfigId + " x" + r.Count);
-                    Context.UI?.ShowToast("提交成功，获得: " + string.Join(", ", parts.ToArray()));
+                    ClientUiEventPublisher.ShowToast("提交成功，获得: " + string.Join(", ", parts.ToArray()));
                 }
                 else
                 {
-                    Context.UI?.ShowToast("提交成功");
+                    ClientUiEventPublisher.ShowToast("提交成功");
                 }
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("提交任务失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("提交任务失败: " + ex.Message);
             }
         }
 
@@ -113,33 +112,25 @@ namespace Client.Logic
                     new TaskGiveUpReq { TaskId = taskId });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 Tasks.RemoveAll(t => t.TaskId == ack.TaskId);
                 if (SelectedTaskId == ack.TaskId)
                     SelectedTaskId = -1;
-                OnDataChanged?.Invoke();
-                Context.UI?.ShowToast("已放弃任务");
+                PublishDataChanged();
+                ClientUiEventPublisher.ShowToast("已放弃任务");
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("放弃任务失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("放弃任务失败: " + ex.Message);
             }
         }
 
-        public void HandleTaskChangedNtf(TaskChangedNtf ntf)
+        private static void PublishDataChanged()
         {
-            if (ntf.Tasks == null) return;
-            foreach (var changed in ntf.Tasks)
-            {
-                int idx = Tasks.FindIndex(t => t.TaskId == changed.TaskId);
-                if (idx >= 0)
-                    Tasks[idx] = changed;
-                else
-                    Tasks.Add(changed);
-            }
-            OnDataChanged?.Invoke();
+            EventBus.Instance.Publish(new EventType.TaskDataChangedEvent());
         }
     }
+
 }

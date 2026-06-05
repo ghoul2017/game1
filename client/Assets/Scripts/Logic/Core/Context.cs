@@ -1,18 +1,25 @@
-using System;
 using Shared.Core.Entities;
+using Shared.Core.Event;
 using Shared.Core.Network;
 
 namespace Client.Logic
 {
     public static class Context
     {
-        public static IClientUI UI { get; set; }
         public static Module Client = new();
         public static NetClient NetClient = new();
         public static NetworkComponent Network => Client.GetComponent<NetworkComponent>();
 
+        private static bool _eventHandlersRegistered;
+
         public static void Start()
         {
+            if (!_eventHandlersRegistered)
+            {
+                EventBus.Instance.AutoRegister();
+                _eventHandlersRegistered = true;
+            }
+
             NetClient.Initialize();
         }
 
@@ -27,16 +34,13 @@ namespace Client.Logic
         }
     }
 
-    public interface IClientUI
+    public static class ClientUiEventPublisher
     {
-        T GetPanel<T>() where T : class;
-        void ShowPanel<T>() where T : class;
-        void HidePanel<T>() where T : class;
-        void ReplacePanel<T>() where T : class;
-        void ClearAll();
-        void Back();
-        void ShowToast(string msg);
-        void ShowMessageBox(string title, string content, Action onOk, Action onCancel);
+        public static void ShowToast(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            EventBus.Instance.Publish(new EventType.ClientToastRequestedEvent { Message = message });
+        }
     }
 
 }

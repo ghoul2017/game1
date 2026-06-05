@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 
 namespace Client.Logic
 {
@@ -13,8 +14,6 @@ namespace Client.Logic
         public Dictionary<int, BagItemInfo> ItemMap { get; private set; } = new();
         public int Capacity { get; private set; }
 
-        public event Action OnDataChanged;
-
         public async Task QueryBag()
         {
             try
@@ -23,7 +22,7 @@ namespace Client.Logic
 
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 Items = ack.Items ?? new List<BagItemInfo>();
@@ -32,7 +31,7 @@ namespace Client.Logic
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("查询背包失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("查询背包失败: " + ex.Message);
             }
         }
 
@@ -45,16 +44,16 @@ namespace Client.Logic
 
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 var cfg = Shared.Core.Config.ConfigManager.Get<Shared.Common.Config.ItemConfig>(ack.ConfigId);
                 string itemName = cfg != null ? cfg.Name : "物品";
-                Context.UI?.ShowToast("使用了 " + itemName);
+                ClientUiEventPublisher.ShowToast("使用了 " + itemName);
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("使用物品失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("使用物品失败: " + ex.Message);
             }
         }
 
@@ -66,42 +65,17 @@ namespace Client.Logic
 
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 Items = ack.Items ?? new List<BagItemInfo>();
                 RebuildMap();
-                Context.UI?.ShowToast("整理完成");
+                ClientUiEventPublisher.ShowToast("整理完成");
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("整理背包失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("整理背包失败: " + ex.Message);
             }
-        }
-
-        public void HandleBagItemChangedNtf(BagItemChangedNtf ntf)
-        {
-            if (ntf.RemovedIndices != null)
-            {
-                foreach (int idx in ntf.RemovedIndices)
-                {
-                    ItemMap.Remove(idx);
-                }
-                Items.RemoveAll(it => ntf.RemovedIndices.Contains(it.Index));
-            }
-            if (ntf.ChangedItems != null)
-            {
-                foreach (var item in ntf.ChangedItems)
-                {
-                    ItemMap[item.Index] = item;
-                    int existIdx = Items.FindIndex(it => it.Index == item.Index);
-                    if (existIdx >= 0)
-                        Items[existIdx] = item;
-                    else
-                        Items.Add(item);
-                }
-            }
-            OnDataChanged?.Invoke();
         }
 
         private void RebuildMap()
@@ -109,7 +83,13 @@ namespace Client.Logic
             ItemMap.Clear();
             foreach (var item in Items)
                 ItemMap[item.Index] = item;
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
+        }
+
+        private static void PublishDataChanged()
+        {
+            EventBus.Instance.Publish(new EventType.BagDataChangedEvent());
         }
     }
+
 }

@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Client.Logic;
-using Shared.Common.Const;
-using Shared.Common.Protos;
 using Shared.Common.Config;
 using Shared.Core.Config;
 
@@ -12,17 +7,14 @@ namespace Client.View
 {
     public class GameSceneEntry : MonoBehaviour
     {
+        public static GameSceneEntry Instance { get; private set; }
         public static PlayerController PlayerController { get; private set; }
-        public static MapGround MapGround { get; private set; }
+        public static MapGround MapGround { get; internal set; }
         private static MainPanel _mainPanel;
-
-        // 存储 NetClient 事件委托以便取消订阅
-        private Action _onReconnectedHandler;
-        private Action<string> _onReconnectFailedHandler;
-        private Action<int> _onKickedHandler;
 
         private void Start()
         {
+            Instance = this;
             Debug.Log("[GameSceneEntry] 初始化游戏场景");
 
             // UIManager 因 DontDestroyOnLoad 在场景切换后保留
@@ -30,66 +22,27 @@ namespace Client.View
 
             InitializeScene();
 
-            // 订阅 MapController 事件
-            MapController.Instance.OnMapObjectsChanged += HandleMapObjectsChanged;
-            MapController.Instance.OnMapObjectMove += HandleMapObjectMove;
-            MapController.Instance.OnMapMoveCorrected += HandleMapMoveCorrected;
-            MapController.Instance.OnMapRebuild += HandleMapRebuild;
-            MapController.Instance.OnChangeMapFailed += HandleChangeMapFailed;
-            MapController.Instance.OnKicked += HandleKickedEvent;
-            MapController.Instance.OnReconnected += HandleReconnectedEvent;
-            MapController.Instance.OnReconnectFailed += HandleReconnectFailedEvent;
             MapController.Instance.MarkMapViewReady();
-
-            // Wire NetClient events to MapController
-            var nc = NetClient.Instance;
-            if (nc != null)
-            {
-                _onReconnectedHandler = () => MapController.Instance.HandleReconnected();
-                _onReconnectFailedHandler = (msg) => MapController.Instance.HandleReconnectFailed(msg);
-                _onKickedHandler = (reason) => MapController.Instance.HandleKicked(reason);
-
-                nc.OnReconnected += _onReconnectedHandler;
-                nc.OnReconnectFailed += _onReconnectFailedHandler;
-                nc.OnKicked += _onKickedHandler;
-            }
 
             _mainPanel = UIManager.Instance.ShowPanel<MainPanel>();
         }
 
         private void OnDestroy()
         {
-            // 取消订阅 MapController 事件
-            MapController.Instance.OnMapObjectsChanged -= HandleMapObjectsChanged;
-            MapController.Instance.OnMapObjectMove -= HandleMapObjectMove;
-            MapController.Instance.OnMapMoveCorrected -= HandleMapMoveCorrected;
-            MapController.Instance.OnMapRebuild -= HandleMapRebuild;
-            MapController.Instance.OnChangeMapFailed -= HandleChangeMapFailed;
-            MapController.Instance.OnKicked -= HandleKickedEvent;
-            MapController.Instance.OnReconnected -= HandleReconnectedEvent;
-            MapController.Instance.OnReconnectFailed -= HandleReconnectFailedEvent;
             MapController.Instance.MarkMapViewClosed();
-
-            // 取消订阅 NetClient 事件
-            var nc = NetClient.Instance;
-            if (nc != null)
-            {
-                nc.OnReconnected -= _onReconnectedHandler;
-                nc.OnReconnectFailed -= _onReconnectFailedHandler;
-                nc.OnKicked -= _onKickedHandler;
-            }
 
             OtherPlayerManager.Instance.ClearAll();
             MonsterEntityManager.Instance.ClearAll();
             _mainPanel = null;
+            if (Instance == this) Instance = null;
         }
 
         private void Update()
         {
-            HandleTargetSelection();
+            SelectTargetUnderCursor();
         }
 
-        private void HandleTargetSelection()
+        private void SelectTargetUnderCursor()
         {
             if (Input.GetMouseButtonDown(0))
             {
@@ -206,121 +159,5 @@ namespace Client.View
             }
         }
 
-        // ==================== MapController Event Handlers ====================
-
-        private void HandleMapObjectsChanged(List<MapObjectInfo> objects, List<long> removeObjectIds)
-        {
-            if (removeObjectIds != null)
-            {
-                foreach (var objectId in removeObjectIds)
-                {
-                    OtherPlayerManager.Instance.RemovePlayer(objectId);
-                    MonsterEntityManager.Instance.Remove(objectId);
-                }
-            }
-
-            if (objects == null) return;
-
-            foreach (var obj in objects)
-            {
-                if (obj.ObjectType == MapObjectType.Player)
-                {
-                    OtherPlayerManager.Instance.SpawnPlayer(obj);
-                }
-                else if (obj.ObjectType == MapObjectType.Monster || obj.ObjectType == MapObjectType.Npc)
-                {
-                    MonsterEntityManager.Instance.Spawn(obj.ObjectId, obj.CfgId, obj.ObjectType, obj.Name, obj.X, obj.Y);
-                }
-            }
-        }
-
-        private void HandleMapObjectMove(MapObjectMoveNtf ntf)
-        {
-            if (ntf.ObjectType == MapObjectType.Player)
-            {
-                OtherPlayerManager.Instance.MovePlayer(ntf.ObjectId, ntf.X, ntf.Y);
-            }
-            else if (ntf.ObjectType == MapObjectType.Monster || ntf.ObjectType == MapObjectType.Npc)
-            {
-                MonsterEntityManager.Instance.Move(ntf.ObjectId, ntf.X, ntf.Y);
-            }
-            else
-            {
-                Debug.LogWarning(string.Format("[GameSceneEntry] 未知地图对象类型，忽略移动 ObjectId:{0} ObjectType:{1}",
-                    ntf.ObjectId, ntf.ObjectType));
-            }
-        }
-
-        private void HandleMapMoveCorrected(int x, int y)
-        {
-            if (PlayerController != null)
-            {
-                PlayerController.CorrectPosition(x, y);
-                Debug.Log(string.Format("[GameSceneEntry] 移动被服务端纠正: ({0},{1})", x, y));
-            }
-        }
-
-        private void HandleMapRebuild(int mapCfgId, int spawnX, int spawnY)
-        {
-            // 清除其他玩家和怪物
-            OtherPlayerManager.Instance.ClearAll();
-            MonsterEntityManager.Instance.ClearAll();
-
-            // 销毁旧地图
-            if (MapGround != null)
-            {
-                UnityEngine.Object.Destroy(MapGround.gameObject);
-                MapGround = null;
-            }
-
-            // 创建新地图
-            var mapConfig = ConfigManager.Get<MapConfig>(mapCfgId);
-            var mapObj = new GameObject("Map");
-            var mapGround = mapObj.AddComponent<MapGround>();
-            mapGround.Generate(mapConfig);
-            MapGround = mapGround;
-
-            // 重置玩家位置
-            if (PlayerController != null)
-            {
-                PlayerController.Init(mapConfig, spawnX, spawnY);
-            }
-
-            Debug.Log(string.Format("[GameSceneEntry] 场景重建完成 Map={0} ({1}x{2})",
-                mapConfig.Name, mapConfig.Width, mapConfig.Height));
-        }
-
-        private void HandleChangeMapFailed(string error)
-        {
-            UIToast.Show("传送失败: " + error);
-            Debug.Log("[GameSceneEntry] 切图失败: " + error);
-        }
-
-        private void HandleKickedEvent(int reason)
-        {
-            Debug.Log("[GameSceneEntry] 被踢下线，reason=" + reason);
-            string reasonText = MapController.GetKickReasonText(reason);
-            UIMessageBox.Show("下线通知", reasonText, () =>
-            {
-                GoBackToLogin();
-            }, showCancel: false, confirmText: "确定");
-        }
-
-        private void HandleReconnectedEvent()
-        {
-            Debug.Log("[GameSceneEntry] 重连成功");
-        }
-
-        private void HandleReconnectFailedEvent(string msg)
-        {
-            Debug.Log("[GameSceneEntry] 重连失败: " + msg + "，返回登录");
-            GoBackToLogin();
-        }
-
-        private void GoBackToLogin()
-        {
-            OtherPlayerManager.Instance.ClearAll();
-            SceneManager.LoadScene("SampleScene");
-        }
     }
 }

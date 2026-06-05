@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 
 namespace Client.Logic
 {
@@ -11,11 +12,6 @@ namespace Client.Logic
 
         public bool IsLoggingIn { get; private set; }
         public string ErrorMessage { get; private set; }
-
-        /// <summary>
-        /// 登录完成事件。参数: (是否成功, 错误消息)
-        /// </summary>
-        public event Action<bool, string> OnLoginCompleted;
 
         private string _pendingUsername;
         private string _pendingPassword;
@@ -56,7 +52,7 @@ namespace Client.Logic
         /// <summary>
         /// 连接成功后继续登录
         /// </summary>
-        public void OnConnectionSuccess()
+        public void ContinuePendingLoginAfterConnection()
         {
             if (IsLoggingIn && !string.IsNullOrEmpty(_pendingUsername))
             {
@@ -64,10 +60,15 @@ namespace Client.Logic
             }
         }
 
-        public void OnConnectionError(string reason)
+        public void FailPendingLoginConnection(string reason)
         {
             IsLoggingIn = false;
-            ErrorMessage = "连接服务器失败";
+            ErrorMessage = GetConnectionErrorText(reason);
+        }
+
+        public static string GetConnectionErrorText(string reason)
+        {
+            return string.IsNullOrEmpty(reason) ? "连接服务器失败" : "连接服务器失败: " + reason;
         }
 
         private void DoSendLogin(string username, string password)
@@ -95,21 +96,31 @@ namespace Client.Logic
                         Job = GameData.GetJobName(r.Job)
                     }).ToList();
                     IsLoggingIn = false;
-                    OnLoginCompleted?.Invoke(true, "");
+                    PublishLoginCompleted(true, "");
                 }
                 else
                 {
                     IsLoggingIn = false;
                     ErrorMessage = res.ErrorMessage;
-                    OnLoginCompleted?.Invoke(false, ErrorMessage);
+                    PublishLoginCompleted(false, ErrorMessage);
                 }
             }
             catch (Exception ex)
             {
                 IsLoggingIn = false;
                 ErrorMessage = "登录失败: " + ex.Message;
-                OnLoginCompleted?.Invoke(false, ErrorMessage);
+                PublishLoginCompleted(false, ErrorMessage);
             }
         }
+
+        private static void PublishLoginCompleted(bool success, string errorMessage)
+        {
+            EventBus.Instance.Publish(new EventType.LoginCompletedEvent
+            {
+                Success = success,
+                ErrorMessage = errorMessage
+            });
+        }
     }
+
 }

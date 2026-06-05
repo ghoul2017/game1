@@ -18,7 +18,6 @@ namespace Client.View
 
             Context.Start();
             UIManager.EnsureCreated();
-            Context.UI = UIManager.Instance;
             NetworkStatusPanel.EnsureCreated();
             UIManager.Instance.ShowPanel<LoadingPanel>();
         }

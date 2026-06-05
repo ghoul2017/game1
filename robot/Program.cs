@@ -1,10 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using Client.Logic;
 using Robot;
+using Shared.Core.Event;
 
-// 设置 Robot UI 桥接
-Context.UI = new RobotClientUI();
+EventBus.Instance.AutoRegister();
 
 Console.WriteLine("Robot 自动化测试框架");
 Console.WriteLine("=====================");

@@ -87,7 +87,7 @@ namespace Client.View
             RefreshChannelDisplay();
         }
 
-        private void RefreshChannelDisplay()
+        public void RefreshChannelDisplay()
         {
             if (chatTitle != null)
             {
@@ -108,7 +108,7 @@ namespace Client.View
 
         // ==================== Chat Display ====================
 
-        private void RefreshChatDisplay()
+        public void RefreshChatDisplay()
         {
             if (chatDisplay == null) return;
 

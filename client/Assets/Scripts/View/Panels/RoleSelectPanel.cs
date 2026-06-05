@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 using Client.Logic;
 
 namespace Client.View
@@ -103,28 +102,12 @@ namespace Client.View
 
         public override void OnShow()
         {
-            RoleSelectController.Instance.OnDataChanged += OnControllerDataChanged;
-            MapController.Instance.OnEnterMapReady += OnEnterMapReadyHandler;
             RoleSelectController.Instance.LoadRoles();
         }
 
         public override void OnHide()
         {
-            RoleSelectController.Instance.OnDataChanged -= OnControllerDataChanged;
-            MapController.Instance.OnEnterMapReady -= OnEnterMapReadyHandler;
             HideCreateDialog();
-        }
-
-        private void OnControllerDataChanged()
-        {
-            RefreshSlots();
-        }
-
-        private void OnEnterMapReadyHandler()
-        {
-            Debug.Log("[RoleSelectPanel] 进图成功");
-            UIManager.Instance.ClearAll();
-            SceneManager.LoadScene("GameScene");
         }
 
         // --- Create Role Dialog ---
@@ -277,7 +260,7 @@ namespace Client.View
             return slot;
         }
 
-        private void RefreshSlots()
+        internal void RefreshSlots()
         {
             var roles = RoleSelectController.Instance.Roles;
             var selectedRoleIndex = RoleSelectController.Instance.SelectedRoleIndex;

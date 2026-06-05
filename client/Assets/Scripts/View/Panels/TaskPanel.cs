@@ -182,13 +182,11 @@ namespace Client.View
 
         public override void OnShow()
         {
-            TaskController.Instance.OnDataChanged += OnTaskDataChanged;
             TaskController.Instance.QueryTaskList();
         }
 
         public override void OnHide()
         {
-            TaskController.Instance.OnDataChanged -= OnTaskDataChanged;
         }
     }
 }

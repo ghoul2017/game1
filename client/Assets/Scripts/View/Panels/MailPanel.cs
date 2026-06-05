@@ -192,24 +192,16 @@ namespace Client.View
 
         public override void OnShow()
         {
-            MailController.Instance.OnDataChanged += OnMailDataChanged;
             MailController.Instance.QueryMailList();
         }
 
         public override void OnHide()
         {
-            MailController.Instance.OnDataChanged -= OnMailDataChanged;
-        }
-
-        private void OnMailDataChanged()
-        {
-            RefreshList();
-            RefreshDetail();
         }
 
         // ==================== UI Refresh ====================
 
-        private void RefreshList()
+        internal void RefreshList()
         {
             var mails = MailController.Instance.Mails;
 
@@ -303,7 +295,7 @@ namespace Client.View
             MailController.Instance.SelectMail(mailId);
         }
 
-        private void RefreshDetail()
+        internal void RefreshDetail()
         {
             var mail = MailController.Instance.Mails.Find(m => m.MailId == MailController.Instance.SelectedMailId);
             if (mail == null)

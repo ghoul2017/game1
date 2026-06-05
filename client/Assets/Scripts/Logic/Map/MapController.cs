@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 
 namespace Client.Logic
 {
@@ -9,20 +10,13 @@ namespace Client.Logic
     {
         public static MapController Instance { get; } = new();
 
-        // 地图事件：由消息 Handler 触发，View 消费。
-        public event Action OnEnterMapReady;
-        public event Action<List<MapObjectInfo>, List<long>> OnMapObjectsChanged;
-        public event Action<MapObjectMoveNtf> OnMapObjectMove;
-        public event Action<int, int> OnMapMoveCorrected; // x, y
-        public event Action<int, int, int> OnMapRebuild; // mapCfgId, spawnX, spawnY
-        public event Action<string> OnChangeMapFailed;
-        public event Action<int> OnKicked;
-        public event Action OnReconnected;
-        public event Action<string> OnReconnectFailed;
-
         private readonly List<MapObjectInfo> _pendingObjects = new List<MapObjectInfo>();
         private readonly List<long> _pendingRemoveObjectIds = new List<long>();
         private bool _mapViewReady;
+
+        internal List<MapObjectInfo> PendingObjects => _pendingObjects;
+        internal List<long> PendingRemoveObjectIds => _pendingRemoveObjectIds;
+        internal bool MapViewReady => _mapViewReady;
 
         public async Task Move(int x, int y)
         {
@@ -32,12 +26,12 @@ namespace Client.Logic
                     new MapMoveReq { X = x, Y = y });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    OnMapMoveCorrected?.Invoke(ack.X, ack.Y);
+                    EventBus.Instance.Publish(new EventType.MapMoveCorrectedEvent { X = ack.X, Y = ack.Y });
                 }
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("同步位置失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("同步位置失败: " + ex.Message);
             }
         }
 
@@ -55,12 +49,12 @@ namespace Client.Logic
                     });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    OnChangeMapFailed?.Invoke(ack.ErrorMessage);
+                    EventBus.Instance.Publish(new EventType.ChangeMapFailedEvent { ErrorMessage = ack.ErrorMessage });
                 }
             }
             catch (Exception ex)
             {
-                OnChangeMapFailed?.Invoke(ex.Message);
+                EventBus.Instance.Publish(new EventType.ChangeMapFailedEvent { ErrorMessage = ex.Message });
             }
         }
 
@@ -73,56 +67,13 @@ namespace Client.Logic
 
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    OnChangeMapFailed?.Invoke(ack.ErrorMessage);
+                    EventBus.Instance.Publish(new EventType.ChangeMapFailedEvent { ErrorMessage = ack.ErrorMessage });
                 }
             }
             catch (Exception ex)
             {
-                OnChangeMapFailed?.Invoke(ex.Message);
+                EventBus.Instance.Publish(new EventType.ChangeMapFailedEvent { ErrorMessage = ex.Message });
             }
-        }
-
-        // 地图 AOI 消息处理。
-
-        public void HandleEnterMapNtf(EnterMapNtf ntf)
-        {
-            _pendingObjects.Clear();
-            _pendingRemoveObjectIds.Clear();
-
-            GameData.CurrentMap = new EnterMapData
-            {
-                MapCfgId = ntf.MapCfgId,
-                Line = ntf.Line,
-                SpawnX = ntf.X,
-                SpawnY = ntf.Y
-            };
-
-            if (_mapViewReady)
-                OnMapRebuild?.Invoke(ntf.MapCfgId, ntf.X, ntf.Y);
-
-            OnEnterMapReady?.Invoke();
-        }
-
-        public void HandleMapObjectsNtf(MapObjectsNtf ntf)
-        {
-            var objects = ntf.Objects ?? new List<MapObjectInfo>();
-            var removeObjectIds = ntf.RemoveObjectIds ?? new List<long>();
-            if (objects.Count == 0 && removeObjectIds.Count == 0)
-                return;
-
-            if (!_mapViewReady)
-            {
-                _pendingObjects.AddRange(objects);
-                _pendingRemoveObjectIds.AddRange(removeObjectIds);
-                return;
-            }
-
-            OnMapObjectsChanged?.Invoke(objects, removeObjectIds);
-        }
-
-        public void HandleMapObjectMoveNtf(MapObjectMoveNtf ntf)
-        {
-            OnMapObjectMove?.Invoke(ntf);
         }
 
         public void MarkMapViewReady()
@@ -147,29 +98,7 @@ namespace Client.Logic
             var removeObjectIds = new List<long>(_pendingRemoveObjectIds);
             _pendingObjects.Clear();
             _pendingRemoveObjectIds.Clear();
-            OnMapObjectsChanged?.Invoke(objects, removeObjectIds);
-        }
-
-        // 重连和踢下线。
-
-        public async Task HandleReconnected()
-        {
-            var mapData = GameData.CurrentMap;
-            if (mapData != null)
-            {
-                await EnterMap(mapData.MapCfgId, mapData.Line);
-            }
-            OnReconnected?.Invoke();
-        }
-
-        public void HandleReconnectFailed(string message)
-        {
-            OnReconnectFailed?.Invoke(message);
-        }
-
-        public void HandleKicked(int reason)
-        {
-            OnKicked?.Invoke(reason);
+            EventBus.Instance.Publish(new EventType.MapObjectsChangedEvent { Objects = objects, RemoveObjectIds = removeObjectIds });
         }
 
         public static string GetKickReasonText(int reason)
@@ -185,4 +114,5 @@ namespace Client.Logic
             }
         }
     }
+
 }

@@ -10,7 +10,7 @@ namespace Client.View
     /// UI 管理器，负责所有面板的加载、显示、隐藏和栈管理。
     /// 挂在 Canvas 所在的 GameObject 上，或由 GameEntry 自动创建。
     /// </summary>
-    public class UIManager : MonoBehaviour, IClientUI
+    public class UIManager : MonoBehaviour
     {
         private static UIManager instance;
         public static UIManager Instance => instance;
@@ -223,71 +223,10 @@ namespace Client.View
             return null;
         }
 
-        // IClientUI 显式接口实现 —— 供 Logic 层通过 Context.UI 调用
-
-        T IClientUI.GetPanel<T>()
-        {
-            foreach (var panel in panels.Values)
-            {
-                if (panel is T t)
-                    return t;
-            }
-            return null;
-        }
-
-        void IClientUI.ShowPanel<T>()
-        {
-            if (typeof(UIPanel).IsAssignableFrom(typeof(T)))
-            {
-                var method = typeof(UIManager).GetMethod(nameof(ShowPanel), new Type[] { typeof(float) });
-                var generic = method.MakeGenericMethod(typeof(T));
-                generic.Invoke(this, new object[] { 0.3f });
-            }
-        }
-
-        void IClientUI.HidePanel<T>()
-        {
-            if (typeof(UIPanel).IsAssignableFrom(typeof(T)))
-            {
-                var method = typeof(UIManager).GetMethod(nameof(HidePanel), new Type[] { typeof(float) });
-                var generic = method.MakeGenericMethod(typeof(T));
-                generic.Invoke(this, new object[] { 0.3f });
-            }
-        }
-
-        void IClientUI.ReplacePanel<T>()
-        {
-            if (typeof(UIPanel).IsAssignableFrom(typeof(T)))
-            {
-                var method = typeof(UIManager).GetMethod(nameof(ReplacePanel), new Type[] { typeof(float) });
-                var generic = method.MakeGenericMethod(typeof(T));
-                generic.Invoke(this, new object[] { 0.3f });
-            }
-        }
-
-        void IClientUI.ClearAll()
-        {
-            ClearAll();
-        }
-
-        void IClientUI.Back()
-        {
-            Back();
-        }
-
-        void IClientUI.ShowToast(string msg)
-        {
-            UIToast.Show(msg);
-        }
-
-        void IClientUI.ShowMessageBox(string title, string content, Action onOk, Action onCancel)
-        {
-            UIMessageBox.Show(title, content, onOk, onCancel);
-        }
-
         private void OnDestroy()
         {
             if (instance == this) instance = null;
         }
     }
+
 }

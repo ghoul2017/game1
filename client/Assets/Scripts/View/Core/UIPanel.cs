@@ -13,6 +13,7 @@ namespace Client.View
         protected bool isInitialized = false;
 
         public bool IsVisible => canvasGroup != null && canvasGroup.alpha > 0;
+        public bool IsShown { get; private set; }
 
         protected virtual void Awake()
         {
@@ -54,6 +55,7 @@ namespace Client.View
             }
 
             gameObject.SetActive(true);
+            IsShown = true;
             StopAllCoroutines();
             StartCoroutine(FadeCoroutine(0f, 1f, fadeDuration, () =>
             {
@@ -68,6 +70,7 @@ namespace Client.View
         /// </summary>
         public void Hide(float fadeDuration = 0.3f)
         {
+            IsShown = false;
             OnHide();
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
@@ -93,6 +96,7 @@ namespace Client.View
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
             gameObject.SetActive(true);
+            IsShown = true;
             OnShow();
         }
 
@@ -101,6 +105,7 @@ namespace Client.View
         /// </summary>
         public void HideImmediate()
         {
+            IsShown = false;
             OnHide();
             canvasGroup.alpha = 0f;
             canvasGroup.interactable = false;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 
 namespace Client.Logic
 {
@@ -11,10 +12,8 @@ namespace Client.Logic
 
         public List<RoleData> Roles { get; private set; } = new();
         public int SelectedRoleIndex { get; private set; } = -1;
-        public string StatusText { get; private set; } = "";
-        public bool HasError { get; private set; }
-
-        public event Action OnDataChanged;
+        public string StatusText { get; internal set; } = "";
+        public bool HasError { get; internal set; }
 
         public void LoadRoles()
         {
@@ -22,7 +21,7 @@ namespace Client.Logic
             SelectedRoleIndex = -1;
             StatusText = Roles.Count > 0 ? "请选择一个角色进入游戏" : "没有角色，请创建新角色";
             HasError = false;
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
         }
 
         public void SelectRole(int index)
@@ -31,7 +30,7 @@ namespace Client.Logic
             SelectedRoleIndex = index;
             StatusText = string.Format("已选择: {0} (Lv.{1} {2})", Roles[index].Name, Roles[index].Level, Roles[index].Job);
             HasError = false;
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
         }
 
         public async Task CreateRole(string name, int job)
@@ -40,19 +39,19 @@ namespace Client.Logic
             {
                 StatusText = "请输入角色名称";
                 HasError = true;
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
                 return;
             }
             if (name.Length > 12)
             {
                 StatusText = "角色名称最多12个字符";
                 HasError = true;
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
                 return;
             }
             StatusText = "正在创建角色...";
             HasError = false;
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
 
             try
             {
@@ -84,7 +83,7 @@ namespace Client.Logic
                 StatusText = "创建角色失败: " + ex.Message;
                 HasError = true;
             }
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
         }
 
         public async Task EnterGame()
@@ -93,7 +92,7 @@ namespace Client.Logic
             var role = Roles[SelectedRoleIndex];
             StatusText = "正在进入游戏...";
             HasError = false;
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
             try
             {
                 EnterGameRes res = await NetClient.Instance.CallAsync<EnterGameRes>(
@@ -116,50 +115,13 @@ namespace Client.Logic
                 StatusText = "进入游戏失败: " + ex.Message;
                 HasError = true;
             }
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
         }
 
-        public void HandleEnterGameNtf(EnterGameNtf ntf)
+        private static void PublishDataChanged()
         {
-            GameData.CurrentRole = new RoleData
-            {
-                RoleId = ntf.RoleId,
-                Name = ntf.Name,
-                Level = ntf.Level,
-                Job = GameData.GetJobName(ntf.Job)
-            };
-            StatusText = "正在进入地图...";
-            HasError = false;
-            OnDataChanged?.Invoke();
-            _ = EnterInitialMapAsync();
-        }
-
-        private async Task EnterInitialMapAsync()
-        {
-            try
-            {
-                EnterMapAck ack = await NetClient.Instance.CallAsync<EnterMapAck>(
-                    new EnterMapReq { MapCfgId = 1, Line = 1 });
-
-                if (string.IsNullOrEmpty(ack.ErrorMessage))
-                {
-                    StatusText = "正在加载地图...";
-                    HasError = false;
-                    OnDataChanged?.Invoke();
-                }
-                else
-                {
-                    StatusText = "进入地图失败: " + ack.ErrorMessage;
-                    HasError = true;
-                    OnDataChanged?.Invoke();
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusText = "进入地图失败: " + ex.Message;
-                HasError = true;
-                OnDataChanged?.Invoke();
-            }
+            EventBus.Instance.Publish(new EventType.RoleSelectDataChangedEvent());
         }
     }
+
 }

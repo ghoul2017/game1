@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 
 namespace Client.Logic
 {
@@ -12,8 +13,6 @@ namespace Client.Logic
         public List<MailInfo> Mails { get; private set; } = new();
         public long SelectedMailId { get; private set; } = -1;
 
-        public event Action OnDataChanged;
-
         public async Task QueryMailList()
         {
             try
@@ -21,23 +20,23 @@ namespace Client.Logic
                 QueryMailListAck ack = await NetClient.Instance.CallAsync<QueryMailListAck>(new QueryMailListReq());
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 Mails = ack.Mails ?? new List<MailInfo>();
                 SelectedMailId = -1;
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("查询邮件失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("查询邮件失败: " + ex.Message);
             }
         }
 
         public void SelectMail(long mailId)
         {
             SelectedMailId = mailId;
-            OnDataChanged?.Invoke();
+            PublishDataChanged();
         }
 
         public async Task ReadAll()
@@ -49,7 +48,7 @@ namespace Client.Logic
             }
             if (unreadIds.Count == 0)
             {
-                Context.UI?.ShowToast("没有未读邮件");
+                ClientUiEventPublisher.ShowToast("没有未读邮件");
                 return;
             }
             try
@@ -58,7 +57,7 @@ namespace Client.Logic
                     new MailReadReq { MailIds = unreadIds });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 if (ack.ReadMailIds != null)
@@ -69,11 +68,11 @@ namespace Client.Logic
                         if (mail != null) mail.State = 1;
                     }
                 }
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("读取邮件失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("读取邮件失败: " + ex.Message);
             }
         }
 
@@ -93,7 +92,7 @@ namespace Client.Logic
             }
             if (claimIds.Count == 0)
             {
-                Context.UI?.ShowToast("没有可领取的附件");
+                ClientUiEventPublisher.ShowToast("没有可领取的附件");
                 return;
             }
             try
@@ -102,7 +101,7 @@ namespace Client.Logic
                     new MailGetItemReq { MailIds = claimIds });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 if (ack.ClaimedMailIds != null)
@@ -113,11 +112,11 @@ namespace Client.Logic
                         if (mail != null) mail.State = 2;
                     }
                 }
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("领取附件失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("领取附件失败: " + ex.Message);
             }
         }
 
@@ -134,7 +133,7 @@ namespace Client.Logic
             }
             if (deleteIds.Count == 0)
             {
-                Context.UI?.ShowToast("没有可删除的邮件");
+                ClientUiEventPublisher.ShowToast("没有可删除的邮件");
                 return;
             }
             try
@@ -143,7 +142,7 @@ namespace Client.Logic
                     new MailDeleteReq { MailIds = deleteIds });
                 if (!string.IsNullOrEmpty(ack.ErrorMessage))
                 {
-                    Context.UI?.ShowToast(ack.ErrorMessage);
+                    ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
                     return;
                 }
                 if (ack.DeletedMailIds != null)
@@ -154,22 +153,18 @@ namespace Client.Logic
                 {
                     SelectedMailId = -1;
                 }
-                OnDataChanged?.Invoke();
+                PublishDataChanged();
             }
             catch (Exception ex)
             {
-                Context.UI?.ShowToast("删除邮件失败: " + ex.Message);
+                ClientUiEventPublisher.ShowToast("删除邮件失败: " + ex.Message);
             }
         }
 
-        public void HandleMailNewNtf(MailNewNtf ntf)
+        private static void PublishDataChanged()
         {
-            if (ntf.Mail != null)
-            {
-                Mails.Insert(0, ntf.Mail);
-                OnDataChanged?.Invoke();
-                Context.UI?.ShowToast("收到新邮件: " + ntf.Mail.Title);
-            }
+            EventBus.Instance.Publish(new EventType.MailDataChangedEvent());
         }
     }
+
 }

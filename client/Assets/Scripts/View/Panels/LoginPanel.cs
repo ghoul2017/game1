@@ -337,16 +337,21 @@ namespace Client.View
         {
             errorText.text = "";
             SetButtonEnabled(!LoginController.Instance.IsLoggingIn);
-            LoginController.Instance.OnLoginCompleted += HandleLoginCompleted;
         }
 
         public override void OnHide()
         {
-            LoginController.Instance.OnLoginCompleted -= HandleLoginCompleted;
             CleanupConnectEvents();
         }
 
-        private void SetButtonEnabled(bool enabled)
+        internal bool ConnectEventsActive => _connectEventsActive;
+
+        internal void SetErrorText(string message)
+        {
+            errorText.text = message;
+        }
+
+        internal void SetButtonEnabled(bool enabled)
         {
             if (loginBtn != null) loginBtn.interactable = enabled;
             if (loginBtnText != null)
@@ -381,14 +386,12 @@ namespace Client.View
                 if (nc == null)
                 {
                     errorText.text = "网络未初始化";
-                    LoginController.Instance.OnConnectionError("网络未初始化");
+                    LoginController.Instance.FailPendingLoginConnection("网络未初始化");
                     SetButtonEnabled(true);
                     return;
                 }
 
                 _connectEventsActive = true;
-                nc.OnConnected += OnConnectedHandler;
-                nc.OnError += OnErrorHandler;
                 if (!nc.IsConnecting)
                     nc.Connect();
             }
@@ -396,44 +399,10 @@ namespace Client.View
 
         private bool _connectEventsActive;
 
-        private void OnConnectedHandler()
-        {
-            LoginController.Instance.OnConnectionSuccess();
-            CleanupConnectEvents();
-        }
-
-        private void OnErrorHandler(string reason)
-        {
-            // 忽略重连过程中的错误回调，OnConnected/OnError 是一次性的
-            errorText.text = LoginController.Instance.ErrorMessage;
-            SetButtonEnabled(true);
-            CleanupConnectEvents();
-        }
-
-        private void CleanupConnectEvents()
+        internal void CleanupConnectEvents()
         {
             if (!_connectEventsActive) return;
             _connectEventsActive = false;
-            var nc = NetClient.Instance;
-            if (nc != null)
-            {
-                nc.OnConnected -= OnConnectedHandler;
-                nc.OnError -= OnErrorHandler;
-            }
-        }
-
-        private void HandleLoginCompleted(bool success, string errorMessage)
-        {
-            if (success)
-            {
-                Debug.Log("[LoginPanel] 登录成功 PlayerId=" + GameData.PlayerId + " 角色数=" + GameData.Roles.Count);
-                UIManager.Instance.ReplacePanel<RoleSelectPanel>();
-            }
-            else
-            {
-                errorText.text = errorMessage;
-                SetButtonEnabled(true);
-            }
         }
 
         private void LoadSavedCredentials()
