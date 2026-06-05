@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 namespace Shared.Common.Protos
 {
-    #region 查询邮件列表
 
     [ProtoContract]
     [Message("Mail.QueryMailListReq")]
@@ -20,9 +19,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public List<MailInfo> Mails { get; set; } = new List<MailInfo>();
     }
 
-    #endregion
 
-    #region 标记已读
 
     [ProtoContract]
     [Message("Mail.MailReadReq")]
@@ -39,9 +36,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public List<long> ReadMailIds { get; set; } = new List<long>();
     }
 
-    #endregion
 
-    #region 领取附件
 
     [ProtoContract]
     [Message("Mail.MailGetItemReq")]
@@ -59,9 +54,7 @@ namespace Shared.Common.Protos
         [ProtoMember(3)] public List<MailAttachmentInfo> Items { get; set; } = new List<MailAttachmentInfo>();
     }
 
-    #endregion
 
-    #region 删除邮件
 
     [ProtoContract]
     [Message("Mail.MailDeleteReq")]
@@ -78,9 +71,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public List<long> DeletedMailIds { get; set; } = new List<long>();
     }
 
-    #endregion
 
-    #region 新邮件通知
 
     [ProtoContract]
     [Message("Mail.MailNewNtf")]
@@ -89,9 +80,7 @@ namespace Shared.Common.Protos
         [ProtoMember(1)] public MailInfo Mail { get; set; } = new MailInfo();
     }
 
-    #endregion
 
-    #region 通用邮件信息
 
     [ProtoContract]
     public class MailInfo
@@ -113,5 +102,4 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public int Count { get; set; }
     }
 
-    #endregion
 }

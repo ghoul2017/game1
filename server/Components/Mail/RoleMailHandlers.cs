@@ -13,7 +13,6 @@ public static class RoleMailHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(RoleMailHandlers));
 
-    #region 事件订阅
 
     [EventSubscriber]
     public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
@@ -30,5 +29,4 @@ public static class RoleMailHandlers
         player.AddComponent(mail);
     }
 
-    #endregion
 }

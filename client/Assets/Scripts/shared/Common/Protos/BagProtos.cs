@@ -5,7 +5,6 @@ using System.Collections.Generic;
 
 namespace Shared.Common.Protos
 {
-    #region 查询背包
 
     [ProtoContract]
     [Message("Bag.QueryBagReq")]
@@ -22,9 +21,7 @@ namespace Shared.Common.Protos
         [ProtoMember(3)] public int Capacity { get; set; }
     }
 
-    #endregion
 
-    #region 整理背包
 
     [ProtoContract]
     [Message("Bag.BagTidyReq")]
@@ -40,9 +37,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public List<BagItemInfo> Items { get; set; } = new List<BagItemInfo>();
     }
 
-    #endregion
 
-    #region 交换物品
 
     [ProtoContract]
     [Message("Bag.BagSwapReq")]
@@ -59,9 +54,7 @@ namespace Shared.Common.Protos
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
     }
 
-    #endregion
 
-    #region 使用物品
 
     [ProtoContract]
     [Message("Bag.BagUseItemReq")]
@@ -79,9 +72,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public int ConfigId { get; set; }
     }
 
-    #endregion
 
-    #region 物品变化通知
 
     [ProtoContract]
     [Message("Bag.BagItemChangedNtf")]
@@ -91,9 +82,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public List<int> RemovedIndices { get; set; } = new List<int>();
     }
 
-    #endregion
 
-    #region 通用物品信息
 
     [ProtoContract]
     public class BagItemInfo
@@ -105,5 +94,4 @@ namespace Shared.Common.Protos
         [ProtoMember(5)] public bool Bind { get; set; }
     }
 
-    #endregion
 }

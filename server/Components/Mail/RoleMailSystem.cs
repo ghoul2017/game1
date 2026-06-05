@@ -209,7 +209,6 @@ public static class RoleMailSystem
     }
 }
 
-#region 结果类型
 
 public record MailResult(bool Success, string ErrorMessage = "", long MailId = 0)
 {
@@ -234,5 +233,3 @@ public record DeleteResult(bool Changed, List<long> DeletedIds)
     public static DeleteResult Ok(List<long> ids) => new(true, ids);
     public static DeleteResult None() => new(false, []);
 }
-
-#endregion

@@ -209,7 +209,6 @@ public static class PlayerSystem
         Log.Info($"清空所有在线玩家，共 {count} 人");
     }
 
-    #region 奖励发放
 
     /// <summary>发放经验给玩家</summary>
     public static async Task GrantExpAsync(this PlayerComponent self, long roleId, int exp)
@@ -299,5 +298,4 @@ public static class PlayerSystem
         return level;
     }
 
-    #endregion
 }

@@ -257,7 +257,6 @@ public static class RoleTaskSystem
     }
 }
 
-#region 结果类型
 
 public record TaskAcceptResult(bool Success, string ErrorMessage = "")
 {
@@ -276,5 +275,3 @@ public record TaskGiveUpResult(bool Success, string ErrorMessage = "")
     public static TaskGiveUpResult Ok() => new(true);
     public static TaskGiveUpResult Fail(string message) => new(false, message);
 }
-
-#endregion

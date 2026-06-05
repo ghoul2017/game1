@@ -12,7 +12,6 @@ public static class FightCore
 {
     private static readonly Random _random = new();
 
-    #region 伤害计算
 
     /// <summary>
     /// 计算技能伤害。
@@ -52,9 +51,7 @@ public static class FightCore
         return Math.Max(0, damage);
     }
 
-    #endregion
 
-    #region 命中/暴击/闪避判定
 
     /// <summary>命中判定。命中概率 = 基础命中率 + 攻击者命中 - 目标闪避</summary>
     public static bool IsHit(FightUnitComponent attacker, FightUnitComponent target)
@@ -71,9 +68,7 @@ public static class FightCore
         return _random.Next(10000) < rate;
     }
 
-    #endregion
 
-    #region 技能使用
 
     /// <summary>
     /// 执行一次技能攻击。
@@ -133,9 +128,7 @@ public static class FightCore
         return results;
     }
 
-    #endregion
 
-    #region 工具方法
 
     private static int RandomRange(int min, int max)
     {
@@ -143,7 +136,6 @@ public static class FightCore
         return _random.Next(min, max + 1);
     }
 
-    #endregion
 }
 
 /// <summary>技能命中结果</summary>

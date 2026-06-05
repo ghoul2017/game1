@@ -42,7 +42,6 @@ public class MongoDb
         Log.Info("数据库模块初始化完成（MongoDB）");
     }
 
-    #region IEntity 通用 CRUD
 
     public async Task<T?> LoadAsync<T>(long id) where T : class, IEntity
     {
@@ -79,9 +78,7 @@ public class MongoDb
         await collection.DeleteOneAsync(filter);
     }
 
-    #endregion
 
-    #region 条件查询（非 IEntity 也可用）
 
     public async Task<List<T>> QueryAsync<T>(Expression<Func<T, bool>> filter)
     {
@@ -101,9 +98,7 @@ public class MongoDb
         return await collection.Find(filter).AnyAsync();
     }
 
-    #endregion
 
-    #region 非 IEntity 直接操作
 
     public async Task SaveAsync<T>(T document) where T : notnull
     {
@@ -123,9 +118,7 @@ public class MongoDb
         await collection.DeleteOneAsync(filter);
     }
 
-    #endregion
 
-    #region 索引
 
     public async Task EnsureIndexAsync<T>(Expression<Func<T, object>> field, bool unique = false)
     {
@@ -135,9 +128,7 @@ public class MongoDb
                 new CreateIndexOptions { Unique = unique }));
     }
 
-    #endregion
 
-    #region 内部方法
 
     private IMongoCollection<BsonDocument> GetEntityCollection<T>()
     {
@@ -177,5 +168,4 @@ public class MongoDb
         return sb.ToString();
     }
 
-    #endregion
 }

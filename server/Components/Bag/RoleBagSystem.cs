@@ -15,13 +15,11 @@ public static class RoleBagSystem
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(RoleBagSystem));
 
-    #region 物品效果类型
 
     public const int EffectHp = 1;
     public const int EffectMp = 2;
     public const int EffectRevive = 5;
 
-    #endregion
 
     /// <summary>保存背包</summary>
     public static async Task SaveBagAsync(this RoleBagComponent self)

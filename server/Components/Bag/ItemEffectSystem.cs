@@ -16,13 +16,11 @@ public static class ItemEffectSystem
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(ItemEffectSystem));
 
-    #region 物品效果类型
 
     public const int EffectHp = 1;
     public const int EffectMp = 2;
     public const int EffectRevive = 5;
 
-    #endregion
 
     /// <summary>
     /// 使用物品并触发效果。
@@ -72,7 +70,6 @@ public static class ItemEffectSystem
         return result;
     }
 
-    #region 效果处理方法
 
     private static void ApplyHpEffect(long roleId, RoleAttributeComponent attr, int healAmount)
     {
@@ -108,9 +105,7 @@ public static class ItemEffectSystem
         }
     }
 
-    #endregion
 
-    #region 消息发送
 
     private static void SendHpChangedNtf(long roleId, long targetId, int deltaHp, int currentHp, int reason)
     {
@@ -124,7 +119,6 @@ public static class ItemEffectSystem
         Context.Players.SendToPlayer(roleId, ntf);
     }
 
-    #endregion
 }
 
 /// <summary>

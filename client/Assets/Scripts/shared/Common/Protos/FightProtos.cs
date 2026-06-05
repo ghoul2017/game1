@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 namespace Shared.Common.Protos
 {
-    #region 使用技能
 
     [ProtoContract]
     [Message("Fight.UseSkillReq")]
@@ -40,9 +39,7 @@ namespace Shared.Common.Protos
         [ProtoMember(9)] public List<SkillTargetInfo> Targets { get; set; } = new List<SkillTargetInfo>();
     }
 
-    #endregion
 
-    #region HP变化通知
 
     public static class HpChangeReason
     {
@@ -64,9 +61,7 @@ namespace Shared.Common.Protos
         [ProtoMember(4)] public int Reason { get; set; }
     }
 
-    #endregion
 
-    #region 被击杀通知
 
     [ProtoContract]
     [Message("Fight.KilledByNtf")]
@@ -77,9 +72,7 @@ namespace Shared.Common.Protos
         [ProtoMember(3)] public bool IsMonster { get; set; }
     }
 
-    #endregion
 
-    #region PK模式
 
     public static class PkMode
     {
@@ -103,9 +96,7 @@ namespace Shared.Common.Protos
         [ProtoMember(1)] public int PkMode { get; set; }
     }
 
-    #endregion
 
-    #region 经验/金币/升级/物品/MP变化通知
 
     /// <summary>
     /// 经验变化通知
@@ -171,5 +162,4 @@ namespace Shared.Common.Protos
         [ProtoMember(4)] public int Reason { get; set; }
     }
 
-    #endregion
 }

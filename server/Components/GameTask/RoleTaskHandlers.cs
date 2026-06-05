@@ -13,7 +13,6 @@ public static class RoleTaskHandlers
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(RoleTaskHandlers));
 
-    #region 事件订阅
 
     [EventSubscriber]
     public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
@@ -90,5 +89,4 @@ public static class RoleTaskHandlers
         }
     }
 
-    #endregion
 }

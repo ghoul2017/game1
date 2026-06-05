@@ -13,6 +13,7 @@ LINEKB:ENGINEERING:POWERSHELL_UTF8 doc=AGENTS.md note="只有确实使用 PowerS
 LINEKB:ENGINEERING:UNITY_META doc=AGENTS.md note="不要手动新增、编辑或补齐 .meta；需要更新时使用 Unity 2021.3.26f1c1 batchmode 生成。"
 LINEKB:ENGINEERING:CS_STYLE doc=AGENTS.md note="不额外预设纯格式偏好，保持邻近代码一致，并选择更利于理解、修改和验证的写法。"
 LINEKB:ENGINEERING:CS_READABILITY doc=AGENTS.md note="新代码命名直接表达业务含义，类型和方法职责单一，控制流显式，优先早返回。"
+LINEKB:ENGINEERING:NO_REGION doc=AGENTS.md note="不使用 #region/#endregion；需要分组时用清晰命名、类型拆分和顺序组织表达。"
 LINEKB:ENGINEERING:CS_COMPLEXITY doc=AGENTS.md note="减少隐式状态、隐藏副作用、复杂链式调用、反射、动态魔法和过度抽象。"
 LINEKB:ENGINEERING:DELETE_USING doc=AGENTS.md note="删除类前搜索命名空间引用；如果被删类是命名空间下唯一类，必须清理失效 using。"
 LINEKB:ENGINEERING:STATIC_GENERIC doc=AGENTS.md note="静态类不能作为泛型参数，System 日志不要写 GetLogger<XxxSystem>()。"

@@ -22,7 +22,6 @@ public static class RoleBagHandlers
         Bind = item.Bind,
     };
 
-    #region 事件订阅
 
     [EventSubscriber]
     public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
@@ -39,5 +38,4 @@ public static class RoleBagHandlers
         player.AddComponent(bag);
     }
 
-    #endregion
 }

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 namespace Shared.Common.Protos
 {
-    #region 查询任务列表
 
     [ProtoContract]
     [Message("Task.QueryTaskListReq")]
@@ -20,9 +19,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
     }
 
-    #endregion
 
-    #region 接取任务
 
     [ProtoContract]
     [Message("Task.TaskAcceptReq")]
@@ -39,9 +36,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public TaskInfo Task { get; set; } = new TaskInfo();
     }
 
-    #endregion
 
-    #region 提交任务
 
     [ProtoContract]
     [Message("Task.TaskSubmitReq")]
@@ -59,9 +54,7 @@ namespace Shared.Common.Protos
         [ProtoMember(3)] public List<TaskRewardInfo> Rewards { get; set; } = new List<TaskRewardInfo>();
     }
 
-    #endregion
 
-    #region 放弃任务
 
     [ProtoContract]
     [Message("Task.TaskGiveUpReq")]
@@ -78,9 +71,7 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public int TaskId { get; set; }
     }
 
-    #endregion
 
-    #region 任务变更通知
 
     [ProtoContract]
     [Message("Task.TaskChangedNtf")]
@@ -89,9 +80,7 @@ namespace Shared.Common.Protos
         [ProtoMember(1)] public List<TaskInfo> Tasks { get; set; } = new List<TaskInfo>();
     }
 
-    #endregion
 
-    #region 通用任务信息
 
     [ProtoContract]
     public class TaskInfo
@@ -119,5 +108,4 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public int Count { get; set; }
     }
 
-    #endregion
 }

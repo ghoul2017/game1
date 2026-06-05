@@ -3,7 +3,6 @@ using Shared.Core.Network;
 
 namespace Shared.Common.Protos
 {
-    #region 聊天频道常量
 
     public static class ChatChannel
     {
@@ -12,9 +11,7 @@ namespace Shared.Common.Protos
         public const int Private = 3;
     }
 
-    #endregion
 
-    #region 发送聊天
 
     [ProtoContract]
     [Message("Chat.ChatReq")]
@@ -32,9 +29,7 @@ namespace Shared.Common.Protos
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
     }
 
-    #endregion
 
-    #region 聊天消息通知
 
     [ProtoContract]
     [Message("Chat.ChatNtf")]
@@ -47,9 +42,7 @@ namespace Shared.Common.Protos
         [ProtoMember(5)] public long SendTime { get; set; }
     }
 
-    #endregion
 
-    #region 系统广播通知
 
     [ProtoContract]
     [Message("Chat.SystemChatNtf")]
@@ -59,5 +52,4 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public long SendTime { get; set; }
     }
 
-    #endregion
 }
