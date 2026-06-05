@@ -36,7 +36,7 @@ public sealed class LoginReqHandler : RpcMessageHandler<LoginReq, LoginRes>
         {
             if (oldUser.Session != null)
             {
-                UserHandler.KickUser(oldUser.Session, LogoutReason.AnotherSession);
+                UserHelper.KickUser(oldUser.Session, LogoutReason.AnotherSession);
             }
             userComponent.Users.Remove(oldUser.Id);
             userComponent.Usernames.Remove(oldUser.Username);

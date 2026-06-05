@@ -11,7 +11,7 @@ public sealed class QueryBagReqHandler : PlayerRpcMessageHandler<QueryBagReq, Qu
     protected override Task ExecuteAsync(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
         res.Capacity = player.RoleBag.Capacity;
-        res.Items = player.RoleBag.Items.Values.Select(RoleBagHandlers.ToInfo).ToList();
+        res.Items = player.RoleBag.Items.Values.Select(RoleBagHelper.ToInfo).ToList();
         return Task.CompletedTask;
     }
 }

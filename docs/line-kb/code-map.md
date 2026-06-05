@@ -11,7 +11,7 @@ LINEKB:MAP:SHARED_NETWORK path=client/Assets/Scripts/shared/Core/Network note="�
 LINEKB:MAP:SHARED_CONFIG path=client/Assets/Scripts/shared/Core/Config note="共享配置加载层，包含 ConfigManager、ConfigTableAttribute、SimpleCsvReader。"
 LINEKB:MAP:SHARED_LOG path=client/Assets/Scripts/shared/Core/Log note="共享日志层，包含 ILog、LogManager 和 Appender。"
 LINEKB:MAP:SHARED_ECS path=client/Assets/Scripts/shared/Core/ECS note="共享 ECS 基础，包含 Entity、Component、ComponentOfAttribute。"
-LINEKB:MAP:SHARED_EVENT path=client/Assets/Scripts/shared/Core/Event note="共享事件总线基础，包含 EventBus、IEvent、EventSubscriberAttribute。"
+LINEKB:MAP:SHARED_EVENT path=client/Assets/Scripts/shared/Core/Event note="共享事件总线基础，包含 EventBus、IEvent、ISyncEventHandler<TEvent>、IAsyncEventHandler<TEvent>。"
 LINEKB:MAP:SERVER_COMPONENTS path=server/Components note="服务端业务组件目录，按 User、Player、Bag、Mail、Chat、GameTask、Fight、Map、Monster、Misc 分模块。"
 LINEKB:MAP:SERVER_CORE path=server/Core note="服务端基础设施目录，包含配置、数据库、AOI、事件、网络、定时器、Token 和同步上下文。"
 LINEKB:MAP:SERVER_TABLES path=server/Data/Tables note="服务端 CSV 配置表目录。"

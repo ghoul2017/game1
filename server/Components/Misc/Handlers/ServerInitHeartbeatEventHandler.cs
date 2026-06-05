@@ -7,14 +7,13 @@ namespace Game.Components.Misc;
 /// <summary>
 /// 握手+心跳处理。
 /// </summary>
-public static class MiscHandlers
+public sealed class ServerInitHeartbeatEventHandler : ISyncEventHandler<EventType.ServerInitEvent>
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(MiscHandlers));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(ServerInitHeartbeatEventHandler));
 
     private const int CheckIntervalSeconds = 20;
 
-    [EventSubscriber]
-    public static void OnServerInit(EventType.ServerInitEvent e)
+    public void Handle(EventType.ServerInitEvent e)
     {
         GameTimer.Start(CheckIntervalSeconds * 1000, () =>
         {

@@ -13,6 +13,6 @@ public sealed class BagTidyReqHandler : PlayerRpcMessageHandler<BagTidyReq, BagT
         player.RoleBag.Tidy();
         await player.RoleBag.SaveBagAsync();
 
-        res.Items = player.RoleBag.Items.Values.Select(RoleBagHandlers.ToInfo).ToList();
+        res.Items = player.RoleBag.Items.Values.Select(RoleBagHelper.ToInfo).ToList();
     }
 }

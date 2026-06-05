@@ -1,21 +1,15 @@
-using Game.Components.Player;
-using System.Linq;
 using System.Threading.Tasks;
 using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
-using Shared.Core.Network;
-using Shared.Common.Protos;
 
 namespace Game.Components.Mail;
 
-public static class RoleMailHandlers
+public sealed class PlayerOnlineLoadMailEventHandler : IAsyncEventHandler<EventType.PlayerOnlineEvent>
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleMailHandlers));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(PlayerOnlineLoadMailEventHandler));
 
-
-    [EventSubscriber]
-    public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
+    public async Task HandleAsync(EventType.PlayerOnlineEvent e)
     {
         var player = e.Player;
 
@@ -28,5 +22,4 @@ public static class RoleMailHandlers
         }
         player.AddComponent(mail);
     }
-
 }

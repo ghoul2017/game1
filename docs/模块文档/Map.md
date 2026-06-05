@@ -50,11 +50,11 @@ AOI 事件回调到 `MapAoiNotifier` 后，只使用两个地图对象通知：
 | `MapPlayerEntity.cs` | 玩家地图投影实体 |
 | `MapAoiNotifier.cs` | AOI 事件 → 地图对象网络通知 |
 | `MapHelper.cs` | 地图对象通知构造和发送辅助 |
-| `MapHandlers.cs` | PlayerOfflineEvent 订阅 |
-| `EnterMapReqHandler.cs` | 进入地图消息处理 |
-| `LeaveMapReqHandler.cs` | 离开地图消息处理 |
-| `ChangeMapReqHandler.cs` | 切换地图消息处理 |
-| `MapMoveReqHandler.cs` | 地图移动消息处理 |
+| `Handlers/PlayerOfflineQuitMapEventHandler.cs` | PlayerOffline → 下线退图 |
+| `Handlers/EnterMapReqHandler.cs` | 进入地图消息处理 |
+| `Handlers/LeaveMapReqHandler.cs` | 离开地图消息处理 |
+| `Handlers/ChangeMapReqHandler.cs` | 切换地图消息处理 |
+| `Handlers/MapMoveReqHandler.cs` | 地图移动消息处理 |
 | `IMapObject.cs` | 地图对象接口 |
 | `MapObjectType.cs` | shared 地图对象类型常量 |
 

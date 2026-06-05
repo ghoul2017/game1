@@ -24,11 +24,11 @@ Mail 模块管理玩家邮件——查询、已读标记、附件领取、删除
 |------|------|
 | `RoleMailComponent.cs` | 邮件 Component（IEntity 持久化，Dictionary 主结构） |
 | `RoleMailSystem.cs` | 邮件操作扩展方法 |
-| `RoleMailHandlers.cs` | PlayerOnlineEvent 订阅 |
-| `QueryMailListReqHandler.cs` | 查询邮件列表消息处理 |
-| `MailReadReqHandler.cs` | 标记已读消息处理 |
-| `MailGetItemReqHandler.cs` | 领取附件消息处理 |
-| `MailDeleteReqHandler.cs` | 删除邮件消息处理 |
+| `Handlers/PlayerOnlineLoadMailEventHandler.cs` | PlayerOnline → 加载邮件 |
+| `Handlers/QueryMailListReqHandler.cs` | 查询邮件列表消息处理 |
+| `Handlers/MailReadReqHandler.cs` | 标记已读消息处理 |
+| `Handlers/MailGetItemReqHandler.cs` | 领取附件消息处理 |
+| `Handlers/MailDeleteReqHandler.cs` | 删除邮件消息处理 |
 | `RoleMail.cs` | 邮件/附件数据类 |
 
 ## 邮件操作
@@ -62,7 +62,7 @@ Mail 模块管理玩家邮件——查询、已读标记、附件领取、删除
 ## 上线加载
 
 ```
-PlayerOnlineEvent → RoleMailHandlers.OnPlayerOnline
+PlayerOnlineEvent → PlayerOnlineLoadMailEventHandler
   ├── LoadAsync<RoleMailComponent>(roleId)
   ├── 不存在 → 创建默认空邮件列表 + InsertAsync
   └── player.AddComponent(mailComp)

@@ -25,11 +25,12 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 | 文件 | 职责 |
 |------|------|
 | `UserComponent.cs` | Module 级 Component，全局用户索引 |
-| `UserHandler.cs` | 事件订阅 + 踢人下线工具方法 |
-| `LoginReqHandler.cs` | 登录消息处理 |
-| `CreateRoleReqHandler.cs` | 创建角色消息处理 |
-| `EnterGameReqHandler.cs` | 进入游戏消息处理 |
-| `ReconnectReqHandler.cs` | 断线重连消息处理 |
+| `Handlers/ServerInitUserComponentEventHandler.cs` | ServerInit → 挂载 UserComponent |
+| `UserHelper.cs` | 踢人下线工具方法 |
+| `Handlers/LoginReqHandler.cs` | 登录消息处理 |
+| `Handlers/CreateRoleReqHandler.cs` | 创建角色消息处理 |
+| `Handlers/EnterGameReqHandler.cs` | 进入游戏消息处理 |
+| `Handlers/ReconnectReqHandler.cs` | 断线重连消息处理 |
 | `User.cs` | 账号实体（IEntity 持久化） |
 | `UserRole.cs` | 角色索引实体（IEntity 持久化） |
 
@@ -126,10 +127,10 @@ ReconnectReq(token, roleId)
 
 | 交互方 | 方向 | 内容 |
 |--------|------|------|
-| Player | 单向 | `EnterGameHandler` → `PlayerSystem.EnterGame` |
+| Player | 单向 | `Handlers/EnterGameReqHandler` → `PlayerSystem.EnterGame` |
 | MongoDB | 单向 | User / UserRole 持久化 |
 | IdGenerator | 单向 | 雪花算法生成 roleId |
-| EventBus | 单向 | ServerInitEvent 订阅 |
+| EventBus | 单向 | ServerInitUserComponentEventHandler 订阅 ServerInitEvent |
 | TokenSigner | 单向 | Token 签名验证 |
 
 核心依赖链：**User 登录 → 进入游戏（UserRole 验证）→ PlayerSystem.EnterGame → EnterGameNtf → PlayerOnlineEvent → 各模块挂载 Component + 加载数据**

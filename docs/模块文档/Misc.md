@@ -20,9 +20,9 @@ TCP 连接建立后，客户端发送 `HandshakeReq` 确认连接可用。当前
 
 | 文件 | 职责 |
 |------|------|
-| `MiscHandlers.cs` | 心跳检测定时器 |
-| `HandshakeReqHandler.cs` | 握手消息处理 |
-| `HeartbeatReqHandler.cs` | 心跳消息处理 |
+| `Handlers/ServerInitHeartbeatEventHandler.cs` | ServerInit → 启动心跳检测定时器 |
+| `Handlers/HandshakeReqHandler.cs` | 握手消息处理 |
+| `Handlers/HeartbeatReqHandler.cs` | 心跳消息处理 |
 
 ## 协议
 
@@ -64,5 +64,5 @@ Misc 不被任何业务模块依赖。
 
 ## 已知局限
 
-1. **握手未验证**：HandshakeHandler 未验证 Token，仅记录日志
+1. **握手未验证**：Handlers/HandshakeReqHandler 未验证 Token，仅记录日志
 2. **心跳频率固定**：客户端心跳间隔硬编码，不可配置

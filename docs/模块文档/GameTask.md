@@ -45,11 +45,16 @@ GameTask 模块管理玩家任务——接取、进度追踪、提交领奖、�
 |------|------|
 | `RoleTaskComponent.cs` | 任务 Component（IEntity 持久化，Dictionary 主结构） |
 | `RoleTaskSystem.cs` | 任务操作扩展方法 |
-| `RoleTaskHandlers.cs` | PlayerOnlineEvent 和任务进度事件订阅 |
-| `QueryTaskListReqHandler.cs` | 查询任务列表消息处理 |
-| `TaskAcceptReqHandler.cs` | 接取任务消息处理 |
-| `TaskSubmitReqHandler.cs` | 提交任务消息处理 |
-| `TaskGiveUpReqHandler.cs` | 放弃任务消息处理 |
+| `Handlers/PlayerOnlineLoadTaskEventHandler.cs` | PlayerOnline → 加载任务 |
+| `Handlers/PlayerLevelUpTaskProgressEventHandler.cs` | PlayerLevelUp → 更新 ReachLevel 目标 |
+| `Handlers/PlayerExpChangedTaskProgressEventHandler.cs` | PlayerExpChanged → 预留经验进度事件 |
+| `Handlers/PlayerGoldChangedTaskProgressEventHandler.cs` | PlayerGoldChanged → 预留金币进度事件 |
+| `Handlers/PlayerItemGainedTaskProgressEventHandler.cs` | PlayerItemGained → 更新 CollectItem 目标 |
+| `Handlers/MonsterKilledTaskProgressEventHandler.cs` | MonsterKilled → 更新 KillMonster 目标 |
+| `Handlers/QueryTaskListReqHandler.cs` | 查询任务列表消息处理 |
+| `Handlers/TaskAcceptReqHandler.cs` | 接取任务消息处理 |
+| `Handlers/TaskSubmitReqHandler.cs` | 提交任务消息处理 |
+| `Handlers/TaskGiveUpReqHandler.cs` | 放弃任务消息处理 |
 | `RoleTask.cs` | 任务/目标数据类 + 目标类型常量 |
 
 ## 任务操作
@@ -90,7 +95,7 @@ GameTask 模块管理玩家任务——接取、进度追踪、提交领奖、�
 ## 上线加载
 
 ```
-PlayerOnlineEvent → RoleTaskHandlers.OnPlayerOnline
+PlayerOnlineEvent → PlayerOnlineLoadTaskEventHandler
   ├── LoadAsync<RoleTaskComponent>(roleId)
   ├── 不存在 → 创建默认空任务列表 + InsertAsync
   └── player.AddComponent(taskComp)

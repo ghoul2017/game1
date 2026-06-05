@@ -5,12 +5,11 @@ using Shared.Core.Log;
 
 namespace Game.Components.Player;
 
-public static class PlayerHandlers
+public sealed class PlayerOnlineLoadAttributeEventHandler : IAsyncEventHandler<EventType.PlayerOnlineEvent>
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(PlayerHandlers));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(PlayerOnlineLoadAttributeEventHandler));
 
-    [EventSubscriber]
-    public static async Task OnPlayerOnline(EventType.PlayerOnlineEvent e)
+    public async Task HandleAsync(EventType.PlayerOnlineEvent e)
     {
         var player = e.Player;
 

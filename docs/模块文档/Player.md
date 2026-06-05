@@ -20,10 +20,10 @@ Player 模块管理在线玩家的核心实体 `PlayerEntity` 及其生命周期
 
 ```
 PlayerOnlineEvent
-  ├── PlayerHandlers → RoleAttributeComponent
-  ├── RoleBagHandlers → RoleBagComponent
-  ├── RoleMailHandlers → RoleMailComponent
-  └── RoleTaskHandlers → RoleTaskComponent
+  ├── PlayerOnlineLoadAttributeEventHandler → RoleAttributeComponent
+  ├── PlayerOnlineLoadBagEventHandler → RoleBagComponent
+  ├── PlayerOnlineLoadMailEventHandler → RoleMailComponent
+  └── PlayerOnlineLoadTaskEventHandler → RoleTaskComponent
 ```
 
 这实现了 Player 模块不需要知道有哪些子模块——子模块自己订阅、自己加载。
@@ -52,7 +52,7 @@ player.AddComponent(bag);
 | `PlayerEntity.cs` | 玩家实体（Create 中挂载 PlayerOnlineComponent） |
 | `PlayerComponent.cs` | Module 级 Component，全局在线玩家集合 |
 | `PlayerSystem.cs` | 玩家管理扩展方法 + EnterGame 逻辑 |
-| `PlayerHandlers.cs` | 事件订阅（PlayerOnline → 加载属性） |
+| `Handlers/PlayerOnlineLoadAttributeEventHandler.cs` | PlayerOnline → 加载属性 |
 | `PlayerOnlineComponent.cs` | PlayerEntity 级，在线状态和会话 |
 | `RoleDataComponent.cs` | PlayerEntity 级，角色持久化数据（IEntity） |
 | `RoleAttributeComponent.cs` | PlayerEntity 级，战斗属性（IEntity 持久化） |
@@ -120,7 +120,7 @@ public sealed class XxxReqHandler : PlayerRpcMessageHandler<XxxReq, XxxRes>
 
 | 交互方 | 方向 | 内容 |
 |--------|------|------|
-| User | 单向 | `EnterGameHandler` → `PlayerSystem.EnterGame` |
+| User | 单向 | `Handlers/EnterGameReqHandler` → `PlayerSystem.EnterGame` |
 | Bag/Mail/Task | 双向 | PlayerOnlineEvent 订阅加载；`player.RoleXxx` 访问 |
 | Fight | 单向 | `RoleAttributeComponent.ToFightAttribute()` 属性转换 |
 | Map | 单向 | `Context.Players.SendToPlayer` 推送通知 |
