@@ -6,7 +6,7 @@ LINEKB:CLIENT:CONTEXT path=client/Assets/Scripts/Logic/Core/Context.cs symbol=Co
 LINEKB:CLIENT:UI_EVENTS path=client/Assets/Scripts/Logic/Core/EventType.cs symbol=Shared.Core.Event.EventType note="Logic -> View 的表现通知和 UI 刷新通知通过 EventBus 发布；客户端事件对象参考服务器集中到 EventType，内部事件类型使用 struct。"
 LINEKB:CLIENT:UI_EVENT_PUBLISHER path=client/Assets/Scripts/Logic/Core/Context.cs symbol=ClientUiEventPublisher note="高频 Toast 等 UI 表现事件由 ClientUiEventPublisher 封装发布，调用方不直接散落构造 ClientToastRequestedEvent。"
 LINEKB:CLIENT:UI_EVENT_HANDLERS path=client/Assets/Scripts/View/Panels/Handlers path=client/Assets/Scripts/View/Scene/Handlers path=client/Assets/Scripts/View/Core/Handlers note="View 侧 EventBus Handler 必须独立文件，放在对应 View 模块的 Handlers/ 目录；一个 EventHandler 只处理一个事件，不合并多个 ISyncEventHandler<T>。"
-LINEKB:CLIENT:NET_CLIENT path=client/Assets/Scripts/Logic/Core/NetClient.cs symbol=NetClient note="客户端网络管理器，普通 C# 类，由 GameEntry.Update 驱动。"
+LINEKB:CLIENT:NET_CLIENT path=client/Assets/Scripts/Logic/Core/NetClient.cs symbol=NetClient note="客户端网络管理器，普通 C# 类，由常驻 UIManager.Update 驱动，避免场景切换后停止网络轮询。"
 LINEKB:CLIENT:GAME_ENTRY path=client/Assets/Scripts/View/Core/GameEntry.cs symbol=GameEntry note="Unity 客户端运行入口，负责驱动逻辑网络更新等生命周期。"
 LINEKB:CLIENT:UI_MANAGER path=client/Assets/Scripts/View/Core/UIManager.cs symbol=UIManager note="UI 栈式管理入口。"
 LINEKB:CLIENT:UI_PANEL path=client/Assets/Scripts/View/Core/UIPanel.cs symbol=UIPanel note="UI 面板基类。"

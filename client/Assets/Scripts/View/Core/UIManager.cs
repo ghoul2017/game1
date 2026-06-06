@@ -76,6 +76,11 @@ namespace Client.View
                 MainCanvas = GetComponent<Canvas>();
         }
 
+        private void Update()
+        {
+            Context.Update(Time.deltaTime);
+        }
+
         /// <summary>
         /// 显示指定类型的面板
         /// </summary>

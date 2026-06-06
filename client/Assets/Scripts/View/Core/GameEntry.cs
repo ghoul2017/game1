@@ -22,16 +22,6 @@ namespace Client.View
             UIManager.Instance.ShowPanel<LoadingPanel>();
         }
 
-        private void Update()
-        {
-            Context.Update(Time.deltaTime);
-        }
-
-        private void OnDestroy()
-        {
-            Context.OnDestroy();
-        }
-
         private static string GetTablesDirectory()
         {
 #if UNITY_EDITOR

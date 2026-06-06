@@ -107,7 +107,7 @@ namespace Client.Logic
         }
 
         /// <summary>
-        /// 每帧由 GameEntry 调用，deltaTime 为 Time.deltaTime
+        /// 每帧由 UIManager 调用，deltaTime 为 Time.deltaTime
         /// </summary>
         public void Update(float deltaTime)
         {
