@@ -75,7 +75,6 @@ public static class MonsterSystem
 
         map.AddObject(monster);
 
-        Log.Debug($"生成怪物 MonsterId:{monsterId} CfgId:{cfg.Id} Pos:({x},{y})");
         return monster;
     }
 

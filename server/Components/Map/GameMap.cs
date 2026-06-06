@@ -114,7 +114,6 @@ public class GameMap
                 break;
         }
 
-        Log.Debug($"对象进入地图 ObjectId:{obj.ObjectId} MapId:{CfgId} Line:{Line} Pos:({obj.X},{obj.Y})");
         return true;
     }
 
