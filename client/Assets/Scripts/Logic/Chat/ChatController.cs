@@ -16,7 +16,8 @@ namespace Client.Logic
 
         public async Task SendChat(string content)
         {
-            if (string.IsNullOrEmpty(content)) return;
+            if (string.IsNullOrEmpty(content))
+                return;
             var req = new ChatReq();
             req.Channel = CurrentChannel;
             req.Content = content;
@@ -39,7 +40,6 @@ namespace Client.Logic
             CurrentChannel = channel;
             EventBus.Instance.Publish(new EventType.ChatChannelChangedEvent());
         }
-
     }
 
     public struct ChatLineData

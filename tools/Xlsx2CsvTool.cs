@@ -82,7 +82,8 @@ public class Xlsx2CsvTool : ITool
                 rows.Add(cells);
             }
 
-            if (rows.Count == 0) continue;
+            if (rows.Count == 0)
+                continue;
 
             // CSV 文件名: 仅一个 Sheet 或默认 Sheet 时用 xlsx 文件名
             var csvName = wb.Worksheets.Count == 1 || ws.Name == "Sheet"

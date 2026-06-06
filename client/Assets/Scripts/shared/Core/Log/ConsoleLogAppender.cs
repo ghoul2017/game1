@@ -18,7 +18,8 @@ namespace Shared.Core.Log
 
         public void Append(LogEntry entry)
         {
-            if (entry.Level < Level) return;
+            if (entry.Level < Level)
+                return;
 
             var text = _formatter.Format(entry);
 

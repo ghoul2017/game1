@@ -7,7 +7,8 @@ namespace Client.View
         public void Handle(EventType.TaskDataChangedEvent e)
         {
             var panel = UIManager.Instance != null ? UIManager.Instance.GetPanel<TaskPanel>() : null;
-            if (panel == null || !panel.IsShown) return;
+            if (panel == null || !panel.IsShown)
+                return;
 
             panel.RefreshList();
             panel.RefreshDetail();

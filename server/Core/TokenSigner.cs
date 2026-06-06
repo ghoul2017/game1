@@ -43,7 +43,8 @@ public class TokenSigner
         try
         {
             var sepIndex = token.IndexOf(':');
-            if (sepIndex < 0) return null;
+            if (sepIndex < 0)
+                return null;
 
             var payloadBytes = Convert.FromBase64String(token.Substring(0, sepIndex));
             var signatureBytes = Convert.FromBase64String(token.Substring(sepIndex + 1));
@@ -57,10 +58,14 @@ public class TokenSigner
 
             // 解析 payload
             var parts = payload.Split(':');
-            if (parts.Length != 3) return null;
-            if (!long.TryParse(parts[0], out var userId)) return null;
-            if (!long.TryParse(parts[1], out var roleId)) return null;
-            if (!long.TryParse(parts[2], out var timestamp)) return null;
+            if (parts.Length != 3)
+                return null;
+            if (!long.TryParse(parts[0], out var userId))
+                return null;
+            if (!long.TryParse(parts[1], out var roleId))
+                return null;
+            if (!long.TryParse(parts[2], out var timestamp))
+                return null;
 
             // 检查过期
             var tokenTime = DateTimeOffset.FromUnixTimeSeconds(timestamp);

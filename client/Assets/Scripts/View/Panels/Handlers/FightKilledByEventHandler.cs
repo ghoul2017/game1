@@ -8,7 +8,8 @@ namespace Client.View
         public void Handle(EventType.FightKilledByEvent e)
         {
             var panel = UIManager.Instance != null ? UIManager.Instance.GetPanel<MainPanel>() : null;
-            if (panel == null || !panel.IsShown || e.Notification == null) return;
+            if (panel == null || !panel.IsShown || e.Notification == null)
+                return;
 
             var ntf = e.Notification;
             string killerDesc = ntf.IsMonster ? "怪物" : ntf.KillerName;

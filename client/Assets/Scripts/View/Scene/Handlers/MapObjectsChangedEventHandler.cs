@@ -7,7 +7,8 @@ namespace Client.View
     {
         public void Handle(EventType.MapObjectsChangedEvent e)
         {
-            if (GameSceneEntry.Instance == null) return;
+            if (GameSceneEntry.Instance == null)
+                return;
 
             if (e.RemoveObjectIds != null)
             {
@@ -18,7 +19,8 @@ namespace Client.View
                 }
             }
 
-            if (e.Objects == null) return;
+            if (e.Objects == null)
+                return;
 
             foreach (var obj in e.Objects)
             {

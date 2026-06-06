@@ -53,7 +53,8 @@ public static class FightSystem
     /// <summary>获取仇恨最高的目标</summary>
     public static long GetMaxThreatTarget(this FightUnitComponent self)
     {
-        if (self.ThreatMap.Count == 0) return 0;
+        if (self.ThreatMap.Count == 0)
+            return 0;
 
         long targetId = 0;
         int maxThreat = 0;
@@ -284,7 +285,8 @@ public static class FightSystem
     private static void OnUnitKilled(long victimId, long killerId)
     {
         var victimFight = GetFightUnit(victimId);
-        if (victimFight == null) return;
+        if (victimFight == null)
+            return;
 
         var killerFight = GetFightUnit(killerId);
 
@@ -344,7 +346,8 @@ public static class FightSystem
     public static bool Revive(long objectId, int hpPercent = 100)
     {
         var fight = GetFightUnit(objectId);
-        if (fight == null || !fight.IsDead) return false;
+        if (fight == null || !fight.IsDead)
+            return false;
 
         fight.Attr.Hp = fight.Attr.MaxHp * hpPercent / 100;
         fight.ThreatMap.Clear();

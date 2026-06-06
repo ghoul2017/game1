@@ -48,7 +48,8 @@ public class MongoDb
         var collection = GetEntityCollection<T>();
         var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
         var doc = await collection.Find(filter).FirstOrDefaultAsync();
-        if (doc == null) return null;
+        if (doc == null)
+            return null;
 
         var entity = BsonSerializer.Deserialize<T>(doc);
         return entity;
@@ -132,25 +133,29 @@ public class MongoDb
 
     private IMongoCollection<BsonDocument> GetEntityCollection<T>()
     {
-        if (_database == null) throw new InvalidOperationException("MongoDb 未初始化");
+        if (_database == null)
+            throw new InvalidOperationException("MongoDb 未初始化");
         return _database.GetCollection<BsonDocument>(ConvertToUnderscore(typeof(T).Name));
     }
 
     private IMongoCollection<T> GetCollection<T>(string? name = null)
     {
-        if (_database == null) throw new InvalidOperationException("MongoDb 未初始化");
+        if (_database == null)
+            throw new InvalidOperationException("MongoDb 未初始化");
         return _database.GetCollection<T>(name ?? typeof(T).Name);
     }
 
     private IMongoCollection<T> GetTypedCollection<T>()
     {
-        if (_database == null) throw new InvalidOperationException("MongoDb 未初始化");
+        if (_database == null)
+            throw new InvalidOperationException("MongoDb 未初始化");
         return _database.GetCollection<T>(ConvertToUnderscore(typeof(T).Name));
     }
 
     private static string ConvertToUnderscore(string input)
     {
-        if (string.IsNullOrEmpty(input)) return input;
+        if (string.IsNullOrEmpty(input))
+            return input;
         var sb = new StringBuilder();
         for (var i = 0; i < input.Length; i++)
         {

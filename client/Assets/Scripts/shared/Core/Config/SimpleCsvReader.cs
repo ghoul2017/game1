@@ -29,7 +29,8 @@ namespace Shared.Core.Config
             var listType = typeof(List<>).MakeGenericType(type);
             var result = (IList)Activator.CreateInstance(listType)!;
             var lines = File.ReadAllLines(filePath);
-            if (lines.Length == 0) return result;
+            if (lines.Length == 0)
+                return result;
 
             var headers = ParseLine(lines[0]);
             var propMap = new Dictionary<string, PropertyInfo>();
@@ -37,7 +38,8 @@ namespace Shared.Core.Config
             for (int h = 0; h < headers.Count; h++)
             {
                 var header = headers[h].Trim();
-                if (string.IsNullOrEmpty(header)) continue;
+                if (string.IsNullOrEmpty(header))
+                    continue;
                 var prop = type.GetProperty(header);
                 if (prop != null && !propMap.ContainsKey(header))
                 {
@@ -48,7 +50,8 @@ namespace Shared.Core.Config
             for (int i = 1; i < lines.Length; i++)
             {
                 var line = lines[i].Trim();
-                if (string.IsNullOrEmpty(line)) continue;
+                if (string.IsNullOrEmpty(line))
+                    continue;
 
                 var values = ParseLine(line);
                 var item = Activator.CreateInstance(type)!;
@@ -56,11 +59,13 @@ namespace Shared.Core.Config
                 for (int j = 0; j < headers.Count && j < values.Count; j++)
                 {
                     var header = headers[j].Trim();
-                    if (!propMap.ContainsKey(header)) continue;
+                    if (!propMap.ContainsKey(header))
+                        continue;
 
                     var prop = propMap[header];
                     var val = values[j].Trim();
-                    if (string.IsNullOrEmpty(val)) continue;
+                    if (string.IsNullOrEmpty(val))
+                        continue;
 
                     try
                     {
@@ -102,7 +107,8 @@ namespace Shared.Core.Config
         /// </summary>
         private static int[] ParseIntArray(string val)
         {
-            if (string.IsNullOrEmpty(val)) return new int[0];
+            if (string.IsNullOrEmpty(val))
+                return new int[0];
             var parts = val.Split(';');
             var list = new List<int>();
             foreach (var p in parts)

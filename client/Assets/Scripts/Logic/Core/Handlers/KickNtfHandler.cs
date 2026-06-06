@@ -16,7 +16,8 @@ namespace Client.Logic
             Log.Info(string.Format("[NetClient] Kicked, reason={0}", ntf.Reason));
 
             var client = NetClient.Instance;
-            if (client == null) return Task.CompletedTask;
+            if (client == null)
+                return Task.CompletedTask;
 
             client.UserDisconnect = true;
             client.HadSession = false;

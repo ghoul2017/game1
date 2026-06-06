@@ -9,7 +9,8 @@ namespace Client.View
         public void Handle(EventType.FightHpChangedEvent e)
         {
             var panel = UIManager.Instance != null ? UIManager.Instance.GetPanel<MainPanel>() : null;
-            if (panel == null || !panel.IsShown || e.Notification == null) return;
+            if (panel == null || !panel.IsShown || e.Notification == null)
+                return;
 
             var ntf = e.Notification;
             long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;

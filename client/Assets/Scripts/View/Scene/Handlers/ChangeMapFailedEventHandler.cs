@@ -8,7 +8,8 @@ namespace Client.View
     {
         public void Handle(EventType.ChangeMapFailedEvent e)
         {
-            if (GameSceneEntry.Instance == null) return;
+            if (GameSceneEntry.Instance == null)
+                return;
 
             UIToast.Show("传送失败: " + e.ErrorMessage);
             Debug.Log("[GameSceneEntry] 切图失败: " + e.ErrorMessage);

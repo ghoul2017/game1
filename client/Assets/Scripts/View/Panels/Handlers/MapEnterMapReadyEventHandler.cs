@@ -10,7 +10,8 @@ namespace Client.View
         public void Handle(EventType.MapEnterMapReadyEvent e)
         {
             var panel = UIManager.Instance != null ? UIManager.Instance.GetPanel<RoleSelectPanel>() : null;
-            if (panel == null || !panel.IsShown) return;
+            if (panel == null || !panel.IsShown)
+                return;
 
             Debug.Log("[RoleSelectPanel] 进图成功");
             UIManager.Instance.ClearAll();

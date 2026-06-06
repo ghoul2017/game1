@@ -26,7 +26,8 @@ namespace Shared.Core.Log
 
         private void Write(LogLevel level, string message, Exception? ex)
         {
-            if (level < _level) return;
+            if (level < _level)
+                return;
 
             var entry = new LogEntry
             {

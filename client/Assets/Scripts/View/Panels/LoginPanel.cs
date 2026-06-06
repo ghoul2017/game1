@@ -297,7 +297,8 @@ namespace Client.View
 
         private void ApplySpriteSkin(Image image, string resource, Vector4 border, Color fallbackColor)
         {
-            if (image == null) return;
+            if (image == null)
+                return;
 
             var texture = Resources.Load<Texture2D>(resource);
             if (texture == null)
@@ -373,7 +374,8 @@ namespace Client.View
             errorText.text = "";
             SaveCredentials();
 
-            if (LoginController.Instance.IsLoggingIn) return;
+            if (LoginController.Instance.IsLoggingIn)
+                return;
             SetButtonEnabled(false);
 
             bool needConnect = LoginController.Instance.BeginLogin(username, password);
@@ -401,7 +403,8 @@ namespace Client.View
 
         internal void CleanupConnectEvents()
         {
-            if (!_connectEventsActive) return;
+            if (!_connectEventsActive)
+                return;
             _connectEventsActive = false;
         }
 

@@ -368,7 +368,8 @@ namespace Client.View
 
         private static string FormatTime(long timestamp)
         {
-            if (timestamp <= 0) return "";
+            if (timestamp <= 0)
+                return "";
             var dt = new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc);
             dt = dt.AddMilliseconds(timestamp).ToLocalTime();
             return dt.ToString("yyyy-MM-dd HH:mm");

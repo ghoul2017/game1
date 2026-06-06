@@ -16,22 +16,26 @@ public class MapAoiNotifier : IAoiEventListener
 
     public void OnObjectEnter(IAoiObject obj, IReadOnlyDictionary<long, IAoiObject> watchers)
     {
-        if (obj is not IMapObject mapObj) return;
+        if (obj is not IMapObject mapObj)
+            return;
 
         foreach (var watcher in watchers.Values)
         {
-            if (watcher.ObjectId == obj.ObjectId) continue;
+            if (watcher.ObjectId == obj.ObjectId)
+                continue;
             SendEnterNotification(watcher.ObjectId, mapObj);
         }
     }
 
     public void OnObjectLeave(IAoiObject obj, IReadOnlyDictionary<long, IAoiObject> watchers)
     {
-        if (obj is not IMapObject mapObj) return;
+        if (obj is not IMapObject mapObj)
+            return;
 
         foreach (var watcher in watchers.Values)
         {
-            if (watcher.ObjectId == obj.ObjectId) continue;
+            if (watcher.ObjectId == obj.ObjectId)
+                continue;
             SendLeaveNotification(watcher.ObjectId, mapObj);
         }
     }
@@ -39,11 +43,13 @@ public class MapAoiNotifier : IAoiEventListener
     public void OnObjectMove(IAoiObject obj, IReadOnlyDictionary<long, IAoiObject> oldWatchers,
         IReadOnlyDictionary<long, IAoiObject> updateWatchers, IReadOnlyDictionary<long, IAoiObject> newWatchers)
     {
-        if (obj is not IMapObject mapObj) return;
+        if (obj is not IMapObject mapObj)
+            return;
 
         foreach (var watcher in updateWatchers.Values)
         {
-            if (watcher.ObjectId == obj.ObjectId) continue;
+            if (watcher.ObjectId == obj.ObjectId)
+                continue;
             SendMoveNotification(watcher.ObjectId, mapObj);
         }
     }
@@ -52,15 +58,19 @@ public class MapAoiNotifier : IAoiEventListener
     {
         foreach (var obj in addedObjects)
         {
-            if (obj is not IMapObject mapObj) continue;
-            if (mapObj.ObjectId == watcher.ObjectId) continue;
+            if (obj is not IMapObject mapObj)
+                continue;
+            if (mapObj.ObjectId == watcher.ObjectId)
+                continue;
             SendEnterNotification(watcher.ObjectId, mapObj);
         }
 
         foreach (var obj in removedObjects)
         {
-            if (obj.ObjectId == watcher.ObjectId) continue;
-            if (obj is not IMapObject mapObj) continue;
+            if (obj.ObjectId == watcher.ObjectId)
+                continue;
+            if (obj is not IMapObject mapObj)
+                continue;
             SendLeaveNotification(watcher.ObjectId, mapObj);
         }
     }

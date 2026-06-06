@@ -151,7 +151,8 @@ public class TowerAoi
             return false;
 
         var tower = GetTower(coord.tx, coord.ty);
-        if (tower == null) return false;
+        if (tower == null)
+            return false;
 
         tower.RemoveObject(obj);
 
@@ -189,7 +190,8 @@ public class TowerAoi
         var oldTower = GetTower(oldCoord.tx, oldCoord.ty);
         var newTower = GetOrCreateTower(newCoord.tx, newCoord.ty);
 
-        if (oldTower == null) return false;
+        if (oldTower == null)
+            return false;
 
         var oldWatchers = oldTower.Watchers.ToDictionary(kv => kv.Key, kv => kv.Value);
         var newWatchers = newTower.Watchers.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -273,7 +275,8 @@ public class TowerAoi
         watcher.Y = newY;
 
         // 同一个灯塔内移动，无需变更观察者
-        if (oldCoord == newCoord) return true;
+        if (oldCoord == newCoord)
+            return true;
 
         var range = info.Range;
         _watcherInfoMap[watcher.ObjectId] = new WatcherInfo(newCoord.tx, newCoord.ty, range);

@@ -129,7 +129,8 @@ public static class RoleTaskSystem
         }
 
         var player = Context.Players.GetByRoleId(roleId);
-        if (player == null) return TaskSubmitResult.Fail("任务不存在");
+        if (player == null)
+            return TaskSubmitResult.Fail("任务不存在");
 
         // 发放物品奖励
         if (!string.IsNullOrEmpty(taskCfg.RewardItems))
@@ -187,14 +188,18 @@ public static class RoleTaskSystem
 
         foreach (var task in self.Tasks.Values)
         {
-            if (!task.IsInProgress) continue;
+            if (!task.IsInProgress)
+                continue;
 
             bool changed = false;
             foreach (var goal in task.Goals)
             {
-                if (goal.GoalType != goalType) continue;
-                if (goalParam != 0 && goal.GoalParam != goalParam) continue;
-                if (goal.IsFinished) continue;
+                if (goal.GoalType != goalType)
+                    continue;
+                if (goalParam != 0 && goal.GoalParam != goalParam)
+                    continue;
+                if (goal.IsFinished)
+                    continue;
 
                 goal.CurrentCount = Math.Min(goal.CurrentCount + count, goal.TargetCount);
                 changed = true;
@@ -250,7 +255,8 @@ public static class RoleTaskSystem
             .Select(t => self.ToTaskInfo(t!))
             .ToList();
 
-        if (tasks.Count == 0) return;
+        if (tasks.Count == 0)
+            return;
 
         var ntf = new TaskChangedNtf { Tasks = tasks };
         Context.Players.SendToPlayer(roleId, ntf);

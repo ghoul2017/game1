@@ -74,7 +74,8 @@ public class Xlsx2CsTool : ITool
     {
         using var wb = new XLWorkbook(xlsxPath);
         var ws = wb.Worksheets.FirstOrDefault();
-        if (ws == null) return;
+        if (ws == null)
+            return;
 
         var basename = Path.GetFileNameWithoutExtension(xlsxPath);
 
@@ -84,7 +85,8 @@ public class Xlsx2CsTool : ITool
         foreach (var cell in headerRow.CellsUsed())
         {
             var colName = cell.Value.ToString().Trim();
-            if (string.IsNullOrEmpty(colName)) continue;
+            if (string.IsNullOrEmpty(colName))
+                continue;
 
             // 推断类型：从第二行数据判断
             var dataCell = ws.Cell(2, cell.Address.ColumnNumber);
@@ -92,7 +94,8 @@ public class Xlsx2CsTool : ITool
             columns.Add((colName, typeStr));
         }
 
-        if (columns.Count == 0) return;
+        if (columns.Count == 0)
+            return;
 
         // 生成类名: Item → ItemConfig
         var className = $"{basename}Config";
@@ -136,10 +139,12 @@ public class Xlsx2CsTool : ITool
     /// <summary>根据数据值推断类型</summary>
     static string InferType(string value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return "int";
+        if (string.IsNullOrWhiteSpace(value))
+            return "int";
 
         // 整数
-        if (int.TryParse(value, out _)) return "int";
+        if (int.TryParse(value, out _))
+            return "int";
 
         // 浮点数
         if (float.TryParse(value, System.Globalization.NumberStyles.Float,

@@ -175,7 +175,8 @@ namespace Shared.Core.Event
             Publish(e);
 
             var eventType = e.GetType();
-            if (!_asyncHandlers.TryGetValue(eventType, out var asyncList)) return;
+            if (!_asyncHandlers.TryGetValue(eventType, out var asyncList))
+                return;
 
             List<Func<IEvent, Task>> snapshot;
             lock (asyncList)

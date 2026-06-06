@@ -10,7 +10,8 @@ namespace Client.View
     {
         public void Handle(EventType.MapRebuildEvent e)
         {
-            if (GameSceneEntry.Instance == null) return;
+            if (GameSceneEntry.Instance == null)
+                return;
 
             OtherPlayerManager.Instance.ClearAll();
             MonsterEntityManager.Instance.ClearAll();

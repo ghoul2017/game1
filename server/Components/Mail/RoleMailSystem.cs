@@ -124,8 +124,10 @@ public static class RoleMailSystem
 
         foreach (var mailId in mailIds)
         {
-            if (!self.Mails.TryGetValue(mailId, out var mail)) continue;
-            if (mail.IsClaimed || !mail.HasUnclaimedAttachment) continue;
+            if (!self.Mails.TryGetValue(mailId, out var mail))
+                continue;
+            if (mail.IsClaimed || !mail.HasUnclaimedAttachment)
+                continue;
 
             allItems.AddRange(mail.Attachments);
             mail.State = 2;
@@ -136,7 +138,8 @@ public static class RoleMailSystem
             return ClaimResult.None();
 
         var player = Context.Players.GetByRoleId(self.Id);
-        if (player == null) return ClaimResult.None();
+        if (player == null)
+            return ClaimResult.None();
 
         foreach (var att in allItems)
         {
@@ -156,7 +159,8 @@ public static class RoleMailSystem
 
         foreach (var mailId in mailIds)
         {
-            if (!self.Mails.TryGetValue(mailId, out var mail)) continue;
+            if (!self.Mails.TryGetValue(mailId, out var mail))
+                continue;
 
             if (mail.HasUnclaimedAttachment)
                 continue;
@@ -198,7 +202,8 @@ public static class RoleMailSystem
     private static void CleanExpired(RoleMailComponent self)
     {
         var expired = self.Mails.Values.Where(m => m.IsExpired).ToList();
-        if (expired.Count == 0) return;
+        if (expired.Count == 0)
+            return;
 
         foreach (var mail in expired)
         {

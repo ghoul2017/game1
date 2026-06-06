@@ -21,9 +21,12 @@ namespace Client.Logic
         /// </summary>
         public string ValidateInput(string username, string password)
         {
-            if (string.IsNullOrEmpty(username)) return "请输入账号";
-            if (string.IsNullOrEmpty(password)) return "请输入密码";
-            if (IsLoggingIn) return null;
+            if (string.IsNullOrEmpty(username))
+                return "请输入账号";
+            if (string.IsNullOrEmpty(password))
+                return "请输入密码";
+            if (IsLoggingIn)
+                return null;
             return null;
         }
 
@@ -122,5 +125,4 @@ namespace Client.Logic
             });
         }
     }
-
 }

@@ -7,7 +7,8 @@ namespace Client.View
         public void Handle(EventType.NetConnectedEvent e)
         {
             var panel = GetPanel();
-            if (panel == null || !panel.ConnectEventsActive) return;
+            if (panel == null || !panel.ConnectEventsActive)
+                return;
 
             panel.CleanupConnectEvents();
         }

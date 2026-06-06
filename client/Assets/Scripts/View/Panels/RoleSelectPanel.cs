@@ -329,7 +329,8 @@ namespace Client.View
 
         private void OnEnterGame()
         {
-            if (RoleSelectController.Instance.SelectedRoleIndex < 0) return;
+            if (RoleSelectController.Instance.SelectedRoleIndex < 0)
+                return;
 
             var roles = RoleSelectController.Instance.Roles;
             var idx = RoleSelectController.Instance.SelectedRoleIndex;

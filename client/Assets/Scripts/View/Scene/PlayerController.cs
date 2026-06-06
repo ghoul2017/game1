@@ -29,7 +29,8 @@ namespace Client.View
 
         private void Update()
         {
-            if (currentMap == null) return;
+            if (currentMap == null)
+                return;
 
             float h = Input.GetAxis("Horizontal");
             float v = Input.GetAxis("Vertical");

@@ -27,7 +27,8 @@ public static class MonsterSystem
             .Where(m => m.MapId == map.CfgId)
             .ToList();
 
-        if (monsters.Count == 0) return;
+        if (monsters.Count == 0)
+            return;
 
         foreach (var cfg in monsters)
         {
@@ -82,7 +83,8 @@ public static class MonsterSystem
     public static void OnMonsterKilled(this GameMap map, long monsterId, long killerId)
     {
         var monster = map.GetMonster(monsterId);
-        if (monster == null) return;
+        if (monster == null)
+            return;
 
         map.RemoveObject(monsterId);
 
@@ -122,11 +124,14 @@ public static class MonsterSystem
     /// <summary>更新单个怪物AI</summary>
     private static void UpdateMonsterAi(GameMap map, MonsterEntity monster, long now)
     {
-        if (monster.Info.Config == null) return;
-        if (monster.Fight.IsDead) return;
+        if (monster.Info.Config == null)
+            return;
+        if (monster.Fight.IsDead)
+            return;
 
         long updateInterval = 1000;
-        if (now - monster.Ai.LastUpdateTime < updateInterval) return;
+        if (now - monster.Ai.LastUpdateTime < updateInterval)
+            return;
         monster.Ai.LastUpdateTime = now;
 
         switch (monster.Ai.AiState)
@@ -200,7 +205,8 @@ public static class MonsterSystem
     /// <summary>追击AI</summary>
     private static void UpdateAiChase(GameMap map, MonsterEntity monster, long now)
     {
-        if (monster.Ai.ChaseTarget == null) return;
+        if (monster.Ai.ChaseTarget == null)
+            return;
 
         var targetPlayer = map.GetPlayer(monster.Ai.ChaseTarget.Value);
         if (targetPlayer == null)
@@ -235,7 +241,8 @@ public static class MonsterSystem
     /// <summary>攻击AI</summary>
     private static void UpdateAiAttack(GameMap map, MonsterEntity monster, long now)
     {
-        if (monster.Ai.ChaseTarget == null) return;
+        if (monster.Ai.ChaseTarget == null)
+            return;
 
         var targetPlayer = map.GetPlayer(monster.Ai.ChaseTarget.Value);
         if (targetPlayer == null)
@@ -246,7 +253,8 @@ public static class MonsterSystem
         }
 
         int attackInterval = 2000;
-        if (now - monster.Ai.LastAttackTime < attackInterval) return;
+        if (now - monster.Ai.LastAttackTime < attackInterval)
+            return;
 
         FightSystem.UseSkill(monster.ObjectId, 1, monster.X, monster.Y, targetPlayer.RoleId);
         monster.Ai.LastAttackTime = now;
@@ -276,7 +284,8 @@ public static class MonsterSystem
     /// <summary>获取随机巡逻点</summary>
     private static (int X, int Y)? GetRandomPatrolPoint(GameMap map, MonsterEntity monster)
     {
-        if (monster.Info.Config == null) return null;
+        if (monster.Info.Config == null)
+            return null;
 
         int x = map.Random.Next(monster.Info.Config.SpawnX1, monster.Info.Config.SpawnX2 + 1);
         int y = map.Random.Next(monster.Info.Config.SpawnY1, monster.Info.Config.SpawnY2 + 1);
@@ -286,10 +295,12 @@ public static class MonsterSystem
     /// <summary>计算并发放掉落</summary>
     private static async Task CalculateAndGrantDropAsync(GameMap map, MonsterEntity monster, long killerId)
     {
-        if (monster.Info.Config == null) return;
+        if (monster.Info.Config == null)
+            return;
 
         var player = Context.Players.GetByRoleId(killerId);
-        if (player == null) return;
+        if (player == null)
+            return;
 
         await Context.Players.GrantExpAsync(killerId, monster.Info.Config.Exp);
 
@@ -349,7 +360,8 @@ public static class MonsterSystem
     {
         cfgId = 0;
         var parts = key.Split('_');
-        if (parts.Length != 3) return false;
+        if (parts.Length != 3)
+            return false;
         return int.TryParse(parts[2], out cfgId);
     }
 }

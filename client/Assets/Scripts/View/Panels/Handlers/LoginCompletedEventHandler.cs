@@ -10,7 +10,8 @@ namespace Client.View
         public void Handle(EventType.LoginCompletedEvent e)
         {
             var panel = GetPanel();
-            if (panel == null) return;
+            if (panel == null)
+                return;
 
             if (e.Success)
             {

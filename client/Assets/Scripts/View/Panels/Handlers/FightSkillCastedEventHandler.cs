@@ -10,7 +10,8 @@ namespace Client.View
         public void Handle(EventType.FightSkillCastedEvent e)
         {
             var panel = UIManager.Instance != null ? UIManager.Instance.GetPanel<MainPanel>() : null;
-            if (panel == null || !panel.IsShown || e.Ack == null) return;
+            if (panel == null || !panel.IsShown || e.Ack == null)
+                return;
 
             var ack = e.Ack;
             if (!string.IsNullOrEmpty(ack.ErrorMessage))

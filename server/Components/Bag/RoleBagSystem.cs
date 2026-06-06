@@ -43,7 +43,8 @@ public static class RoleBagSystem
                 var canAdd = Math.Min(remaining, maxStack - item.Count);
                 item.Count += canAdd;
                 remaining -= canAdd;
-                if (remaining <= 0) break;
+                if (remaining <= 0)
+                    break;
             }
         }
 
@@ -82,7 +83,8 @@ public static class RoleBagSystem
 
         foreach (var kvp in self.Items)
         {
-            if (kvp.Value.ConfigId != configId) continue;
+            if (kvp.Value.ConfigId != configId)
+                continue;
 
             if (kvp.Value.Count <= remaining)
             {
@@ -95,7 +97,8 @@ public static class RoleBagSystem
                 remaining = 0;
             }
 
-            if (remaining <= 0) break;
+            if (remaining <= 0)
+                break;
         }
 
         foreach (var key in keysToRemove)
@@ -109,8 +112,10 @@ public static class RoleBagSystem
     /// <summary>移除物品（按格子索引）</summary>
     public static bool RemoveByIndex(this RoleBagComponent self, int index, int count)
     {
-        if (!self.Items.TryGetValue(index, out var item)) return false;
-        if (item.Count < count) return false;
+        if (!self.Items.TryGetValue(index, out var item))
+            return false;
+        if (item.Count < count)
+            return false;
 
         if (item.Count == count)
         {
@@ -172,7 +177,8 @@ public static class RoleBagSystem
     /// <summary>交换两个格子的物品</summary>
     public static bool Swap(this RoleBagComponent self, int index1, int index2)
     {
-        if (index1 == index2) return true;
+        if (index1 == index2)
+            return true;
 
         self.Items.Remove(index1, out var item1);
         self.Items.Remove(index2, out var item2);

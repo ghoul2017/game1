@@ -53,7 +53,8 @@ public class GameSynchronizationContext : SynchronizationContext
     /// <summary>向主线程投递一个异步任务</summary>
     public override void Post(SendOrPostCallback d, object? state)
     {
-        if (_stopped) return;
+        if (_stopped)
+            return;
         Interlocked.Increment(ref _pendingCount);
         _queue.Enqueue((d, state));
         _wakeSignal.Set();

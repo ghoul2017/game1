@@ -52,7 +52,8 @@ namespace Client.View
                     return;
 
                 var cam = Camera.main;
-                if (cam == null) return;
+                if (cam == null)
+                    return;
 
                 var ray = cam.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out var hit, 100f))

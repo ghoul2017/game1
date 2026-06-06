@@ -41,8 +41,10 @@ namespace Client.Logic
 
         public string ValidateAcceptInput(string text)
         {
-            if (string.IsNullOrEmpty(text)) return "请输入任务ID";
-            if (!int.TryParse(text, out int taskId) || taskId <= 0) return "无效的任务ID";
+            if (string.IsNullOrEmpty(text))
+                return "请输入任务ID";
+            if (!int.TryParse(text, out int taskId) || taskId <= 0)
+                return "无效的任务ID";
             return null;
         }
 

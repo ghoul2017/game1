@@ -135,7 +135,8 @@ namespace Shared.Core.Network
 
         public void Send(string messageName, byte[] payload)
         {
-            if (!IsConnected) return;
+            if (!IsConnected)
+                return;
 
             var packet = PacketCodec.Encode(messageName, payload);
             try
@@ -154,7 +155,8 @@ namespace Shared.Core.Network
 
         public void Disconnect(LogoutReason reason = LogoutReason.NetDisconnected)
         {
-            if (!IsConnected) return;
+            if (!IsConnected)
+                return;
             IsConnected = false;
             DisconnectReason = reason;
             try

@@ -49,7 +49,8 @@ namespace Client.View
 
         public void MoveTo(int x, int y)
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
             (float px, float py, float pz) = MapData.GridToWorld(x, y);
             _targetPos = new Vector3(px, py, pz);
         }
@@ -66,7 +67,8 @@ namespace Client.View
 
         public void PlayAttack(int skillId)
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
             _isAttacking = true;
             _attackTimer = 0f;
             _attackStartPos = transform.position;
@@ -76,7 +78,8 @@ namespace Client.View
 
         public void ShowDamageNumber(int damage, bool isCritical)
         {
-            if (damage == 0) return;
+            if (damage == 0)
+                return;
 
             var dmgObj = new GameObject("DmgNum");
             dmgObj.transform.SetParent(transform, false);
@@ -106,7 +109,8 @@ namespace Client.View
 
         public void PlayHitFlash()
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
             _flashTimer = 0.15f;
             if (_bodyMat != null) _bodyMat.color = Color.red;
             if (_headMat != null) _headMat.color = Color.red;
@@ -128,7 +132,8 @@ namespace Client.View
 
         private void Update()
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
 
             // 攻击前冲
             if (_isAttacking)

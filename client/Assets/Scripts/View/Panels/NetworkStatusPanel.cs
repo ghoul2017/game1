@@ -24,9 +24,11 @@ namespace Client.View
 
         public static void EnsureCreated()
         {
-            if (Instance != null) return;
+            if (Instance != null)
+                return;
             var canvas = FindObjectOfType<Canvas>();
-            if (canvas == null) return;
+            if (canvas == null)
+                return;
             var go = new GameObject("_NetworkStatus");
             go.transform.SetParent(canvas.transform, false);
             go.AddComponent<NetworkStatusPanel>();

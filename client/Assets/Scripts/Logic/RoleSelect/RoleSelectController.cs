@@ -26,7 +26,8 @@ namespace Client.Logic
 
         public void SelectRole(int index)
         {
-            if (index < 0 || index >= Roles.Count) return;
+            if (index < 0 || index >= Roles.Count)
+                return;
             SelectedRoleIndex = index;
             StatusText = string.Format("已选择: {0} (Lv.{1} {2})", Roles[index].Name, Roles[index].Level, Roles[index].Job);
             HasError = false;
@@ -42,6 +43,7 @@ namespace Client.Logic
                 PublishDataChanged();
                 return;
             }
+
             if (name.Length > 12)
             {
                 StatusText = "角色名称最多12个字符";
@@ -49,6 +51,7 @@ namespace Client.Logic
                 PublishDataChanged();
                 return;
             }
+
             StatusText = "正在创建角色...";
             HasError = false;
             PublishDataChanged();
@@ -83,12 +86,14 @@ namespace Client.Logic
                 StatusText = "创建角色失败: " + ex.Message;
                 HasError = true;
             }
+
             PublishDataChanged();
         }
 
         public async Task EnterGame()
         {
-            if (SelectedRoleIndex < 0 || SelectedRoleIndex >= Roles.Count) return;
+            if (SelectedRoleIndex < 0 || SelectedRoleIndex >= Roles.Count)
+                return;
             var role = Roles[SelectedRoleIndex];
             StatusText = "正在进入游戏...";
             HasError = false;
@@ -115,6 +120,7 @@ namespace Client.Logic
                 StatusText = "进入游戏失败: " + ex.Message;
                 HasError = true;
             }
+
             PublishDataChanged();
         }
 
@@ -123,5 +129,4 @@ namespace Client.Logic
             EventBus.Instance.Publish(new EventType.RoleSelectDataChangedEvent());
         }
     }
-
 }

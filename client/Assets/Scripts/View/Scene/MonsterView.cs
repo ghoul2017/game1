@@ -60,7 +60,8 @@ namespace Client.View
 
         public void MoveTo(int x, int y)
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
             (float px, float py, float pz) = MapData.GridToWorld(x, y);
             _targetPos = new Vector3(px, py, pz);
         }
@@ -77,7 +78,8 @@ namespace Client.View
 
         public void ShowDamageNumber(int damage, bool isCritical)
         {
-            if (damage == 0) return;
+            if (damage == 0)
+                return;
 
             var dmgObj = new GameObject("DmgNum");
             dmgObj.transform.SetParent(transform, false);
@@ -107,7 +109,8 @@ namespace Client.View
 
         public void PlayHitFlash()
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
             _flashTimer = 0.15f;
             if (_bodyMat != null) _bodyMat.color = Color.white;
             if (_headMat != null) _headMat.color = Color.white;
@@ -128,7 +131,8 @@ namespace Client.View
 
         private void Update()
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
 
             // Smooth movement interpolation
             if (Vector3.SqrMagnitude(transform.position - _targetPos) > 0.001f)
@@ -352,7 +356,8 @@ namespace Client.View
 
         public void Spawn(long objectId, int cfgId, int objectType, string name, int x, int y)
         {
-            if (_entities.ContainsKey(objectId)) return;
+            if (_entities.ContainsKey(objectId))
+                return;
 
             var obj = new GameObject("Monster_" + objectId);
             if (_container != null)
@@ -368,7 +373,8 @@ namespace Client.View
 
         public void Remove(long objectId)
         {
-            if (!_entities.TryGetValue(objectId, out var view)) return;
+            if (!_entities.TryGetValue(objectId, out var view))
+                return;
 
             _entities.Remove(objectId);
             if (view != null)
@@ -379,26 +385,30 @@ namespace Client.View
 
         public void Move(long objectId, int x, int y)
         {
-            if (!_entities.TryGetValue(objectId, out var view)) return;
+            if (!_entities.TryGetValue(objectId, out var view))
+                return;
             view.MoveTo(x, y);
         }
 
         public void UpdateHp(long objectId, int hp, int maxHp)
         {
-            if (!_entities.TryGetValue(objectId, out var view)) return;
+            if (!_entities.TryGetValue(objectId, out var view))
+                return;
             view.UpdateHp(hp, maxHp);
         }
 
         public void ShowDamage(long objectId, int damage, bool isCritical)
         {
-            if (!_entities.TryGetValue(objectId, out var view)) return;
+            if (!_entities.TryGetValue(objectId, out var view))
+                return;
             view.ShowDamageNumber(damage, isCritical);
             view.PlayHitFlash();
         }
 
         public void PlayDeath(long objectId)
         {
-            if (!_entities.TryGetValue(objectId, out var view)) return;
+            if (!_entities.TryGetValue(objectId, out var view))
+                return;
             view.PlayDeath();
         }
 

@@ -122,7 +122,8 @@ namespace Client.View
         private void OnUseSkill(int skillId)
         {
             var pc = GameSceneEntry.PlayerController;
-            if (pc == null) return;
+            if (pc == null)
+                return;
 
             FightController.Instance.UseSkill(skillId, pc.CurrentGridX, pc.CurrentGridY, GameData.SelectedTargetId);
         }

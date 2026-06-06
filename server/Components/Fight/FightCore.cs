@@ -122,7 +122,8 @@ public static class FightCore
         var results = new List<SkillHitResult>();
         foreach (var (targetFight, targetId) in targets)
         {
-            if (targetFight.IsDead) continue;
+            if (targetFight.IsDead)
+                continue;
             results.AddRange(UseSkill(attacker, attackerId, targetFight, targetId, skillCfg));
         }
         return results;
@@ -132,7 +133,8 @@ public static class FightCore
 
     private static int RandomRange(int min, int max)
     {
-        if (min >= max) return min;
+        if (min >= max)
+            return min;
         return _random.Next(min, max + 1);
     }
 

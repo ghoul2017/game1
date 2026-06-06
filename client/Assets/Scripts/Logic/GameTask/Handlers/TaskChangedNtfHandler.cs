@@ -9,7 +9,8 @@ namespace Client.Logic
     {
         protected override Task ExecuteAsync(TcpSession session, TaskChangedNtf ntf)
         {
-            if (ntf.Tasks == null) return Task.CompletedTask;
+            if (ntf.Tasks == null)
+                return Task.CompletedTask;
 
             var controller = TaskController.Instance;
             foreach (var changed in ntf.Tasks)

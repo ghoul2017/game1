@@ -213,10 +213,12 @@ public static class PlayerSystem
     /// <summary>发放经验给玩家</summary>
     public static async Task GrantExpAsync(this PlayerComponent self, long roleId, int exp)
     {
-        if (exp <= 0) return;
+        if (exp <= 0)
+            return;
 
         var player = self.GetByRoleId(roleId);
-        if (player == null) return;
+        if (player == null)
+            return;
 
         var roleAttr = player.RoleAttribute;
         roleAttr.Exp += exp;
@@ -244,10 +246,12 @@ public static class PlayerSystem
     /// <summary>发放金币给玩家</summary>
     public static async Task GrantGoldAsync(this PlayerComponent self, long roleId, int gold)
     {
-        if (gold <= 0) return;
+        if (gold <= 0)
+            return;
 
         var player = self.GetByRoleId(roleId);
-        if (player == null) return;
+        if (player == null)
+            return;
 
         var roleAttr = player.RoleAttribute;
         roleAttr.Gold += gold;
@@ -261,7 +265,8 @@ public static class PlayerSystem
     public static async Task GrantItemAsync(this PlayerComponent self, long roleId, int configId, int count)
     {
         var player = self.GetByRoleId(roleId);
-        if (player == null) return;
+        if (player == null)
+            return;
 
         var result = player.RoleBag.AddItem(configId, count);
         if (result.Success)
@@ -290,10 +295,12 @@ public static class PlayerSystem
         while (true)
         {
             int required = 100 * level;
-            if (totalExp + required > exp) break;
+            if (totalExp + required > exp)
+                break;
             totalExp += required;
             level++;
-            if (level >= 100) break;
+            if (level >= 100)
+                break;
         }
         return level;
     }

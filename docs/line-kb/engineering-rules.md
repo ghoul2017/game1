@@ -11,7 +11,7 @@ LINEKB:ENGINEERING:ENCODING doc=AGENTS.md note="文本文档和代码使用 UTF-
 LINEKB:ENGINEERING:CMD_CALL doc=AGENTS.md path=scripts note=".cmd 脚本调用其他 .cmd 必须使用 call。"
 LINEKB:ENGINEERING:POWERSHELL_UTF8 doc=AGENTS.md note="只有确实使用 PowerShell 读取中文文档或日志时才显式设置 UTF-8；发现乱码后必须重新按 UTF-8 读取。"
 LINEKB:ENGINEERING:UNITY_META doc=AGENTS.md note="不要手动新增、编辑或补齐 .meta；需要更新时使用 Unity 2021.3.26f1c1 batchmode 生成。"
-LINEKB:ENGINEERING:CS_STYLE doc=AGENTS.md note="不额外预设纯格式偏好，保持邻近代码一致，并选择更利于理解、修改和验证的写法。"
+LINEKB:ENGINEERING:CS_STYLE doc=AGENTS.md path=.editorconfig note="C# 单语句 if guard/control 使用分行且不加大括号；文本文件使用 UTF-8/LF、保留结尾换行，普通长行不主动折行。"
 LINEKB:ENGINEERING:CS_READABILITY doc=AGENTS.md note="新代码命名直接表达业务含义，类型和方法职责单一，控制流显式，优先早返回。"
 LINEKB:ENGINEERING:NO_REGION doc=AGENTS.md note="不使用 #region/#endregion；需要分组时用清晰命名、类型拆分和顺序组织表达。"
 LINEKB:ENGINEERING:CS_COMPLEXITY doc=AGENTS.md note="减少隐式状态、隐藏副作用、复杂链式调用、反射、动态魔法和过度抽象。"

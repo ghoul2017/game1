@@ -22,7 +22,8 @@ namespace Client.View
 
         public static UIManager EnsureCreated()
         {
-            if (instance != null) return instance;
+            if (instance != null)
+                return instance;
 
             // 创建 Canvas
             var canvasObj = new GameObject("Canvas");
@@ -83,7 +84,8 @@ namespace Client.View
             var type = typeof(T);
             T panel = GetOrCreatePanel<T>();
 
-            if (panel == null) return null;
+            if (panel == null)
+                return null;
 
             // 隐藏当前栈顶面板
             if (panelStack.Count > 0 && panelStack.Peek() != panel)
@@ -120,7 +122,8 @@ namespace Client.View
         /// </summary>
         public void Back(float fadeDuration = 0.3f)
         {
-            if (panelStack.Count <= 1) return;
+            if (panelStack.Count <= 1)
+                return;
 
             var current = panelStack.Pop();
             current.Hide(fadeDuration);
@@ -156,7 +159,8 @@ namespace Client.View
             }
 
             T panel = GetOrCreatePanel<T>();
-            if (panel == null) return;
+            if (panel == null)
+                return;
 
             panelStack.Push(panel);
             panel.Show(fadeDuration);
@@ -167,7 +171,8 @@ namespace Client.View
             var type = typeof(T);
             if (panels.TryGetValue(type, out var existPanel))
             {
-                if (existPanel != null) return (T)existPanel;
+                if (existPanel != null)
+                    return (T)existPanel;
                 panels.Remove(type);
             }
 
@@ -198,7 +203,8 @@ namespace Client.View
 
         private void RemoveFromStack(UIPanel panel)
         {
-            if (panelStack.Count == 0) return;
+            if (panelStack.Count == 0)
+                return;
 
             var temp = new Stack<UIPanel>();
             while (panelStack.Count > 0)

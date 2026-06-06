@@ -8,7 +8,8 @@ namespace Client.View
         public void Handle(EventType.NetErrorEvent e)
         {
             var panel = GetPanel();
-            if (panel == null || !panel.ConnectEventsActive) return;
+            if (panel == null || !panel.ConnectEventsActive)
+                return;
 
             panel.SetErrorText(LoginController.GetConnectionErrorText(e.Reason));
             panel.SetButtonEnabled(true);

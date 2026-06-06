@@ -155,11 +155,13 @@ public static class MapSystem
     private static bool EnterMapInternal(MapComponent self, int cfgId, int line, int x, int y, PlayerEntity playerEntity)
     {
         var map = self.GetMap(cfgId, line);
-        if (map == null) return false;
+        if (map == null)
+            return false;
 
         var mapPlayer = MapPlayerEntity.Create(cfgId, line, x, y, playerEntity);
 
-        if (!map.AddObject(mapPlayer)) return false;
+        if (!map.AddObject(mapPlayer))
+            return false;
 
         self.PlayerMapEntities[playerEntity.Id] = mapPlayer;
         return true;
@@ -181,7 +183,8 @@ public static class MapSystem
             return false;
 
         var map = self.GetMap(mapPlayer.MapId, mapPlayer.Line);
-        if (map == null) return false;
+        if (map == null)
+            return false;
 
         return map.MoveObject(roleId, newX, newY);
     }
@@ -211,10 +214,12 @@ public static class MapSystem
     public static void BroadcastToAoiWatchers(this MapComponent self, long objectId, IMessage msg)
     {
         var map = self.GetPlayerMap(objectId);
-        if (map == null) return;
+        if (map == null)
+            return;
 
         var mapObj = map.GetObject(objectId);
-        if (mapObj == null) return;
+        if (mapObj == null)
+            return;
 
         var watchers = map.Aoi.GetObjectsByRange(mapObj.X, mapObj.Y, 4);
         foreach (var watcher in watchers)

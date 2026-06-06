@@ -165,7 +165,8 @@ namespace Client.View
 
         private void OnAcceptClick()
         {
-            if (_acceptInput == null) return;
+            if (_acceptInput == null)
+                return;
             string text = _acceptInput.text.Trim();
             string error = TaskController.Instance.ValidateAcceptInput(text);
             if (error != null)
@@ -254,7 +255,8 @@ namespace Client.View
 
         private static string FormatTime(long timestamp)
         {
-            if (timestamp <= 0) return "";
+            if (timestamp <= 0)
+                return "";
             var dt = new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc);
             dt = dt.AddMilliseconds(timestamp).ToLocalTime();
             return dt.ToString("yyyy-MM-dd HH:mm");

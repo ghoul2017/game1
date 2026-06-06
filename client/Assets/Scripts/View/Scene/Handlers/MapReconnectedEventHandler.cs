@@ -8,7 +8,8 @@ namespace Client.View
     {
         public void Handle(EventType.MapReconnectedEvent e)
         {
-            if (GameSceneEntry.Instance == null) return;
+            if (GameSceneEntry.Instance == null)
+                return;
 
             Debug.Log("[GameSceneEntry] 重连成功");
         }

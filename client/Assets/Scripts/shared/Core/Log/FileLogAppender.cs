@@ -34,7 +34,8 @@ namespace Shared.Core.Log
 
         public void Append(LogEntry entry)
         {
-            if (entry.Level < Level) return;
+            if (entry.Level < Level)
+                return;
 
             var text = _formatter.Format(entry);
             var date = entry.Time.ToString("yyyyMMdd");
@@ -131,7 +132,8 @@ namespace Shared.Core.Log
         private static void CleanDir(string filePath, string cutoff)
         {
             var dir = Path.GetDirectoryName(filePath);
-            if (dir == null) return;
+            if (dir == null)
+                return;
 
             var name = Path.GetFileNameWithoutExtension(filePath);
             var ext = Path.GetExtension(filePath);

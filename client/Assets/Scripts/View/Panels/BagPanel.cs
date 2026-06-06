@@ -181,7 +181,8 @@ namespace Client.View
 
         private void OnSlotClick(int slotIndex)
         {
-            if (!BagController.Instance.ItemMap.TryGetValue(slotIndex, out var item)) return;
+            if (!BagController.Instance.ItemMap.TryGetValue(slotIndex, out var item))
+                return;
 
             var cfg = ConfigManager.Get<ItemConfig>(item.ConfigId);
             string itemName = cfg != null ? cfg.Name : "物品";

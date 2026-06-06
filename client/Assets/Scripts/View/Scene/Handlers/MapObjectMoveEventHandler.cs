@@ -10,7 +10,8 @@ namespace Client.View
         public void Handle(EventType.MapObjectMoveEvent e)
         {
             var ntf = e.Notification;
-            if (GameSceneEntry.Instance == null || ntf == null) return;
+            if (GameSceneEntry.Instance == null || ntf == null)
+                return;
 
             if (ntf.ObjectType == MapObjectType.Player)
             {

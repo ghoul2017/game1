@@ -59,7 +59,8 @@ namespace Shared.Core.Config
             foreach (var type in assembly.GetTypes())
             {
                 var attr = type.GetCustomAttribute<ConfigTableAttribute>();
-                if (attr == null) continue;
+                if (attr == null)
+                    continue;
 
                 var keyProp = type.GetProperty(attr.KeyName);
                 if (keyProp == null)
@@ -111,7 +112,8 @@ namespace Shared.Core.Config
         /// <summary>按主键查单条</summary>
         public static T? Get<T>(int id) where T : class
         {
-            if (!Instance._dicts.TryGetValue(typeof(T), out var dict)) return null;
+            if (!Instance._dicts.TryGetValue(typeof(T), out var dict))
+                return null;
             return ((Dictionary<int, T>)dict).TryGetValue(id, out var val) ? val : null;
         }
 
@@ -144,7 +146,8 @@ namespace Shared.Core.Config
                 var fileName = Path.GetFileName(e.Name ?? "");
 
                 var type = _configMeta.FirstOrDefault(kv => kv.Value.fileName == fileName).Key;
-                if (type == null) return;
+                if (type == null)
+                    return;
 
                 var now = DateTime.UtcNow;
                 if (lastWrite.TryGetValue(fileName, out var last) && (now - last).TotalSeconds < 1)

@@ -38,9 +38,9 @@ namespace Client.Logic
     {
         public static void ShowToast(string message)
         {
-            if (string.IsNullOrEmpty(message)) return;
+            if (string.IsNullOrEmpty(message))
+                return;
             EventBus.Instance.Publish(new EventType.ClientToastRequestedEvent { Message = message });
         }
     }
-
 }

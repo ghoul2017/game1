@@ -243,7 +243,8 @@ namespace Client.Logic
 
         private void OnConnectSuccess(TcpSession session)
         {
-            if (!_running) return;
+            if (!_running)
+                return;
 
             _session = session;
             _session.PostToMainThread = action => _mainQueue.Enqueue(() =>
@@ -437,7 +438,5 @@ namespace Client.Logic
                 EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = res.ErrorMessage });
             }
         }
-
     }
-
 }

@@ -11,7 +11,8 @@ namespace Robot.Handlers
     {
         public void Handle(EventType.ClientToastRequestedEvent e)
         {
-            if (string.IsNullOrEmpty(e.Message)) return;
+            if (string.IsNullOrEmpty(e.Message))
+                return;
             Console.WriteLine($"[UI] Toast: {e.Message}");
         }
     }

@@ -30,7 +30,8 @@ namespace Client.View
 
         public void SpawnPlayers(List<MapObjectInfo> objects)
         {
-            if (objects == null) return;
+            if (objects == null)
+                return;
             foreach (var obj in objects)
             {
                 SpawnPlayer(obj);
@@ -39,7 +40,8 @@ namespace Client.View
 
         public void SpawnPlayer(MapObjectInfo info)
         {
-            if (_players.ContainsKey(info.ObjectId)) return;
+            if (_players.ContainsKey(info.ObjectId))
+                return;
 
             var obj = new GameObject("OtherPlayer_" + info.ObjectId);
             if (_container != null)
@@ -55,7 +57,8 @@ namespace Client.View
 
         public void RemovePlayer(long roleId)
         {
-            if (!_players.TryGetValue(roleId, out var view)) return;
+            if (!_players.TryGetValue(roleId, out var view))
+                return;
 
             _players.Remove(roleId);
             if (view != null)
@@ -66,38 +69,44 @@ namespace Client.View
 
         public void MovePlayer(long roleId, int x, int y)
         {
-            if (!_players.TryGetValue(roleId, out var view)) return;
+            if (!_players.TryGetValue(roleId, out var view))
+                return;
             view.MoveTo(x, y);
         }
 
         public void UpdatePlayerHp(long roleId, int hp, int maxHp)
         {
-            if (!_players.TryGetValue(roleId, out var view)) return;
+            if (!_players.TryGetValue(roleId, out var view))
+                return;
             view.UpdateHp(hp, maxHp);
         }
 
         public void PlayAttack(long roleId, int skillId)
         {
-            if (!_players.TryGetValue(roleId, out var view)) return;
+            if (!_players.TryGetValue(roleId, out var view))
+                return;
             view.PlayAttack(skillId);
         }
 
         public void ShowDamage(long roleId, int damage, bool isCritical)
         {
-            if (!_players.TryGetValue(roleId, out var view)) return;
+            if (!_players.TryGetValue(roleId, out var view))
+                return;
             view.ShowDamageNumber(damage, isCritical);
             view.PlayHitFlash();
         }
 
         public void PlayDeath(long roleId)
         {
-            if (!_players.TryGetValue(roleId, out var view)) return;
+            if (!_players.TryGetValue(roleId, out var view))
+                return;
             view.PlayDeath();
         }
 
         public void PlayRevive(long roleId)
         {
-            if (!_players.TryGetValue(roleId, out var view)) return;
+            if (!_players.TryGetValue(roleId, out var view))
+                return;
             view.PlayRevive();
         }
 

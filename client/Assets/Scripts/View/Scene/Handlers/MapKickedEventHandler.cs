@@ -10,7 +10,8 @@ namespace Client.View
     {
         public void Handle(EventType.MapKickedEvent e)
         {
-            if (GameSceneEntry.Instance == null) return;
+            if (GameSceneEntry.Instance == null)
+                return;
 
             Debug.Log("[GameSceneEntry] 被踢下线，reason=" + e.Reason);
             string reasonText = MapController.GetKickReasonText(e.Reason);

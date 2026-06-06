@@ -98,9 +98,11 @@ namespace Client.View
 
         private void OnSendChat()
         {
-            if (chatInput == null) return;
+            if (chatInput == null)
+                return;
             string msg = chatInput.text.Trim();
-            if (string.IsNullOrEmpty(msg)) return;
+            if (string.IsNullOrEmpty(msg))
+                return;
 
             ChatController.Instance.SendChat(msg);
             chatInput.text = "";
@@ -110,7 +112,8 @@ namespace Client.View
 
         public void RefreshChatDisplay()
         {
-            if (chatDisplay == null) return;
+            if (chatDisplay == null)
+                return;
 
             var lines = ChatController.Instance.ChatLines;
             if (lines.Count == 0)

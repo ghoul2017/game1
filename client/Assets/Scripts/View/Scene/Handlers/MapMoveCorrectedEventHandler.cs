@@ -8,7 +8,8 @@ namespace Client.View
     {
         public void Handle(EventType.MapMoveCorrectedEvent e)
         {
-            if (GameSceneEntry.Instance == null) return;
+            if (GameSceneEntry.Instance == null)
+                return;
 
             if (GameSceneEntry.PlayerController != null)
             {
