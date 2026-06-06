@@ -31,5 +31,5 @@ LINEKB:CLIENT:COORDINATE doc=AGENTS.md note="坐标换算为 1 格 = 1 世界单
 LINEKB:CLIENT:UI_COLOR doc=AGENTS.md note="UI 配色保持 RPG 风格：深蓝/紫底色 + 金色强调色。"
 LINEKB:CLIENT:MATERIAL doc=AGENTS.md note="材质使用 Shader.Find(\"Universal Render Pipeline/Lit\")。"
 LINEKB:CLIENT:UGUI_RAYCAST doc=AGENTS.md note="非交互 UGUI 文本应关闭 raycastTarget，避免遮挡点击、拖拽或指令输入。"
-LINEKB:CLIENT:META_RULE doc=AGENTS.md note="不要手动新增、编辑或补齐 .meta；需要更新时使用 Unity 2021.3.26f1c1 batchmode 生成。"
-LINEKB:CLIENT:UNITY_CSPROJ_REFRESH command="/Applications/Unity/Hub/Editor/2021.3.26f1c1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath client -logFile /tmp/game1-unity-plan12.log" note="不要手动修改客户端 Unity 生成的 csproj；新增、删除、移动 .cs、.asmdef 或资源后用 Unity 2021.3.26f1c1 batchmode 生成 csproj/.meta 并检查日志。"
+LINEKB:CLIENT:META_RULE doc=AGENTS.md note="不要手动新增、编辑或补齐 .meta；需要更新时使用 Unity 2022.3.62f3 batchmode 生成。"
+LINEKB:CLIENT:UNITY_CSPROJ_REFRESH command="/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath client -logFile /tmp/game1-unity-2022.log" note="不要手动修改客户端 Unity 生成的 csproj；新增、删除、移动 .cs、.asmdef 或资源后用 Unity 2022.3.62f3 batchmode 生成 csproj/.meta 并检查日志。"

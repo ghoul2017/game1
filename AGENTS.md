@@ -20,8 +20,8 @@
 - 不执行 `git reset`、`git checkout` 回退、递归删除、大范围清理等高风险操作，除非用户明确要求。
 - 不自动 `git push`；未经用户明确要求，也不把提交作为每次修改的默认交付动作。
 - 不提交 `Library/`、`Temp/`、`Logs/`、`UserSettings/`、IDE 配置、本地生成文件和 `.DS_Store`。
-- 不修改客户端 `client/Assembly-CSharp*.csproj` 等 Unity 生成的 csproj；需要更新时使用 Unity 2021.3.26f1c1 batchmode 生成。
-- 不手动新增、编辑或补齐 `.meta` 文件；需要更新时使用 Unity 2021.3.26f1c1 batchmode 生成。
+- 不修改客户端 `client/Assembly-CSharp*.csproj` 等 Unity 生成的 csproj；需要更新时使用 Unity 2022.3.62f3 batchmode 生成。
+- 不手动新增、编辑或补齐 `.meta` 文件；需要更新时使用 Unity 2022.3.62f3 batchmode 生成。
 - 文本文档和代码使用 UTF-8，行尾遵循仓库 `.gitattributes`。
 
 ## 上下文入口
@@ -54,8 +54,8 @@
 - 修改服务端代码后运行 `dotnet build server/Server.csproj`。
 - 修改 Robot 后运行 `dotnet build robot/Robot.csproj`；涉及共享代码或跨端行为时运行 `dotnet build game1.sln`。
 - 修改工具后运行 `dotnet build tools/tools.csproj`，必要时运行对应工具命令。
-- 修改客户端、Shared、整体结构或跨端协议后，优先运行 `dotnet build game1.sln`；如 Unity csproj 未覆盖新增文件，不手动修改 csproj，必须说明并使用 Unity 2021.3.26f1c1 batchmode 生成后再验证。
-- 修改 Unity 场景、Prefab、资源导入、输入或 UI 配置后，优先用 Unity Editor 验证；需要自动化时使用 Unity 2021.3.26f1c1 batchmode，并同时检查日志和测试 XML。
+- 修改客户端、Shared、整体结构或跨端协议后，优先运行 `dotnet build game1.sln`；如 Unity csproj 未覆盖新增文件，不手动修改 csproj，必须说明并使用 Unity 2022.3.62f3 batchmode 生成后再验证。
+- 修改 Unity 场景、Prefab、资源导入、输入或 UI 配置后，优先用 Unity Editor 验证；需要自动化时使用 Unity 2022.3.62f3 batchmode，并同时检查日志和测试 XML。
 - 验证失败继续修，不能把失败包装成完成；确实无法验证时说明原因、已执行命令、现象、风险和下一步条件。
 
 ## Git 和知识维护
