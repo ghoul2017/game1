@@ -6,19 +6,21 @@ using Shared.Core.ECS;
 namespace Game.Components.Player;
 
 /// <summary>
-/// 角色属性组件。持久化到 MongoDB（集合名 role_attribute）。
+/// 角色属性组件。持久化到 MongoDB（集合名 role_attribute_component）。
 /// </summary>
 [ComponentOf(typeof(PlayerEntity))]
 public class RoleAttributeComponent : Component, IEntity
 {
+    public const int SurvivalHp = 1_000_000_000;
+
     [BsonId]
     public long Id { get; set; }
 
     /// <summary>当前HP</summary>
-    public int Hp { get; set; } = 100;
+    public int Hp { get; set; } = SurvivalHp;
 
     /// <summary>最大HP</summary>
-    public int MaxHp { get; set; } = 100;
+    public int MaxHp { get; set; } = SurvivalHp;
 
     /// <summary>当前MP</summary>
     public int Mp { get; set; } = 50;

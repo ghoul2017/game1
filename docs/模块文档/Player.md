@@ -82,9 +82,11 @@ PlayerSystem.EnterGame(roleId, userId, session, name, level, job)
 | PlayerComponent | Module 级 | 否 | — |
 | PlayerOnlineComponent | PlayerEntity 级 | 否 | — |
 | RoleDataComponent | PlayerEntity 级 | 是 | `role` |
-| RoleAttributeComponent | PlayerEntity 级 | 是 | `role_attribute` |
+| RoleAttributeComponent | PlayerEntity 级 | 是 | `role_attribute_component` |
 
 RoleAttributeComponent 的 `ToFightAttribute()` 方法是 Player → Fight 的数据桥梁，将持久化属性转换为战斗属性。
+
+测试期新角色使用高生存 HP：`RoleAttributeComponent.SurvivalHp` 为新角色默认 `Hp/MaxHp`，避免新建角色被环境怪物击杀；已有持久化角色属性不在上线时自动迁移。
 
 ## PlayerRpcMessageHandler
 
