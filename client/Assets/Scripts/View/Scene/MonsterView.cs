@@ -97,7 +97,7 @@ namespace Client.View
             var rect = textObj.AddComponent<RectTransform>();
             rect.sizeDelta = new Vector2(200, 80);
             var txt = textObj.AddComponent<Text>();
-            txt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            txt.font = UIBuilder.DefaultFont;
             txt.text = isCritical ? damage + "!" : damage.ToString();
             txt.fontSize = isCritical ? 40 : 30;
             txt.color = isCritical ? new Color(1f, 0.2f, 0.2f) : new Color(1f, 1f, 0.3f);
@@ -211,7 +211,7 @@ namespace Client.View
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
             var nameText = textObj.AddComponent<Text>();
-            nameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            nameText.font = UIBuilder.DefaultFont;
             nameText.text = name;
             nameText.fontSize = IsMonster ? 13 : 14;
             nameText.color = IsMonster ? new Color(1f, 0.6f, 0.4f) : new Color(0.5f, 0.8f, 1f);

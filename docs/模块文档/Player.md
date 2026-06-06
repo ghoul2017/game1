@@ -71,8 +71,8 @@ PlayerSystem.EnterGame(roleId, userId, session, name, level, job)
   ├── 5. player.Online.Session = session
   ├── 6. TokenSigner.Generate → roleData.LastToken
   ├── 7. AddPlayer(player)                    — 加入在线列表
-  ├── 8. session.Send(EnterGameNtf)           — 通知客户端准备就绪
-  └── 9. PublishAsync(PlayerOnlineEvent)      — 各模块挂载 Component + 加载数据
+  ├── 8. PublishAsync(PlayerOnlineEvent)      — 各模块挂载 Component + 加载数据
+  └── 9. session.Send(EnterGameNtf)           — 通知客户端准备就绪
 ```
 
 ## Component 分级

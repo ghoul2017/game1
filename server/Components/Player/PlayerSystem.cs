@@ -143,7 +143,10 @@ public static class PlayerSystem
 
         self.AddPlayer(player);
 
-        // 通知客户端进入游戏准备就绪（在 PlayerOnlineEvent 之前，让客户端做好准备接收后续消息）
+        // 先完成各模块上线加载，避免客户端收到 EnterGameNtf 后立即进图时访问未挂载组件。
+        await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { Player = player });
+
+        // 通知客户端进入游戏准备就绪
         session.Send(new Shared.Common.Protos.EnterGameNtf
         {
             RoleId = roleId,
@@ -151,9 +154,6 @@ public static class PlayerSystem
             Level = roleData.Level,
             Job = roleData.Job
         });
-
-        // 发布上线事件，各模块自行挂载 Component 并加载数据
-        await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { Player = player });
 
         Log.Info($"进入游戏 UserId:{userId} RoleId:{roleId} Name:{roleData.Name}");
         return (player, token);

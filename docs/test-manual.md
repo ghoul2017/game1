@@ -29,7 +29,7 @@ cd server && dotnet run
 ```
 
 - 预期：控制台输出 `TcpServer listening on 0.0.0.0:9000`
-- 日志文件：`server/log/game.log`（普通日志）、`server/log/error.log`（错误日志）
+- 日志文件：运行目录下 `log/game-yyyyMMdd.log`（普通日志）、`log/error-yyyyMMdd.log`（错误日志）；通过 `dotnet run --project server/Server.csproj` 从仓库根目录启动时通常位于 `bin/log/`
 
 ### 1.2 启动客户端
 
@@ -41,7 +41,7 @@ cd server && dotnet run
 | 来源 | 位置 |
 |------|------|
 | 服务端控制台 | 运行 dotnet run 的终端窗口 |
-| 服务端日志文件 | `server/log/game.log`、`server/log/error.log` |
+| 服务端日志文件 | 运行目录下 `log/game-yyyyMMdd.log`、`log/error-yyyyMMdd.log`；仓库根目录启动时通常为 `bin/log/` |
 | Unity Editor 日志 | Console 面板（Window → General → Console） |
 | Unity Player.log | `%LOCALAPPDATA%\Unity\Player.log` |
 

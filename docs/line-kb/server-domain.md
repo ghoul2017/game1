@@ -14,6 +14,7 @@ LINEKB:SERVER:ID_GENERATOR doc=AGENTS.md path=client/Assets/Scripts/shared/Core/
 LINEKB:SERVER:EVENT_RULE doc=AGENTS.md note="底层基础设施优先用明确回调解耦；事件用于通知，不替代明确方法调用。"
 LINEKB:SERVER:USER path=server/Components/User note="用户模块，包含 User、UserRole、UserComponent、UserHelper；Handler 位于 Handlers/。"
 LINEKB:SERVER:PLAYER path=server/Components/Player symbol=PlayerEntity note="玩家模块，包含 PlayerEntity、PlayerComponent、PlayerSystem、在线状态、角色数据和属性组件。"
+LINEKB:SERVER:ENTER_GAME_READY path=server/Components/Player/PlayerSystem.cs symbol=PlayerSystem.EnterGame note="进入游戏必须先 await PlayerOnlineEvent 完成 PlayerEntity 级组件加载，再发送 EnterGameNtf；地图层不把未加载完成吞成可恢复提示，缺组件应暴露为服务端错误并修根因。"
 LINEKB:SERVER:BAG path=server/Components/Bag note="背包模块，包含 RoleBagComponent、RoleBagSystem、RoleBagHelper.ToInfo、BagItem、ItemEffectSystem；Handler 位于 Handlers/。"
 LINEKB:SERVER:MAIL path=server/Components/Mail note="邮件模块，包含 RoleMailComponent、RoleMailSystem、RoleMail；Handler 位于 Handlers/。"
 LINEKB:SERVER:CHAT path=server/Components/Chat note="聊天模块，包含 ChatComponent、ChatSystem；Handler 位于 Handlers/。"

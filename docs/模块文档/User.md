@@ -90,13 +90,13 @@ EnterGameReq(roleId)
   │     ├── 加载/创建 RoleDataComponent
   │     ├── 绑定会话 + 生成 Token
   │     ├── AddPlayer
-  │     ├── 发送 EnterGameNtf（角色数据）
-  │     └── PublishAsync(PlayerOnlineEvent) → 各模块级联加载
+  │     ├── PublishAsync(PlayerOnlineEvent) → 各模块级联加载
+  │     └── 发送 EnterGameNtf（角色数据）
   ├── 4. EnterGameRes(errorMessage, token)
   └── 5. EnterGameNtf(roleId, name, level, job)
 ```
 
-**EnterGameNtf 先于 PlayerOnlineEvent**：让客户端做好准备接收后续模块消息。EnterGameRes 精简到只含 ErrorMessage + Token。
+**PlayerOnlineEvent 先于 EnterGameNtf**：保证 PlayerEntity 级组件已挂载完成，客户端收到 EnterGameNtf 后立即发送 EnterMapReq 时不会进入半初始化状态。EnterGameRes 精简到只含 ErrorMessage + Token。
 
 ## 断线重连
 
@@ -133,7 +133,7 @@ ReconnectReq(token, roleId)
 | EventBus | 单向 | ServerInitUserComponentEventHandler 订阅 ServerInitEvent |
 | TokenSigner | 单向 | Token 签名验证 |
 
-核心依赖链：**User 登录 → 进入游戏（UserRole 验证）→ PlayerSystem.EnterGame → EnterGameNtf → PlayerOnlineEvent → 各模块挂载 Component + 加载数据**
+核心依赖链：**User 登录 → 进入游戏（UserRole 验证）→ PlayerSystem.EnterGame → PlayerOnlineEvent → 各模块挂载 Component + 加载数据 → EnterGameNtf**
 
 ## 已知局限
 

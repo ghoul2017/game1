@@ -77,6 +77,8 @@ namespace Shared.Core.Log
                 if (entry.Level >= LogLevel.Error)
                 {
                     _errorWriter?.WriteLine(text);
+                    _writer?.Flush();
+                    _errorWriter?.Flush();
                 }
             }
         }

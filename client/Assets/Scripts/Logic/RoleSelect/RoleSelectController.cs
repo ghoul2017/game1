@@ -34,14 +34,14 @@ namespace Client.Logic
             PublishDataChanged();
         }
 
-        public async Task CreateRole(string name, int job)
+        public async Task<bool> CreateRole(string name, int job)
         {
             if (string.IsNullOrEmpty(name))
             {
                 StatusText = "请输入角色名称";
                 HasError = true;
                 PublishDataChanged();
-                return;
+                return false;
             }
 
             if (name.Length > 12)
@@ -49,13 +49,14 @@ namespace Client.Logic
                 StatusText = "角色名称最多12个字符";
                 HasError = true;
                 PublishDataChanged();
-                return;
+                return false;
             }
 
             StatusText = "正在创建角色...";
             HasError = false;
             PublishDataChanged();
 
+            bool created = false;
             try
             {
                 CreateRoleRes res = await NetClient.Instance.CallAsync<CreateRoleRes>(
@@ -74,6 +75,7 @@ namespace Client.Logic
                     SelectedRoleIndex = Roles.Count - 1;
                     StatusText = string.Format("已创建并选择: {0} ({1})", info.Name, GameData.GetJobName(info.Job));
                     HasError = false;
+                    created = true;
                 }
                 else
                 {
@@ -88,6 +90,7 @@ namespace Client.Logic
             }
 
             PublishDataChanged();
+            return created;
         }
 
         public async Task EnterGame()

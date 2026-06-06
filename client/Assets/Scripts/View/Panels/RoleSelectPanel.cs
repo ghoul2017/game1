@@ -15,6 +15,7 @@ namespace Client.View
         private GameObject createRoleDialog;
         private InputField createNameInput;
         private int selectedJob = 0;
+        private bool isCreatingRole;
         private Text[] jobLabels = new Text[4];
 
         private static readonly string[] JobNames = { "战士", "法师", "弓手", "刺客" };
@@ -199,10 +200,23 @@ namespace Client.View
                 createRoleDialog.SetActive(false);
         }
 
-        private void OnConfirmCreateRole()
+        private async void OnConfirmCreateRole()
         {
+            if (isCreatingRole)
+                return;
+
             string name = (createNameInput != null) ? createNameInput.text.Trim() : "";
-            RoleSelectController.Instance.CreateRole(name, selectedJob);
+            isCreatingRole = true;
+            try
+            {
+                bool created = await RoleSelectController.Instance.CreateRole(name, selectedJob);
+                if (created)
+                    HideCreateDialog();
+            }
+            finally
+            {
+                isCreatingRole = false;
+            }
         }
 
         // --- Slot UI ---

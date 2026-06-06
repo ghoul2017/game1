@@ -20,9 +20,10 @@ namespace Client.View
         public static readonly Color SectionBg = new Color(0.08f, 0.08f, 0.18f, 0.6f);
         public static readonly Color DividerColor = new Color(0.886f, 0.718f, 0.078f, 0.3f);
 
+        private const string BuiltinDefaultFontPath = "LegacyRuntime.ttf";
         private static Font _defaultFont;
         public static Font DefaultFont =>
-            _defaultFont != null ? _defaultFont : _defaultFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _defaultFont != null ? _defaultFont : _defaultFont = Resources.GetBuiltinResource<Font>(BuiltinDefaultFontPath);
 
         public static Image CreateFullScreenBg(Transform parent, Color color)
         {

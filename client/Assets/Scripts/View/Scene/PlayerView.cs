@@ -85,7 +85,7 @@ namespace Client.View
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
             nameText = textObj.AddComponent<Text>();
-            nameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            nameText.font = UIBuilder.DefaultFont;
             nameText.text = $"{roleName} Lv.{level}";
             nameText.fontSize = 14;
             nameText.color = new Color(1f, 0.85f, 0.3f);
