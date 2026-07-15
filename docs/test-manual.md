@@ -38,15 +38,16 @@
 - Unity 2022.3.62f3，用于打开 `client/` 并进入 PlayMode。
 - .NET 8 SDK，用于构建和运行 `server/`、`robot/`、`tools/`。
 - MongoDB，默认连接 `mongodb://127.0.0.1:27017`，数据库名 `game`。
-- 服务端端口默认 `9000`，配置来自 `server/appsettings.json`。
+- 服务端端口默认 `9000`；源配置为 `server/appsettings.json`，构建后复制为 `bin/appsettings.json`。
 
 ### 2.2 启动服务端
 
-`server/Program.cs` 直接读取当前工作目录下的 `appsettings.json`，因此服务端必须从 `server/` 目录启动：
+仓库根 `Directory.Build.props` 将 .NET 输出统一到 `bin/`；`server/Server.csproj` 会把 `appsettings.json` 和 `Data/Tables/*.csv` 复制到该目录。先构建，再以 `bin/` 为工作目录运行输出程序集：
 
 ```bash
-cd server
-dotnet run --project Server.csproj
+dotnet build server/Server.csproj
+cd bin
+dotnet Server.dll
 ```
 
 预期现象：
@@ -56,7 +57,7 @@ dotnet run --project Server.csproj
 - 地图初始化成功，日志包含“默认地图初始化完成”。
 - 网络监听成功，日志包含“监听 0.0.0.0:9000”。
 
-如果从仓库根目录直接执行 `dotnet run --project server/Server.csproj`，当前代码会找不到根目录的 `appsettings.json`，不作为推荐启动方式。
+Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tables`。开发时也可从 `server/` 目录执行 `dotnet run --project Server.csproj`，此时读取源码目录内的配置和表。不要从仓库根直接执行 `dotnet run --project server/Server.csproj`，因为程序按当前工作目录解析这些相对路径。
 
 ### 2.3 启动客户端
 
@@ -75,7 +76,7 @@ dotnet run --project Server.csproj
 | 来源 | 查看方式 |
 |------|----------|
 | 服务端控制台 | 启动服务端的终端 |
-| 服务端文件日志 | `server/log/game-yyyyMMdd.log`、`server/log/error-yyyyMMdd.log` |
+| 服务端文件日志 | `bin/` 启动时为 `bin/log/*.log`；`server/` 源码启动时为 `server/log/*.log` |
 | Unity 日志 | Editor Console |
 | Robot 日志 | 运行 Robot 的终端 |
 
@@ -176,8 +177,8 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 
 步骤：
 
-1. 从 `server/` 目录启动服务端。
-2. 观察终端和 `server/log/`。
+1. 构建服务端，从 `bin/` 目录启动 `dotnet Server.dll`。
+2. 观察终端和 `bin/log/`。
 
 预期：
 

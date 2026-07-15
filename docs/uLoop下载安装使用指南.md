@@ -194,12 +194,22 @@ tools/unity/uloop.sh launch
 tools/unity/uloop.sh get-version
 ```
 
+如果返回“Unity Editor is running, but Unity CLI Loop server is not”，不要反复执行 `launch`。在对应 Unity Editor 中打开 `Window > Unity CLI Loop > Server`；状态为 `Stopped` 时点击 `Start Server`，再执行：
+
+```bash
+tools/unity/uloop.sh get-version
+```
+
+2026-07-15 基线验证确认：当 `client/UserSettings/UnityMcpSettings.json` 的本机状态为 `isServerRunning=false` 时，Unity 可正常完成项目加载，但 `launch` 会继续等待动态代码服务并在 180 秒后超时。该文件属于被忽略的本机状态，不手动改写；应通过 Unity 的 Server 窗口启动服务。
+
 如果 Unity 正在运行但 CLI 仍认为 Unity 忙或连接失败，清理 stale lock：
 
 ```bash
 tools/unity/uloop.sh fix
 tools/unity/uloop.sh get-version
 ```
+
+`fix` 只处理 stale lock，不能代替启动已停止的 Unity CLI Loop Server。
 
 ### 包未安装或命令不存在
 
