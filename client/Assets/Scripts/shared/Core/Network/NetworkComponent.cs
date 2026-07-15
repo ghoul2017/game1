@@ -94,6 +94,9 @@ namespace Shared.Core.Network
             catch (ObjectDisposedException)
             {
             }
+            catch (SocketException) when (ShutdownToken.Instance.IsCancellationRequested)
+            {
+            }
             finally
             {
                 Log.Info("正在关闭...");

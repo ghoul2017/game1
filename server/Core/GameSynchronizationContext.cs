@@ -36,7 +36,6 @@ public class GameSynchronizationContext : SynchronizationContext
     /// <summary>启动主线程循环</summary>
     public void Start()
     {
-        SetSynchronizationContext(this);
         _thread.Start();
         Log.Info("游戏主线程已启动");
     }

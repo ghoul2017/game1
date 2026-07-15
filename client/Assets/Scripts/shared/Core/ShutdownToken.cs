@@ -19,13 +19,13 @@ namespace Shared.Core
         /// <summary>是否已请求关闭</summary>
         public bool IsCancellationRequested => _cts.IsCancellationRequested;
 
-        /// <summary>注册 Console.CancelKeyPress，按 Ctrl+C 时通过主线程投递取消</summary>
+        /// <summary>注册 Console.CancelKeyPress，按 Ctrl+C 时触发关闭令牌</summary>
         public void RegisterConsoleCancel()
         {
             Console.CancelKeyPress += (_, e) =>
             {
                 e.Cancel = true;
-                SynchronizationContext.Current?.Post(_ => Cancel(), null);
+                Cancel();
             };
         }
 
