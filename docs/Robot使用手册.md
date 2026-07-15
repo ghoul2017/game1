@@ -1,10 +1,22 @@
 # Robot 自动化测试 — 使用手册
 
+目标读者：AI。
+
+任务目标：在用户授权的测试环境和数据范围内构建、运行或扩展 Robot 场景，用协议级断言验证服务端行为，并完整报告进程、数据副作用和结果。
+
 Robot 是独立于 Unity 的命令行测试工具，通过 TCP 连接服务端，发送 Protobuf 消息模拟完整客户端行为，验证服务端逻辑。
+
+## 执行边界
+
+- 开始前运行 `git status --short --branch`，确认当前任务是否仅允许运行既有场景，还是同时授权修改 Robot 代码。
+- 构建本身不改变游戏数据；连接服务端、登录、创建角色、进入游戏或运行其他业务场景会读写 MongoDB，执行前必须确认测试环境和账号范围。
+- 默认只连接 `127.0.0.1:9000`。连接远程地址前必须确认目标是获准测试的环境，不得自行连接生产服务。
+- 启动服务端时从 `server/` 目录运行并记录 PID；只停止本任务启动且已核对归属的进程。
+- 场景失败时保留原始响应、日志和数据库状态，先定位协议、环境或业务根因，不新增绕过断言或伪成功分支。
 
 ## 环境要求
 
-- .NET 8.0 SDK（本机路径 `~/.dotnet/`，使用 `~/.dotnet/dotnet` 运行）
+- .NET 8.0 SDK；以 `dotnet --version` 的当前输出为准
 - 服务端运行中（默认 127.0.0.1:9000）
 
 ## 项目结构
@@ -26,13 +38,20 @@ robot/
 
 ```bash
 # 1. 构建
-dotnet build robot/
+dotnet build robot/Robot.csproj
+```
 
-# 2. 启动服务端（另开终端）
-dotnet run --project server/Server.csproj
+另开终端，从 `server/` 启动服务端：
 
-# 3. 运行测试
-dotnet run --project robot/
+```bash
+cd server
+dotnet run --project Server.csproj
+```
+
+回到仓库根目录运行当前已注册场景：
+
+```bash
+dotnet run --project robot/Robot.csproj -- --scenario login_test
 ```
 
 输出示例：
@@ -60,13 +79,13 @@ Robot 自动化测试框架
 
 ```bash
 # 运行全部场景
-dotnet run --project robot/
+dotnet run --project robot/Robot.csproj
 
 # 运行指定场景
-dotnet run --project robot/ -- --scenario login_test
+dotnet run --project robot/Robot.csproj -- --scenario login_test
 
 # 连接远程服务端
-dotnet run --project robot/ -- --host 192.168.1.100 --port 9000
+dotnet run --project robot/Robot.csproj -- --host 192.168.1.100 --port 9000
 ```
 
 ## 编写测试场景
@@ -189,7 +208,7 @@ public class EnterGameTest : TestScenario
 
 Robot 使用共享的 `ILog` + `LogManager`。未初始化时使用 `ConsoleFallbackLogger` 直接输出到控制台。
 
-服务端日志：`server/logs/game-YYYYMMDD.log`
+服务端日志：从 `server/` 启动时位于 `server/log/game-yyyyMMdd.log` 和 `server/log/error-yyyyMMdd.log`。
 
 ### 常见问题
 
@@ -199,7 +218,7 @@ Robot 使用共享的 `ILog` + `LogManager`。未初始化时使用 `ConsoleFall
 | 握手失败 | 检查服务端 NetworkComponent 是否正常监听 |
 | 等待响应超时 | 消息 MessageName 是否匹配？服务端 Handler 是否正确注册？ |
 | 登录失败 | 账号密码是否正确？数据库是否有该用户？ |
-| 编译失败 | `dotnet build robot/` 检查错误，确认 .NET 8 SDK 已安装 |
+| 编译失败 | `dotnet build robot/Robot.csproj` 检查错误，确认 .NET 8 SDK 已安装 |
 
 ## 设计决策
 
@@ -208,3 +227,9 @@ Robot 使用共享的 `ILog` + `LogManager`。未初始化时使用 `ConsoleFall
 - **业务消息零额外字段**：LoginReq、EnterGameReq 等业务协议不携带 RpcId，RPC 关联信息只存在网络层内部 Envelope
 - **ProjectReference 引用 shared/ + Logic/**：Robot 引用 Shared 和 ClientLogic，不引用 View/ 或 UnityEngine
 - **每个场景独立连接**：TestRunner 为每个场景创建新 RobotSession，运行后 Disconnect，保证场景间隔离
+
+## 停止分支和最终报告
+
+- 服务端、MongoDB、配置表或测试数据不可用时，记录命令和原始错误后停止；不得改正式配置或伪造前置数据。
+- 协议或业务预期存在分歧、场景会覆盖已有数据、或远程环境身份无法确认时，列出证据和影响并询问用户。
+- 最终报告必须包含：Robot 与服务端构建结果、运行场景、地址和端口、测试账号/角色、PASS/FAIL 汇总、失败响应和日志、MongoDB 副作用、启动/停止的进程，以及未验证范围。
