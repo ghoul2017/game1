@@ -21,5 +21,6 @@ robot/obj/
 # 通用
 .idea/
 .vs/
+.DS_Store
 *.user
 *.suo
