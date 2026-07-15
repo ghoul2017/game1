@@ -12,7 +12,6 @@ using Shared.Core;
 using Shared.Core.Config;
 using Shared.Core.Event;
 using Shared.Core.Log;
-using Task = System.Threading.Tasks.Task;
 
 namespace Game.Components.Fight;
 
@@ -211,18 +210,13 @@ public static class FightSystem
         result.Y = y;
         result.HitResults = hitResults;
 
-        // 处理死亡
         foreach (var hit in hitResults)
         {
             if (hit.IsDead)
-            {
                 OnUnitKilled(hit.TargetId, attackerId);
-            }
         }
 
-        // 广播技能效果给视野内玩家
         BroadcastSkillEffect(attackerId, result);
-
         Log.Debug($"技能使用 Attacker:{attackerId} Skill:{skillId} Target:{targetId} Hits:{hitResults.Count}");
         return result;
     }
@@ -320,7 +314,6 @@ public static class FightSystem
                 var map = Context.Map.GetMap(mapObj.MapId, mapObj.Line);
                 map?.OnMonsterKilled(victimId, killerId);
 
-                // 发布事件给 GameTask 等其他模块
                 EventBus.Instance.Publish(new EventType.MonsterKilledEvent
                 {
                     MonsterId = victimId,
@@ -340,6 +333,7 @@ public static class FightSystem
                 KillerId = killerId,
             });
         }
+
     }
 
     /// <summary>复活战斗单元</summary>

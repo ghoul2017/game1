@@ -8,10 +8,10 @@ namespace Game.Components.Mail;
 
 public sealed class QueryMailListReqHandler : PlayerRpcMessageHandler<QueryMailListReq, QueryMailListAck>
 {
-    protected override Task ExecuteAsync(PlayerEntity player, QueryMailListReq req, QueryMailListAck res)
+    protected override async Task ExecuteAsync(PlayerEntity player, QueryMailListReq req, QueryMailListAck res)
     {
         var mails = player.RoleMail.GetMailList();
         res.Mails = mails.Select(player.RoleMail.ToMailInfo).ToList();
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }

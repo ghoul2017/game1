@@ -11,13 +11,13 @@ namespace Client.Logic
     {
         private static readonly ILog Log = LogManager.GetLogger<KickNtfHandler>();
 
-        protected override Task ExecuteAsync(TcpSession session, KickNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, KickNtf ntf)
         {
             Log.Info(string.Format("[NetClient] Kicked, reason={0}", ntf.Reason));
 
             var client = NetClient.Instance;
             if (client == null)
-                return Task.CompletedTask;
+                return;
 
             client.UserDisconnect = true;
             client.HadSession = false;
@@ -26,7 +26,7 @@ namespace Client.Logic
             GameData.CurrentMap = null;
             EventBus.Instance.Publish(new EventType.NetKickedEvent { Reason = ntf.Reason });
             client.DisposeSession(LogoutReason.NetDisconnected, "Kicked by server");
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

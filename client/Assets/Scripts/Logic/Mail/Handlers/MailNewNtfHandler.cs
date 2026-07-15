@@ -7,7 +7,7 @@ namespace Client.Logic
 {
     public sealed class MailNewNtfHandler : NtfMessageHandler<MailNewNtf>
     {
-        protected override Task ExecuteAsync(TcpSession session, MailNewNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, MailNewNtf ntf)
         {
             if (ntf.Mail != null)
             {
@@ -16,7 +16,7 @@ namespace Client.Logic
                 ClientUiEventPublisher.ShowToast("收到新邮件: " + ntf.Mail.Title);
             }
 
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

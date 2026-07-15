@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Game.Components.Bag;
 using Game.Components.Mail;
 using Game.Components.GameTask;
@@ -10,6 +13,8 @@ namespace Game.Components.Player;
 /// </summary>
 public class PlayerEntity : Entity
 {
+    private readonly Dictionary<Type, long> _dirtyVersions = [];
+
     /// <summary>在线状态组件</summary>
     public PlayerOnlineComponent Online => GetComponent<PlayerOnlineComponent>();
 
@@ -27,6 +32,24 @@ public class PlayerEntity : Entity
 
     /// <summary>角色任务组件</summary>
     public RoleTaskComponent RoleTask => GetComponent<RoleTaskComponent>();
+
+    internal void MarkDirty(Type componentType)
+    {
+        _dirtyVersions[componentType] = _dirtyVersions.GetValueOrDefault(componentType) + 1;
+    }
+
+    internal List<KeyValuePair<Type, long>> GetDirtyVersions()
+    {
+        return _dirtyVersions.ToList();
+    }
+
+    internal void ConfirmSaved(Type componentType, long version)
+    {
+        if (_dirtyVersions.TryGetValue(componentType, out var currentVersion) && currentVersion == version)
+            _dirtyVersions.Remove(componentType);
+    }
+
+    internal bool HasDirtyData => _dirtyVersions.Count > 0;
 
     /// <summary>创建玩家实体（选角入场时调用）</summary>
     public static PlayerEntity Create(long roleId, long userId)

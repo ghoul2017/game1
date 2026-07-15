@@ -1,5 +1,7 @@
 # Monster 模块
 
+目标读者：人类。
+
 ## 定位
 
 Monster 模块负责管理游戏中所有怪物的生命周期——从生成到战斗到死亡再到刷新。它是服务端核心战斗循环的一环：玩家击杀怪物 → 获得奖励 → 怪物定时重生，形成持续的游戏节奏。
@@ -155,7 +157,7 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 |--------|------|------|
 | Map | 双向 | GameMap 本身属于 Map 模块，内部使用 AOI 广播和玩家查询 |
 | Fight | 双向 | 怪物 FightUnitComponent 常驻；FightSystem 检测死亡后调用 `map.OnMonsterKilled()` |
-| Player | 单向 | 怪物死亡后通过 `GrantExpAsync/GrantGoldAsync/GrantItemAsync` 发放奖励 |
+| Player | 单向 | 怪物死亡后通过同步的 `GrantExp/GrantGold/GrantItem` 修改内存并标脏 |
 | Config | 单向 | 读取 `MonsterConfig` 驱动所有行为参数 |
 | GameTask | 被动 | `MonsterKilledEvent` 驱动击杀任务进度 |
 

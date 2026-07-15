@@ -1,5 +1,7 @@
 # User 模块
 
+目标读者：人类。
+
 ## 定位
 
 User 模块是游戏的入口——账号认证、角色管理、断线重连。所有其他模块都依赖 User 完成登录后才能工作。它管理从"谁连上来了"到"用哪个角色进入游戏"的完整链路。
@@ -8,7 +10,7 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 
 ### 轻量索引与完整数据分离
 
-`UserRole` 是角色索引（UserId/Name/Level/Job），存在 `user_role` 集合，用于角色列表展示和归属验证。`RoleDataComponent`（Player 模块）是完整角色数据，存在 `role` 集合，在首次 EnterGame 时按需创建。
+`UserRole` 是角色索引（UserId/Name/Level/Job），存在 `user_role` 集合，用于角色列表展示和归属验证。`RoleDataComponent`（Player 模块）是完整角色数据，存在 `role_data_component` 集合，在首次 EnterGame 时按需创建。
 
 分离的好处：登录只需读轻量索引，完整数据延迟到选角入场时才加载。
 
@@ -18,7 +20,7 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 
 ### Token 无状态验证
 
-`TokenSigner` 使用 HMAC-SHA256 签名，启动时随机生成密钥。Token 包含 userId:roleId:timestamp，验证时只检查签名和过期时间，不查库。`RoleDataComponent.LastToken` 保证单次有效——新 Token 生成后旧 Token 失效。
+`TokenSigner` 使用 HMAC-SHA256 签名，启动时随机生成密钥。Token 包含 userId:roleId:timestamp，验证时检查签名和过期时间。角色 Token 还计划通过 `RoleDataComponent.LastToken` 做单次有效校验，但该字段当前标记为 `BsonIgnore`，断线后重新加载的组件没有旧值，因此不能把这条重连链路视为已完成能力。
 
 ### 保留的文件
 
@@ -77,7 +79,7 @@ CreateRoleReq(name, job)
   └── 5. 创建 UserRole → MongoDB user_role 集合
 ```
 
-只写 `user_role` 集合。`role` 集合（RoleDataComponent）在首次 EnterGame 时按需创建。
+只写 `user_role` 集合。`role_data_component` 集合在首次 EnterGame 时按需创建。
 
 ## 进入游戏
 
@@ -98,7 +100,7 @@ EnterGameReq(roleId)
 
 **PlayerOnlineEvent 先于 EnterGameNtf**：保证 PlayerEntity 级组件已挂载完成，客户端收到 EnterGameNtf 后立即发送 EnterMapReq 时不会进入半初始化状态。EnterGameRes 精简到只含 ErrorMessage + Token。
 
-## 断线重连
+## 断线重连（当前未闭环）
 
 ```
 ReconnectReq(token, roleId)
@@ -110,7 +112,7 @@ ReconnectReq(token, roleId)
   └── 5. 生成新 Token，更新 LastToken
 ```
 
-重连成功后客户端自动发送 `EnterGameReq`，走正常进入游戏流程。
+设计上重连成功后客户端再发送 `EnterGameReq`，走正常进入游戏流程。当前 `LastToken` 不持久化，而 `ReconnectReqHandler` 会重新从 MongoDB 加载 RoleData；带 roleId 的 Token 因而无法通过 LastToken 匹配。Robot 的任务持久化场景使用的是“断线后重新登录并进入游戏”，不等同于验证 `ReconnectReq`。
 
 ## 踢人
 
@@ -140,3 +142,4 @@ ReconnectReq(token, roleId)
 1. **密码明文**：Password 直接存储和比对，无加密
 2. **账号等级无用**：User.Level 字段存在但未使用
 3. **握手无验证**：HandshakeReq 的 Token 未校验
+4. **角色重连未闭环**：LastToken 不持久化，ReconnectReq 的角色 Token 匹配无法跨断线恢复

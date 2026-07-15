@@ -7,10 +7,10 @@ namespace Client.Logic
 {
     public sealed class TaskChangedNtfHandler : NtfMessageHandler<TaskChangedNtf>
     {
-        protected override Task ExecuteAsync(TcpSession session, TaskChangedNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, TaskChangedNtf ntf)
         {
             if (ntf.Tasks == null)
-                return Task.CompletedTask;
+                return;
 
             var controller = TaskController.Instance;
             foreach (var changed in ntf.Tasks)
@@ -23,7 +23,7 @@ namespace Client.Logic
             }
 
             EventBus.Instance.Publish(new EventType.TaskDataChangedEvent());
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

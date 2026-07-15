@@ -123,7 +123,10 @@ Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tabl
 
 ### 4.1 当前已有 Robot 覆盖
 
-当前 `robot/Program.cs` 只注册了 `login_test`。它会连接服务端，发送 `HandshakeReq`，再用账号 `test`、密码 `123456` 发送 `LoginReq`，验证 `PlayerId`、`Token` 和角色列表。
+当前 `robot/Program.cs` 注册了两个场景：
+
+- `login_test`：使用账号 `test`、密码 `123456` 验证握手、登录、`PlayerId`、Token 和角色列表。
+- `task_persistence_test`：每次使用独立的 `robot_task_<时间戳>` 账号和角色，验证任务 1 的接取、重复错误、断线批次保存、重新登录、5 次击杀进度、提交奖励和重复提交。
 
 执行步骤：
 
@@ -134,8 +137,8 @@ dotnet build robot/Robot.csproj
 另开终端启动服务端：
 
 ```bash
-cd server
-dotnet run --project Server.csproj
+cd bin
+dotnet Server.dll
 ```
 
 回到仓库根目录运行 Robot：
@@ -148,12 +151,14 @@ dotnet run --project robot/Robot.csproj
 
 ```bash
 dotnet run --project robot/Robot.csproj -- --scenario login_test
+dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 ```
 
 预期结果：
 
 - 输出 `PASS: login_test`。
-- 汇总为 `=== 完成: 1 通过, 0 失败 ===`。
+- 单独执行任务场景时输出 `PASS: task_persistence_test`；它会创建一组测试账号/角色数据并击杀 5 只测试怪物。
+- 单场景汇总为 `=== 完成: 1 通过, 0 失败 ===`；不传 `--scenario` 时应汇总 2 个场景。
 - 服务端有对应握手和登录日志。
 
 ### 4.2 当前未自动化但适合补 Robot 的场景
@@ -167,7 +172,6 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 | 世界聊天 | 两个 Robot 登录进入游戏后 `ChatReq(Channel=1)` | 发送者和接收者收到 `ChatNtf`，3 秒内第二条返回冷却错误 |
 | 私聊 | 两个 Robot 登录进入游戏后 `ChatReq(Channel=3, TargetName=目标名)` | 目标在线时收到 `ChatNtf`，目标为空/自己/离线时返回错误 |
 | 地图切换 | 进入游戏后 `ChangeMapReq` | Ack 坐标为目标地图出生点，并收到 `EnterMapNtf` |
-| 任务接取 | 进入游戏后 `TaskAcceptReq(TaskId=1)` | Ack 返回任务，重复接取返回 `任务已接取` |
 
 ## 5. 手工测试主流程
 
@@ -531,7 +535,7 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 
 ### MAIL-03 正向邮件流程
 
-当前项目没有玩家可点击的“生成系统邮件”入口，也没有其他模块调用 `SendSystemMailAsync`。正向邮件流程需要预置邮件数据或补 Robot/测试工具场景。
+当前项目没有玩家可点击的“生成系统邮件”入口，离线系统邮件投递流程也尚未实现。正向邮件流程需要预置邮件数据或补 Robot/测试工具场景。
 
 有邮件数据时执行：
 
@@ -629,6 +633,8 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 - 成功后列表新增任务。
 - Toast 显示 `接取任务成功`。
 - 重复接取同一任务返回 `任务已接取`。
+- 内存立即出现任务；断线触发批量保存后，MongoDB `role_task_component.Tasks` 为数组并包含任务 1。
+- 重新登录并进入游戏后返回相同 `AcceptTime`。这验证的是持久化恢复，不是 `ReconnectReq` 协议。
 
 ### TASK-03 接取输入校验
 
@@ -652,6 +658,7 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 
 - 怪物死亡发布 `MonsterKilledEvent`。
 - 任务目标 `击杀怪物 101` 进度递增。
+- 内存进度变化后立即推送任务变化并标脏；断线批次保存后重新登录，`CurrentCount` 保持一致。
 - 达成目标后任务状态变为 `可提交`。
 - 客户端收到 `TaskChangedNtf` 并刷新任务面板。
 
@@ -662,7 +669,11 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 | 提交未完成任务 | 选中进行中任务，点击提交 | 服务端返回 `任务未完成` |
 | 放弃进行中任务 | 选中进行中任务，点击放弃并确认 | 任务从列表移除，Toast：`已放弃任务` |
 | 放弃已完成任务 | 完成任务后点击放弃 | 服务端返回 `任务已完成` |
-| 提交已完成任务 | 完成任务后点击提交 | 任务移除，奖励物品进入背包 |
+| 提交已完成任务 | 完成任务后点击提交 | 任务进入已领奖状态，客户端列表移除，奖励物品进入背包 |
+| 重复提交任务 | 领奖后再次发送同一提交请求 | 返回 `任务已提交`，背包奖励不重复增加 |
+| 领奖后重新登录 | 完成提交后断线并重新登录 | 任务状态为 2，奖励总数与提交完成后一致 |
+
+野猪 101 可能随机掉落 `1001`，自动化判断任务奖励时应断言提交前后数量增加 1，不能断言背包内 `1001` 总数恰好为 1。任务与背包分集合批量保存，当前不验证跨集合原子性。
 
 当前已接入事件驱动的目标类型：击杀怪物、收集物品、达到等级。对话 NPC、进入场景、使用物品、击杀玩家、通关副本目标类型已有定义但未接入驱动。
 
@@ -733,7 +744,7 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 
 ## 14. 当前限制和测试注意事项
 
-- Robot 当前只有 `login_test`，除登录冒烟外的自动化用例需要新增场景。
+- Robot 当前覆盖登录和任务持久化；背包、邮件、聊天、AOI 和 `ReconnectReq` 协议仍需新增场景。
 - 邮件正向流程没有内置触发入口，需要预置邮件或补测试工具。
 - 聊天 UI 当前没有私聊目标输入框，正向私聊只能通过协议测试。
 - 背包服务端容量是 100，`BagPanel` 当前只绘制 64 个可见格子。
@@ -749,11 +760,12 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 1. `dotnet build robot/Robot.csproj`
 2. 启动 MongoDB 和服务端。
 3. 跑 `login_test` Robot 冒烟。
-4. Unity PlayMode 跑 `USER-01` 到 `ROLE-04`。
-5. 跑 `MAP-01` 到 `MAP-04`。
-6. 跑 `BAG-01`、`TASK-01`、`CHAT-01`、`MAIL-01`。
-7. 有双客户端条件时跑 `USER-03`、`MAP-05`、`CHAT-01` 广播验证。
-8. 有测试数据条件时跑背包使用、邮件附件、任务完成和怪物掉落。
+4. 跑 `task_persistence_test`，确认独立测试角色的任务进度、提交状态和奖励在断线批次保存并重新登录后保持一致。
+5. Unity PlayMode 跑 `USER-01` 到 `ROLE-04`。
+6. 跑 `MAP-01` 到 `MAP-04`。
+7. 跑 `BAG-01`、`TASK-01`、`CHAT-01`、`MAIL-01`。
+8. 有双客户端条件时跑 `USER-03`、`MAP-05`、`CHAT-01` 广播验证。
+9. 有测试数据条件时跑背包使用、邮件附件、任务完成和怪物掉落。
 
 ## 16. 停止分支和最终报告
 

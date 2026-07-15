@@ -6,7 +6,7 @@ namespace Game.Components.Player;
 
 /// <summary>
 /// 角色持久化数据组件。直接持有所有角色字段，实现 IEntity。
-/// 对应 MongoDB 集合: role
+/// 对应 MongoDB 集合: role_data_component
 /// </summary>
 [ComponentOf(typeof(PlayerEntity))]
 public class RoleDataComponent : Component, IEntity

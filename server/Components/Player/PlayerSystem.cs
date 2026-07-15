@@ -172,34 +172,6 @@ public static class PlayerSystem
         }
     }
 
-    public static async Task SaveRoleAsync(this PlayerComponent self, PlayerEntity player)
-    {
-        try
-        {
-            await MongoDb.Instance.UpdateAsync(player.RoleData);
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"保存角色数据失败 RoleId:{player.Id}: {ex.Message}");
-        }
-    }
-
-    public static async Task SaveAllRolesAsync(this PlayerComponent self)
-    {
-        foreach (var player in self.Players.Values)
-        {
-            try
-            {
-                await MongoDb.Instance.UpdateAsync(player.RoleData);
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"保存角色数据失败 RoleId:{player.Id}: {ex.Message}");
-            }
-        }
-        Log.Info($"保存所有在线角色完成，共 {self.Players.Count} 个");
-    }
-
     public static void RemoveAll(this PlayerComponent self)
     {
         var count = self.Players.Count;
@@ -211,7 +183,7 @@ public static class PlayerSystem
 
 
     /// <summary>发放经验给玩家</summary>
-    public static async Task GrantExpAsync(this PlayerComponent self, long roleId, int exp)
+    public static void GrantExp(this PlayerComponent self, long roleId, int exp)
     {
         if (exp <= 0)
             return;
@@ -224,27 +196,31 @@ public static class PlayerSystem
         roleAttr.Exp += exp;
 
         int newLevel = CalculateLevel(roleAttr.Exp);
-        if (newLevel > roleAttr.Level)
+        var leveledUp = newLevel > roleAttr.Level;
+        if (leveledUp)
         {
             roleAttr.Level = newLevel;
             roleAttr.MaxHp += 10;
             roleAttr.MaxMp += 5;
             roleAttr.Hp = roleAttr.MaxHp;
             roleAttr.Mp = roleAttr.MaxMp;
+        }
 
+        roleAttr.MarkDirty();
+
+        if (leveledUp)
+        {
             self.SendToPlayer(roleId, new LevelUpNtf { Level = newLevel });
             EventBus.Instance.Publish(new EventType.PlayerLevelUpEvent { RoleId = roleId, NewLevel = newLevel });
             Log.Info($"玩家升级 RoleId:{roleId} Level:{newLevel}");
         }
-
-        await roleAttr.SaveAsync();
 
         self.SendToPlayer(roleId, new ExpChangedNtf { Exp = roleAttr.Exp, Level = roleAttr.Level });
         EventBus.Instance.Publish(new EventType.PlayerExpChangedEvent { RoleId = roleId, Exp = roleAttr.Exp, Level = roleAttr.Level });
     }
 
     /// <summary>发放金币给玩家</summary>
-    public static async Task GrantGoldAsync(this PlayerComponent self, long roleId, int gold)
+    public static void GrantGold(this PlayerComponent self, long roleId, int gold)
     {
         if (gold <= 0)
             return;
@@ -255,14 +231,14 @@ public static class PlayerSystem
 
         var roleAttr = player.RoleAttribute;
         roleAttr.Gold += gold;
-        await roleAttr.SaveAsync();
+        roleAttr.MarkDirty();
 
         self.SendToPlayer(roleId, new GoldChangedNtf { Gold = roleAttr.Gold });
         EventBus.Instance.Publish(new EventType.PlayerGoldChangedEvent { RoleId = roleId, Gold = roleAttr.Gold });
     }
 
     /// <summary>发放物品给玩家</summary>
-    public static async Task GrantItemAsync(this PlayerComponent self, long roleId, int configId, int count)
+    public static void GrantItem(this PlayerComponent self, long roleId, int configId, int count)
     {
         var player = self.GetByRoleId(roleId);
         if (player == null)
@@ -271,8 +247,6 @@ public static class PlayerSystem
         var result = player.RoleBag.AddItem(configId, count);
         if (result.Success)
         {
-            await player.RoleBag.SaveBagAsync();
-
             self.SendToPlayer(roleId, new ItemGainNtf
             {
                 ConfigId = configId,

@@ -8,7 +8,6 @@ using Shared.Core;
 using Shared.Core.Config;
 using Shared.Common.Config;
 using Shared.Core.Log;
-using Task = System.Threading.Tasks.Task;
 
 namespace Game.Components.Monster;
 
@@ -93,7 +92,7 @@ public static class MonsterSystem
             map.SpawnTimers[timerKey] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 + monster.Info.Config.SpawnInterval * 1000;
 
-            _ = CalculateAndGrantDropAsync(map, monster, killerId);
+            CalculateAndGrantDrop(map, monster, killerId);
         }
 
         Log.Info($"怪物死亡 MonsterId:{monsterId} KillerId:{killerId}");
@@ -292,7 +291,7 @@ public static class MonsterSystem
     }
 
     /// <summary>计算并发放掉落</summary>
-    private static async Task CalculateAndGrantDropAsync(GameMap map, MonsterEntity monster, long killerId)
+    private static void CalculateAndGrantDrop(GameMap map, MonsterEntity monster, long killerId)
     {
         if (monster.Info.Config == null)
             return;
@@ -301,12 +300,12 @@ public static class MonsterSystem
         if (player == null)
             return;
 
-        await Context.Players.GrantExpAsync(killerId, monster.Info.Config.Exp);
+        Context.Players.GrantExp(killerId, monster.Info.Config.Exp);
 
         int gold = map.Random.Next(monster.Info.Config.GoldMin, monster.Info.Config.GoldMax + 1);
         if (gold > 0)
         {
-            await Context.Players.GrantGoldAsync(killerId, gold);
+            Context.Players.GrantGold(killerId, gold);
         }
 
         if (!string.IsNullOrEmpty(monster.Info.Config.DropItems))
@@ -318,7 +317,7 @@ public static class MonsterSystem
                 {
                     if (map.Random.Next(1, 10001) <= monster.Info.Config.DropRate)
                     {
-                        await Context.Players.GrantItemAsync(killerId, itemId, 1);
+                        Context.Players.GrantItem(killerId, itemId, 1);
                     }
                 }
             }

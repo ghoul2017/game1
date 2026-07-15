@@ -7,7 +7,7 @@ namespace Client.Logic
 {
     public sealed class HpChangedNtfHandler : NtfMessageHandler<HpChangedNtf>
     {
-        protected override Task ExecuteAsync(TcpSession session, HpChangedNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, HpChangedNtf ntf)
         {
             long selfId = GameData.CurrentRole != null ? GameData.CurrentRole.RoleId : 0;
             if (ntf.ObjectId == selfId)
@@ -16,7 +16,7 @@ namespace Client.Logic
             }
 
             EventBus.Instance.Publish(new EventType.FightHpChangedEvent { Notification = ntf });
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

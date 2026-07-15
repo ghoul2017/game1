@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Shared.Core;
 using Shared.Core.Entities;
 using Shared.Core.ECS;
 
@@ -13,4 +15,9 @@ public class PlayerComponent : Component
     public readonly Dictionary<long, PlayerEntity> Players = new();           // roleId → PlayerEntity
     public readonly Dictionary<long, PlayerEntity> PlayersByUserId = new();   // userId → PlayerEntity
     public readonly Dictionary<string, PlayerEntity> PlayersByName = new();   // roleName → PlayerEntity
+
+    internal readonly HashSet<PlayerEntity> PendingSavePlayers = [];
+    internal Task SaveQueue { get; set; } = Task.CompletedTask;
+    internal GameTimerHandle SaveTimer { get; set; }
+    internal bool SaveTimerStarted { get; set; }
 }

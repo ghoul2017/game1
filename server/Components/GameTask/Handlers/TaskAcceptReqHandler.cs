@@ -16,7 +16,6 @@ public sealed class TaskAcceptReqHandler : PlayerRpcMessageHandler<TaskAcceptReq
 
         if (result.Success)
         {
-            await player.RoleTask.SaveTasksAsync();
             var task = player.RoleTask.GetByTaskId(req.TaskId);
             res.Task = player.RoleTask.ToTaskInfo(task!);
             Log.Info($"接取任务 RoleId:{player.Id} TaskId:{req.TaskId}");
@@ -25,5 +24,7 @@ public sealed class TaskAcceptReqHandler : PlayerRpcMessageHandler<TaskAcceptReq
         {
             res.ErrorMessage = result.ErrorMessage;
         }
+
+        await Task.CompletedTask;
     }
 }

@@ -1,5 +1,7 @@
 # Fight 模块
 
+目标读者：人类。
+
 ## 定位
 
 Fight 模块是服务端战斗的运算核心——技能使用、伤害计算、命中/暴击/闪避判定、HP 管理、死亡/复活。所有战斗逻辑在 `FightCore`（纯函数）和 `FightSystem`（流程编排）中完成，战斗单元（`FightUnitComponent`）挂载在 `MapObjectEntity` 上随实体存亡。

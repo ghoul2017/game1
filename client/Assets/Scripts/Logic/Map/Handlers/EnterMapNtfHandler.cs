@@ -7,7 +7,7 @@ namespace Client.Logic
 {
     public sealed class EnterMapNtfHandler : NtfMessageHandler<EnterMapNtf>
     {
-        protected override Task ExecuteAsync(TcpSession session, EnterMapNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, EnterMapNtf ntf)
         {
             var controller = MapController.Instance;
             controller.PendingObjects.Clear();
@@ -25,7 +25,7 @@ namespace Client.Logic
                 EventBus.Instance.Publish(new EventType.MapRebuildEvent { MapCfgId = ntf.MapCfgId, SpawnX = ntf.X, SpawnY = ntf.Y });
 
             EventBus.Instance.Publish(new EventType.MapEnterMapReadyEvent());
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

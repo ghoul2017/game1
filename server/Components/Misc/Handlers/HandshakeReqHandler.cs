@@ -9,9 +9,9 @@ public sealed class HandshakeReqHandler : RpcMessageHandler<HandshakeReq, Handsh
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(HandshakeReqHandler));
 
-    protected override Task ExecuteAsync(TcpSession session, HandshakeReq req, HandshakeRes res)
+    protected override async Task ExecuteAsync(TcpSession session, HandshakeReq req, HandshakeRes res)
     {
         Log.Info($"Session:{session.SessionId} Token:{req.Token}");
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }

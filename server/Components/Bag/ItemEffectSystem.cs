@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Game.Components.Fight;
 using Game.Components.Player;
 using Shared.Core.Config;
@@ -25,9 +24,8 @@ public static class ItemEffectSystem
     /// <summary>
     /// 使用物品并触发效果。
     /// </summary>
-    public static async Task<ItemUseResult> ApplyItemEffectAsync(long roleId, int configId)
+    public static ItemUseResult ApplyItemEffect(long roleId, int configId)
     {
-        await Task.CompletedTask;
         var result = new ItemUseResult();
 
         var player = Context.Players.GetByRoleId(roleId);
@@ -65,6 +63,9 @@ public static class ItemEffectSystem
                 ApplyReviveEffect(roleId, effectConfig.Value1);
                 break;
         }
+
+        if (effectConfig.EffectType is EffectHp or EffectMp)
+            attr.MarkDirty();
 
         Log.Info($"物品效果 RoleId:{roleId} ConfigId:{configId} EffectType:{effectConfig.EffectType} Value:{effectConfig.Value1}");
         return result;

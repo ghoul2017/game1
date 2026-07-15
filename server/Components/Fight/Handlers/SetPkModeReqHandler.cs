@@ -7,12 +7,12 @@ namespace Game.Components.Fight;
 
 public sealed class SetPkModeReqHandler : PlayerRpcMessageHandler<SetPkModeReq, PkModeChangedNtf>
 {
-    protected override Task ExecuteAsync(PlayerEntity player, SetPkModeReq req, PkModeChangedNtf res)
+    protected override async Task ExecuteAsync(PlayerEntity player, SetPkModeReq req, PkModeChangedNtf res)
     {
         if (req.PkMode < PkMode.Peace || req.PkMode > PkMode.All)
-            return Task.CompletedTask;
+            return;
 
         res.PkMode = req.PkMode;
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }

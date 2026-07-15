@@ -12,9 +12,8 @@ public sealed class MailReadReqHandler : PlayerRpcMessageHandler<MailReadReq, Ma
         var result = player.RoleMail.MarkRead(req.MailIds);
 
         if (result.Changed)
-        {
-            await player.RoleMail.SaveMailsAsync();
-        }
+            player.RoleMail.MarkDirty();
         res.ReadMailIds = result.ReadIds;
+        await Task.CompletedTask;
     }
 }

@@ -8,7 +8,7 @@
 
 - 先读取当前 Git 状态、对应代码和 `docs/test-manual.md`，再选择本任务授权范围内的 Bug；不得因为本文标记“未修复”就自动修改代码。
 - 历史截图、日志、账号、RoleId 和绝对路径只说明当时现场。文件不存在或当前行为不同不等于问题已修复，必须按同层级用例重新验证。
-- 已有产品决定优先于历史“建议”：`runInBackground=1` 已确认；新手出生点安全语义仍需用户确认；任务持久化改动前仍需确认 MongoDB 兼容边界。
+- 已有产品决定优先于历史“建议”：`runInBackground=1` 已确认；新手出生点安全语义仍需用户确认；上线前测试数据无需迁移兼容，可按验证范围清理并报告。
 - 修复任务只能更新已实际复现和验证的条目状态；无法复现时记录环境、命令、实际现象和再次处理条件。
 - 最终报告必须列出处理的 Bug ID、复现结果、修改范围、验证闭环、未处理条目和仍需用户决定的行为分歧。
 
@@ -101,7 +101,7 @@
 ## BUG-20260608-005 接取任务后保存 RoleTaskComponent 失败导致客户端/服务端状态分叉
 
 - 严重级别：P1 任务主流程阻塞
-- 状态：已复现，未修复
+- 状态：2026-07-15 已修复并通过 Robot/MongoDB 回归
 - 影响范围：TASK-02 接取任务、TASK-04 任务进度、TASK-05 提交领奖；任务持久化和客户端列表刷新。
 - 复现步骤：
   1. 进入游戏并打开任务面板。
@@ -119,15 +119,18 @@
   - `server/Components/GameTask/RoleTaskComponent.cs:19`：`Tasks` 类型为 `Dictionary<int, RoleTask>`。
   - `server/Components/GameTask/RoleTaskSystem.cs:46`：`SaveTasksAsync()` 直接 `MongoDb.Instance.UpdateAsync(self)`。
   - `server/Components/GameTask/Handlers/TaskAcceptReqHandler.cs:15` 先 `AcceptTask()` 修改内存，`server/Components/GameTask/Handlers/TaskAcceptReqHandler.cs:19` 再保存，保存异常没有回滚内存。
-- 建议：
-  - 任务持久化结构不要用 MongoDB Document 表示的 `Dictionary<int, RoleTask>`；改为字符串 key、数组表示或显式 List/索引转换结构。
-  - `TaskAcceptReqHandler` 应在保存失败时回滚本次内存变更，或调整流程为可持久化后再对外表现为成功。
-  - 修复后重跑 TASK-02、TASK-04、TASK-05 和断线重登后的任务持久化验证。
+- 2026-07-15 修复与验证：
+  - `RoleTaskComponent.Tasks` 已直接替换为 `List<RoleTask>`；本地 `game.role_task_component` 的 4 条旧空字典文档按授权清理。
+  - 任务、奖励、战斗和相关事件业务保持同步：只修改游戏主线程内存并标脏，不在业务链路等待 MongoDB。
+  - Player 批量持久化按 60 秒、断线和正常停服触发，按组件集合分别 `BulkWrite`；脏版本只在对应快照成功后清除，失败数据留待后续批次重试。
+  - 任务提交先在内存中完整解析奖励并尝试加入背包，中途失败恢复背包快照；成功后把任务设为 State=2，并分别标脏任务与背包。当前明确不要求跨集合原子性，也不保留 RewardState 或奖励回执。
+  - `RoleBagComponent.Items` 改为 MongoDB `ArrayOfDocuments` 字典表示；本地 `game.role_bag_component` 的 4 条旧空字典文档按授权清理。
+  - 新增 Robot `task_persistence_test`。修复后验证重复接取错误、断线保存后恢复相同 `AcceptTime`、5 次击杀完成、进度恢复、任务奖励增量 `1001:1`、重复提交错误和领奖后恢复。野猪会随机掉落 `1001`，因此按提交前后增量断言。
+  - MongoDB 实测 `Tasks` 为数组、任务状态为 2、进度为 5；背包为整数键数组。在线脏玩家 Ctrl+C 停服时，最终批次保存了任务进度、经验和金币后正常退出。
 
 ## 未完成项
 
 - MAIL-03 正向邮件流程：缺少系统邮件预置数据或 Robot/测试工具场景，未执行。
-- TASK-04 任务进度：TASK-02 持久化失败阻断完整链路，未执行。
 - TASK-03 任务列表满分支：未构造 20 个进行中任务，未执行。
 - CHAT-01 世界频道：未执行。
 - MAP-02 到 MAP-04、BAG-02/03、双客户端和重连：未执行，已拆入分布测试 shard。

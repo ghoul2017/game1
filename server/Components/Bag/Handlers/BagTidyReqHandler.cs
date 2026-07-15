@@ -11,8 +11,8 @@ public sealed class BagTidyReqHandler : PlayerRpcMessageHandler<BagTidyReq, BagT
     protected override async Task ExecuteAsync(PlayerEntity player, BagTidyReq req, BagTidyAck res)
     {
         player.RoleBag.Tidy();
-        await player.RoleBag.SaveBagAsync();
 
         res.Items = player.RoleBag.Items.Values.Select(RoleBagHelper.ToInfo).ToList();
+        await Task.CompletedTask;
     }
 }

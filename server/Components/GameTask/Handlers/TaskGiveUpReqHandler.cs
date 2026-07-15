@@ -16,7 +16,6 @@ public sealed class TaskGiveUpReqHandler : PlayerRpcMessageHandler<TaskGiveUpReq
 
         if (result.Success)
         {
-            await player.RoleTask.SaveTasksAsync();
             Log.Info($"放弃任务 RoleId:{player.Id} TaskId:{req.TaskId}");
         }
         else
@@ -25,5 +24,6 @@ public sealed class TaskGiveUpReqHandler : PlayerRpcMessageHandler<TaskGiveUpReq
         }
 
         res.TaskId = req.TaskId;
+        await Task.CompletedTask;
     }
 }

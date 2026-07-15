@@ -15,6 +15,8 @@ namespace Robot
 
         private NetworkComponent? _network;
         private TcpSession? _session;
+        private string? _host;
+        private int _port;
 
         public bool IsConnected => _session != null && _session.IsConnected;
 
@@ -43,10 +45,20 @@ namespace Robot
         /// <summary>连接服务器</summary>
         public async Task ConnectAsync(string host, int port)
         {
+            _host = host;
+            _port = port;
             _network = new NetworkComponent();
             _session = await _network.ConnectAsync(host, port);
 
             Log.Info($"Robot 连接 {host}:{port}");
+        }
+
+        /// <summary>重新连接上一次使用的服务端</summary>
+        public Task ReconnectAsync()
+        {
+            if (_host == null)
+                throw new InvalidOperationException("尚未连接过服务端");
+            return ConnectAsync(_host, _port);
         }
 
         /// <summary>发送消息，不等待响应</summary>

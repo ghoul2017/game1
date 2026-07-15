@@ -38,10 +38,12 @@ var runner = new TestRunner
 // 注册测试场景
 if (scenarioName == null || scenarioName == "login_test")
     runner.AddScenario(new LoginTest());
+if (scenarioName == null || scenarioName == "task_persistence_test")
+    runner.AddScenario(new TaskPersistenceTest());
 
 if (runner.ScenarioCount == 0)
 {
-    Console.WriteLine("用法: robot [--host 127.0.0.1] [--port 9000] [--scenario login_test]");
+    Console.WriteLine("用法: robot [--host 127.0.0.1] [--port 9000] [--scenario login_test|task_persistence_test]");
     return 1;
 }
 

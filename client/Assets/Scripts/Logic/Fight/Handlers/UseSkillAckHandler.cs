@@ -7,16 +7,16 @@ namespace Client.Logic
 {
     public sealed class UseSkillAckHandler : NtfMessageHandler<UseSkillAck>
     {
-        protected override Task ExecuteAsync(TcpSession session, UseSkillAck ack)
+        protected override async Task ExecuteAsync(TcpSession session, UseSkillAck ack)
         {
             if (!string.IsNullOrEmpty(ack.ErrorMessage))
             {
                 ClientUiEventPublisher.ShowToast(ack.ErrorMessage);
-                return Task.CompletedTask;
+                return;
             }
 
             EventBus.Instance.Publish(new EventType.FightSkillCastedEvent { Ack = ack });
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

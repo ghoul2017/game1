@@ -7,7 +7,7 @@ namespace Client.Logic
 {
     public sealed class BagItemChangedNtfHandler : NtfMessageHandler<BagItemChangedNtf>
     {
-        protected override Task ExecuteAsync(TcpSession session, BagItemChangedNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, BagItemChangedNtf ntf)
         {
             var controller = BagController.Instance;
             if (ntf.RemovedIndices != null)
@@ -33,7 +33,7 @@ namespace Client.Logic
             }
 
             EventBus.Instance.Publish(new EventType.BagDataChangedEvent());
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

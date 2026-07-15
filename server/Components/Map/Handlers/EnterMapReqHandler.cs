@@ -11,7 +11,7 @@ public sealed class EnterMapReqHandler : PlayerRpcMessageHandler<EnterMapReq, En
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(EnterMapReqHandler));
 
-    protected override Task ExecuteAsync(PlayerEntity player, EnterMapReq req, EnterMapAck res)
+    protected override async Task ExecuteAsync(PlayerEntity player, EnterMapReq req, EnterMapAck res)
     {
         var currentPos = Context.Map.GetPlayerPosition(player.Id);
         if (currentPos != null)
@@ -23,14 +23,14 @@ public sealed class EnterMapReqHandler : PlayerRpcMessageHandler<EnterMapReq, En
             res.Y = py;
             Context.Map.NotifyCurrentMap(player.Id);
             Log.Info($"玩家重进地图 RoleId:{player.Id} MapId:{mapId}");
-            return Task.CompletedTask;
+            return;
         }
 
         var map = Context.Map.GetMap(req.MapCfgId, req.Line);
         if (map == null)
         {
             res.ErrorMessage = "目标地图不存在";
-            return Task.CompletedTask;
+            return;
         }
 
         int x = map.BirthX;
@@ -39,7 +39,7 @@ public sealed class EnterMapReqHandler : PlayerRpcMessageHandler<EnterMapReq, En
         if (!Context.Map.EnterMapAndNotify(req.MapCfgId, req.Line, x, y, player))
         {
             res.ErrorMessage = "目标地图不存在";
-            return Task.CompletedTask;
+            return;
         }
 
         res.MapCfgId = req.MapCfgId;
@@ -55,6 +55,6 @@ public sealed class EnterMapReqHandler : PlayerRpcMessageHandler<EnterMapReq, En
         });
 
         Log.Info($"玩家进入地图 RoleId:{player.Id} MapId:{req.MapCfgId}");
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }

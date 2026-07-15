@@ -51,7 +51,8 @@ public static class AppStart
         var networkComponent = Context.Server.AddComponent<NetworkComponent>();
         networkComponent.SessionDisconnected = OnSessionDisconnected;
         EventBus.Instance.Publish(new EventType.ServerInitEvent());
-        Context.Server.AddComponent<PlayerComponent>();
+        var playerComponent = Context.Server.AddComponent<PlayerComponent>();
+        playerComponent.StartBatchSave();
         Context.Server.AddComponent<ChatComponent>();
         Context.Server.AddComponent<MapComponent>();
 
@@ -69,7 +70,8 @@ public static class AppStart
         finally
         {
             // 停服清理
-            await Context.Players.SaveAllRolesAsync();
+            Context.Players.StopBatchSave();
+            await Context.Players.FlushAllPlayersAsync();
             Context.Map.RemoveAll();
         }
     }
@@ -93,7 +95,7 @@ public static class AppStart
             if (player != null)
             {
                 player.Online.Session = null;
-                _ = Context.Players.SaveRoleAsync(player);
+                Context.Players.QueueDetachedPlayerSave(player);
                 Context.Players.RemovePlayer(session.RoleId);
                 EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId, Reason = reason });
             }

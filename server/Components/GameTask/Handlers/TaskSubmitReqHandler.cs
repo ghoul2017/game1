@@ -12,11 +12,11 @@ public sealed class TaskSubmitReqHandler : PlayerRpcMessageHandler<TaskSubmitReq
 
     protected override async Task ExecuteAsync(PlayerEntity player, TaskSubmitReq req, TaskSubmitAck res)
     {
-        var result = await player.RoleTask.SubmitTaskAsync(player.Id, req.TaskId);
+        var result = player.RoleTask.SubmitTask(player.Id, req.TaskId);
 
         if (result.Success)
         {
-            await player.RoleTask.SaveTasksAsync();
+            res.Rewards = result.Rewards!;
             Log.Info($"提交任务领奖 RoleId:{player.Id} TaskId:{req.TaskId}");
         }
         else
@@ -25,5 +25,6 @@ public sealed class TaskSubmitReqHandler : PlayerRpcMessageHandler<TaskSubmitReq
         }
 
         res.TaskId = req.TaskId;
+        await Task.CompletedTask;
     }
 }

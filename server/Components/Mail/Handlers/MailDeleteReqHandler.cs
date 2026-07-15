@@ -12,10 +12,9 @@ public sealed class MailDeleteReqHandler : PlayerRpcMessageHandler<MailDeleteReq
         var result = player.RoleMail.DeleteMails(req.MailIds);
 
         if (result.Changed)
-        {
-            await player.RoleMail.SaveMailsAsync();
-        }
+            player.RoleMail.MarkDirty();
 
         res.DeletedMailIds = result.DeletedIds;
+        await Task.CompletedTask;
     }
 }

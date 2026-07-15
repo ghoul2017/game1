@@ -10,7 +10,7 @@ public sealed class ChatReqHandler : PlayerRpcMessageHandler<ChatReq, ChatAck>
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(ChatReqHandler));
 
-    protected override Task ExecuteAsync(PlayerEntity player, ChatReq req, ChatAck res)
+    protected override async Task ExecuteAsync(PlayerEntity player, ChatReq req, ChatAck res)
     {
         var (errorMessage, ntf, targetRoleId) = Context.Chat.HandleChat(
             player.Id, player.RoleData.Name, req.Channel, req.Content, req.TargetName);
@@ -32,6 +32,6 @@ public sealed class ChatReqHandler : PlayerRpcMessageHandler<ChatReq, ChatAck>
             Log.Debug($"聊天 RoleId:{player.Id} Channel:{req.Channel}");
         }
 
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }

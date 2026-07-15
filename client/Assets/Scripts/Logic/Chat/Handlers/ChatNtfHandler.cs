@@ -7,13 +7,13 @@ namespace Client.Logic
 {
     public sealed class ChatNtfHandler : NtfMessageHandler<ChatNtf>
     {
-        protected override Task ExecuteAsync(TcpSession session, ChatNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, ChatNtf ntf)
         {
             string line = string.Format("[{0}][{1}] {2}",
                 ntf.Channel == ChatChannel.World ? "世界" : "私聊",
                 ntf.SenderName, ntf.Content);
             AppendLine(line);
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
 
         private static void AppendLine(string line)

@@ -10,13 +10,13 @@ public sealed class ChangeMapReqHandler : PlayerRpcMessageHandler<ChangeMapReq, 
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(ChangeMapReqHandler));
 
-    protected override Task ExecuteAsync(PlayerEntity player, ChangeMapReq req, ChangeMapAck res)
+    protected override async Task ExecuteAsync(PlayerEntity player, ChangeMapReq req, ChangeMapAck res)
     {
         var targetMap = Context.Map.GetMap(req.TargetMapCfgId, req.TargetLine);
         if (targetMap == null)
         {
             res.ErrorMessage = "目标地图不存在";
-            return Task.CompletedTask;
+            return;
         }
 
         int x = req.X > 0 ? req.X : targetMap.BirthX;
@@ -25,7 +25,7 @@ public sealed class ChangeMapReqHandler : PlayerRpcMessageHandler<ChangeMapReq, 
         if (!Context.Map.ChangeMapAndNotify(req.TargetMapCfgId, req.TargetLine, x, y, player))
         {
             res.ErrorMessage = "目标地图不存在";
-            return Task.CompletedTask;
+            return;
         }
 
         res.MapCfgId = req.TargetMapCfgId;
@@ -34,6 +34,6 @@ public sealed class ChangeMapReqHandler : PlayerRpcMessageHandler<ChangeMapReq, 
         res.Y = y;
 
         Log.Info($"玩家切图 RoleId:{player.Id} → MapId:{req.TargetMapCfgId}");
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }

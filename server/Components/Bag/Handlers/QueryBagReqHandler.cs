@@ -8,10 +8,10 @@ namespace Game.Components.Bag;
 
 public sealed class QueryBagReqHandler : PlayerRpcMessageHandler<QueryBagReq, QueryBagAck>
 {
-    protected override Task ExecuteAsync(PlayerEntity player, QueryBagReq req, QueryBagAck res)
+    protected override async Task ExecuteAsync(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
         res.Capacity = player.RoleBag.Capacity;
         res.Items = player.RoleBag.Items.Values.Select(RoleBagHelper.ToInfo).ToList();
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }

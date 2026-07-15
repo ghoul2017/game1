@@ -72,6 +72,24 @@ public class MongoDb
         await collection.ReplaceOneAsync(filter, doc, new ReplaceOptions { IsUpsert = true });
     }
 
+    public async Task UpdateBatchAsync(Type entityType, IReadOnlyList<BsonDocument> documents)
+    {
+        if (documents.Count == 0)
+            return;
+        if (_database == null)
+            throw new InvalidOperationException("MongoDb 未初始化");
+
+        var collection = _database.GetCollection<BsonDocument>(ConvertToUnderscore(entityType.Name));
+        var writes = new List<WriteModel<BsonDocument>>(documents.Count);
+        foreach (var document in documents)
+        {
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", document["_id"]);
+            writes.Add(new ReplaceOneModel<BsonDocument>(filter, document) { IsUpsert = true });
+        }
+
+        await collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false });
+    }
+
     public async Task DeleteAsync<T>(long id) where T : class, IEntity
     {
         var collection = GetEntityCollection<T>();

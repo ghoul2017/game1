@@ -13,7 +13,7 @@ public sealed class MailGetItemReqHandler : PlayerRpcMessageHandler<MailGetItemR
 
     protected override async Task ExecuteAsync(PlayerEntity player, MailGetItemReq req, MailGetItemAck res)
     {
-        var result = await player.RoleMail.ClaimAttachmentsAsync(req.MailIds);
+        var result = player.RoleMail.ClaimAttachments(req.MailIds);
 
         res.ClaimedMailIds = result.ClaimedIds;
         res.Items = result.Items.Select(a => new MailAttachmentInfo
@@ -26,5 +26,6 @@ public sealed class MailGetItemReqHandler : PlayerRpcMessageHandler<MailGetItemR
         {
             Log.Info($"领取邮件附件 RoleId:{player.Id} Count:{result.Items.Count}");
         }
+        await Task.CompletedTask;
     }
 }

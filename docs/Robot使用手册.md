@@ -25,13 +25,14 @@ Robot 是独立于 Unity 的命令行测试工具，通过 TCP 连接服务端�
 robot/
 ├── Robot.csproj         # .NET 8 Console，ProjectReference 引用 shared/ + Logic/
 ├── Program.cs           # 入口，命令行解析，注册测试场景
-├── RobotSession.cs      # NetworkComponent + TcpSession 薄包装（CallAsync / WaitForAsync）
+├── RobotSession.cs      # NetworkComponent + TcpSession 薄包装（CallAsync / WaitForAsync / ReconnectAsync）
 ├── TestRunner.cs        # 加载场景 → 执行 → 收集 PASS/FAIL 结果
 ├── TestScenario.cs      # 测试场景抽象基类
 ├── Assertions.cs        # 断言工具（Equal / True / NotNull / Fail）
 ├── Handlers/
 │   └── RobotClientUIEventHandler.cs # 客户端 UI 事件处理器（控制台输出）
-└── LoginTest.cs         # 示例：登录流程测试
+├── LoginTest.cs         # 登录冒烟
+└── TaskPersistenceTest.cs # 接取、重复请求、击杀进度和两次重登恢复
 ```
 
 ## 快速开始
@@ -55,7 +56,10 @@ Rider 调试直接启动 `bin/Server` 时使用同一套输出配置和表。需
 
 ```bash
 dotnet run --project robot/Robot.csproj -- --scenario login_test
+dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 ```
+
+`task_persistence_test` 每次使用独立的 `robot_task_<时间戳>` 账号和角色，验证任务 1 的接取、重复接取、断线批次保存、重新登录、击杀 5 只野猪、进度恢复、提交领奖、重复提交和领奖后恢复。断线后会等待服务端异步保存批次再重新连接。野猪可能随机掉落任务奖励同款物品，因此奖励断言比较提交前后的数量增量，而不是假设背包初始总数为 0。该场景会在 MongoDB 创建账号及角色组件并改变怪物运行状态，只能在已授权测试环境执行；测试结束后按环境的数据保留策略清理并报告。
 
 输出示例：
 ```
@@ -86,6 +90,7 @@ dotnet run --project robot/Robot.csproj
 
 # 运行指定场景
 dotnet run --project robot/Robot.csproj -- --scenario login_test
+dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 
 # 连接远程服务端
 dotnet run --project robot/Robot.csproj -- --host 192.168.1.100 --port 9000

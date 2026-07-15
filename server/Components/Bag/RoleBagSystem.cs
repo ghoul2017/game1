@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Game.Database;
+using Game.Components.Player;
 using Shared.Core;
 using Shared.Core.Log;
 
@@ -20,13 +19,6 @@ public static class RoleBagSystem
     public const int EffectMp = 2;
     public const int EffectRevive = 5;
 
-
-    /// <summary>保存背包</summary>
-    public static async Task SaveBagAsync(this RoleBagComponent self)
-    {
-        await MongoDb.Instance.UpdateAsync(self);
-    }
-
     /// <summary>添加物品（自动找空格或叠加）</summary>
     public static AddItemResult AddItem(this RoleBagComponent self, int configId, int count, int maxStack = 999)
     {
@@ -34,6 +26,7 @@ public static class RoleBagSystem
             return AddItemResult.Fail("参数错误");
 
         var remaining = count;
+        var changed = false;
 
         // 先尝试叠加到已有同类物品
         foreach (var item in self.Items.Values)
@@ -43,6 +36,7 @@ public static class RoleBagSystem
                 var canAdd = Math.Min(remaining, maxStack - item.Count);
                 item.Count += canAdd;
                 remaining -= canAdd;
+                changed = true;
                 if (remaining <= 0)
                     break;
             }
@@ -53,7 +47,11 @@ public static class RoleBagSystem
         {
             var emptyIndex = FindEmptyIndex(self);
             if (emptyIndex < 0)
+            {
+                if (changed)
+                    self.MarkDirty();
                 return AddItemResult.Partial(count - remaining, "背包已满");
+            }
 
             var addCount = Math.Min(remaining, maxStack);
             var newItem = new BagItem
@@ -67,8 +65,11 @@ public static class RoleBagSystem
             };
             self.Items[emptyIndex] = newItem;
             remaining -= addCount;
+            changed = true;
         }
 
+        if (changed)
+            self.MarkDirty();
         return AddItemResult.Ok(count);
     }
 
@@ -106,6 +107,7 @@ public static class RoleBagSystem
             self.Items.Remove(key);
         }
 
+        self.MarkDirty();
         return true;
     }
 
@@ -126,6 +128,7 @@ public static class RoleBagSystem
             item.Count -= count;
         }
 
+        self.MarkDirty();
         return true;
     }
 
@@ -151,6 +154,9 @@ public static class RoleBagSystem
     /// <summary>整理背包（按配置ID排序，紧凑排列）</summary>
     public static void Tidy(this RoleBagComponent self)
     {
+        if (self.Items.Count == 0)
+            return;
+
         var grouped = self.Items.Values
             .GroupBy(i => i.ConfigId)
             .OrderBy(g => g.Key)
@@ -172,6 +178,7 @@ public static class RoleBagSystem
             };
             index++;
         }
+        self.MarkDirty();
     }
 
     /// <summary>交换两个格子的物品</summary>
@@ -186,6 +193,8 @@ public static class RoleBagSystem
         if (item1 != null) { item1.Index = index2; self.Items[index2] = item1; }
         if (item2 != null) { item2.Index = index1; self.Items[index1] = item2; }
 
+        if (item1 != null || item2 != null)
+            self.MarkDirty();
         return true;
     }
 
@@ -211,6 +220,7 @@ public static class RoleBagSystem
             item.Count -= count;
         }
 
+        self.MarkDirty();
         return UseItemResult.Ok(item.ConfigId, count);
     }
 

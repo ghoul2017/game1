@@ -1,14 +1,11 @@
 using Game.Components.Bag;
 using Game.Components.Player;
-using Game.Database;
 using Shared.Common.Protos;
 using Shared.Core;
 using Shared.Core.Log;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Game.Components.Mail;
 
@@ -20,33 +17,6 @@ public static class RoleMailSystem
     private static readonly ILog Log = LogManager.GetLogger(nameof(RoleMailSystem));
 
     private const int MaxMailCount = 100;
-
-    /// <summary>加载角色邮件列表</summary>
-    public static async Task<RoleMailComponent> LoadMailsAsync(this RoleMailComponent self, long roleId)
-    {
-        var mailList = await MongoDb.Instance.LoadAsync<RoleMailComponent>(roleId);
-        if (mailList == null)
-        {
-            mailList = new RoleMailComponent { Id = roleId };
-            await MongoDb.Instance.InsertAsync(mailList);
-            Log.Info($"创建新邮件列表 RoleId:{roleId}");
-        }
-
-        // 把数据库加载的数据拷贝到当前 Component
-        self.Id = mailList.Id;
-        self.Mails = mailList.Mails;
-
-        // 清理过期邮件
-        CleanExpired(self);
-
-        return self;
-    }
-
-    /// <summary>保存邮件列表</summary>
-    public static async Task SaveMailsAsync(this RoleMailComponent self)
-    {
-        await MongoDb.Instance.UpdateAsync(self);
-    }
 
     /// <summary>发送邮件给指定角色</summary>
     public static MailResult SendMail(this RoleMailComponent self, string sender, string title, string content,
@@ -69,25 +39,9 @@ public static class RoleMailSystem
         };
 
         self.Mails[mail.Id] = mail;
+        self.MarkDirty();
 
         return MailResult.Ok(mail.Id);
-    }
-
-    /// <summary>发送系统邮件（给在线玩家实时推送通知）</summary>
-    public static async Task SendSystemMailAsync(this RoleMailComponent self, long roleId, string title, string content,
-        List<MailAttachment>? attachments = null, long expireTime = 0)
-    {
-        var mailList = await self.LoadMailsAsync(roleId);
-        var result = self.SendMail("系统", title, content, attachments, expireTime);
-        if (result.Success)
-        {
-            await self.SaveMailsAsync();
-
-            var ntf = new MailNewNtf { Mail = self.ToMailInfo(self.Mails[result.MailId]) };
-            Context.Players.SendToPlayer(roleId, ntf);
-
-            Log.Info($"系统邮件已发送 RoleId:{roleId} Title:{title}");
-        }
     }
 
     /// <summary>获取邮件列表（按发送时间倒序）</summary>
@@ -117,8 +71,12 @@ public static class RoleMailSystem
     }
 
     /// <summary>领取附件（将物品加入背包）</summary>
-    public static async Task<ClaimResult> ClaimAttachmentsAsync(this RoleMailComponent self, List<long> mailIds)
+    public static ClaimResult ClaimAttachments(this RoleMailComponent self, List<long> mailIds)
     {
+        var player = Context.Players.GetByRoleId(self.Id);
+        if (player == null)
+            return ClaimResult.None();
+
         var claimedIds = new List<long>();
         var allItems = new List<MailAttachment>();
 
@@ -137,17 +95,12 @@ public static class RoleMailSystem
         if (claimedIds.Count == 0)
             return ClaimResult.None();
 
-        var player = Context.Players.GetByRoleId(self.Id);
-        if (player == null)
-            return ClaimResult.None();
-
         foreach (var att in allItems)
         {
             player.RoleBag.AddItem(att.ConfigId, att.Count);
         }
 
-        await player.RoleBag.SaveBagAsync();
-        await self.SaveMailsAsync();
+        self.MarkDirty();
 
         return ClaimResult.Ok(claimedIds, allItems);
     }
@@ -198,20 +151,6 @@ public static class RoleMailSystem
         };
     }
 
-    /// <summary>清理过期邮件</summary>
-    private static void CleanExpired(RoleMailComponent self)
-    {
-        var expired = self.Mails.Values.Where(m => m.IsExpired).ToList();
-        if (expired.Count == 0)
-            return;
-
-        foreach (var mail in expired)
-        {
-            self.Mails.Remove(mail.Id);
-        }
-
-        Log.Info($"清理过期邮件 RoleId:{self.Id} Count:{expired.Count}");
-    }
 }
 
 

@@ -7,7 +7,7 @@ namespace Client.Logic
 {
     public sealed class SystemChatNtfHandler : NtfMessageHandler<SystemChatNtf>
     {
-        protected override Task ExecuteAsync(TcpSession session, SystemChatNtf ntf)
+        protected override async Task ExecuteAsync(TcpSession session, SystemChatNtf ntf)
         {
             var controller = ChatController.Instance;
             controller.ChatLines.Add(new ChatLineData
@@ -19,7 +19,7 @@ namespace Client.Logic
                 controller.ChatLines.RemoveAt(0);
 
             EventBus.Instance.Publish(new EventType.ChatMessageAddedEvent());
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

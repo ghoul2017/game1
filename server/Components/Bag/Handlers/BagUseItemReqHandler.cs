@@ -40,11 +40,10 @@ public sealed class BagUseItemReqHandler : PlayerRpcMessageHandler<BagUseItemReq
             return;
         }
 
-        await player.RoleBag.SaveBagAsync();
-
-        var effectResult = await ItemEffectSystem.ApplyItemEffectAsync(player.Id, configId);
+        var effectResult = ItemEffectSystem.ApplyItemEffect(player.Id, configId);
         res.ConfigId = configId;
 
         Log.Info($"使用物品 RoleId:{player.Id} ConfigId:{configId} Count:{req.Count} EffectType:{effectResult.EffectType}");
+        await Task.CompletedTask;
     }
 }

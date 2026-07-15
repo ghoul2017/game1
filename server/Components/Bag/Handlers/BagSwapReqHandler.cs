@@ -10,6 +10,6 @@ public sealed class BagSwapReqHandler : PlayerRpcMessageHandler<BagSwapReq, BagS
     protected override async Task ExecuteAsync(PlayerEntity player, BagSwapReq req, BagSwapAck res)
     {
         player.RoleBag.Swap(req.Index1, req.Index2);
-        await player.RoleBag.SaveBagAsync();
+        await Task.CompletedTask;
     }
 }
