@@ -35,7 +35,7 @@
 
 ### 2.1 必要依赖
 
-- Unity 2022.3.62f3，用于打开 `client/` 并进入 PlayMode。
+- Unity 2022.3.62f3c1，用于打开 `client/` 并进入 PlayMode；版本权威文件为 `client/ProjectSettings/ProjectVersion.txt`。
 - .NET 8 SDK，用于构建和运行 `server/`、`robot/`、`tools/`。
 - MongoDB，默认连接 `mongodb://127.0.0.1:27017`，数据库名 `game`。
 - 服务端端口默认 `9000`；源配置为 `server/appsettings.json`，构建后复制为 `bin/appsettings.json`。

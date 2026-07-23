@@ -14,7 +14,7 @@
 ## 权威入口
 
 - Unity 项目路径：`client/`
-- Unity 版本：`2022.3.62f3`
+- Unity 版本：`2022.3.62f3c1`，以 `client/ProjectSettings/ProjectVersion.txt` 为准
 - Unity 包：`client/Packages/manifest.json` 中的 `io.github.hatayama.uloopmcp`，当前版本 `2.1.4`
 - Unity 包来源：`client/Packages/manifest.json` 与 `client/ProjectSettings/PackageManagerSettings.asset` 中的 OpenUPM `https://package.openupm.com`
 - CLI 入口：`tools/unity/uloop.sh`
@@ -49,7 +49,7 @@ tools/unity/uloop.sh get-logs --log-type Error --max-count 20
 本项目的 uLoop 安装依赖以下本机条件：
 
 - 已安装 Unity Hub。
-- 已安装 Unity Editor `2022.3.62f3`。
+- 已安装“权威入口”所列版本的 Unity Editor。
 - 已安装 Node.js，并能执行 `npx`。
 - 本机可以访问 OpenUPM 和 npm registry。
 

@@ -5,6 +5,7 @@ obj/
 
 # Unity auto-generated IDE files
 *.csproj
+/client.sln
 
 # Unity IDE
 .vs/
