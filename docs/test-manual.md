@@ -117,7 +117,7 @@ Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tabl
 | 2005 | 复活卷轴 | 消耗品 |
 | 4001 | 野猪獠牙 | 任务材料 |
 
-注意：`ItemEffectConfig` 的主键是 `Id`，而 `ItemEffectSystem` 当前按物品 `ConfigId` 读取效果配置。测试物品使用时，需要分别观察“物品是否扣除”和“HP/MP/复活效果是否实际生效”，不要只用物品扣除推断效果成功。
+注意：道具使用功能尚未完成。`ItemEffectConfig` 的主键是 `Id`，而 `ItemEffectSystem` 当前按物品 `ConfigId` 读取效果配置；请求 `Count` 与效果次数的语义也未定义。完成独立功能任务前，不把物品扣除视为道具使用功能通过。
 
 ## 4. 自动化冒烟测试
 
@@ -480,9 +480,11 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 - 客户端 Toast 显示 `整理完成`。
 - 再次查询背包时物品顺序保持整理后的结果。
 
-### BAG-03 使用消耗品
+### BAG-03 使用消耗品（功能未完成）
 
 前置条件：背包中有 `2001-2999` 范围内消耗品。
+
+当前只保留了请求、扣除和部分效果处理骨架，不作为已实现功能验收。完成独立功能任务后再执行以下用例。
 
 步骤：
 
@@ -495,8 +497,8 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 - 非消耗品返回 `物品使用失败`。
 - 物品不存在返回 `物品不存在`。
 - 数量不足返回 `物品数量不足`。
-- 消耗品成功时物品数量扣减，并显示 `使用了 <物品名>`。
-- HP/MP/复活效果需另行观察 `HpChangedNtf`、`MpChangedNtf` 或角色状态；当前效果配置读取存在主键注意事项，见 3.4。
+- 消耗品成功时按已确认的请求数量语义扣减物品，并显示 `使用了 <物品名>`。
+- HP/MP/复活效果与物品扣除次数一致；效果配置缺失或语义未确认时不得只扣物品后返回成功。
 
 ### BAG-04 背包交换协议
 
@@ -749,7 +751,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 - 聊天 UI 当前没有私聊目标输入框，正向私聊只能通过协议测试。
 - 背包服务端容量是 100，`BagPanel` 当前只绘制 64 个可见格子。
 - 服务端有 `BagSwapReq`，但当前背包 UI 没有交换操作入口。
-- `ItemEffectSystem` 按物品 ConfigId 读取 `ItemEffectConfig`，而配置表主键是效果 Id；测试消耗品效果时需要单独确认效果通知。
+- 道具使用功能尚未完成：效果配置关联和请求数量语义都需在独立功能任务中补齐，当前不作为已实现功能验收。
 - 任务配置中的前置任务、最低等级、经验和金币奖励字段当前没有完整接入提交发奖流程；提交主要发放 `RewardItems`。
 - 怪物 AI 已知局限包括单目标仇恨、随机巡逻、攻击后回 Idle、无脱战回血。
 - 地图移动当前只做边界限制，没有碰撞和寻路。
@@ -765,7 +767,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 6. 跑 `MAP-01` 到 `MAP-04`。
 7. 跑 `BAG-01`、`TASK-01`、`CHAT-01`、`MAIL-01`。
 8. 有双客户端条件时跑 `USER-03`、`MAP-05`、`CHAT-01` 广播验证。
-9. 有测试数据条件时跑背包使用、邮件附件、任务完成和怪物掉落。
+9. 道具使用功能完成后再跑背包使用；有测试数据条件时跑邮件附件、任务完成和怪物掉落。
 
 ## 16. 停止分支和最终报告
 
