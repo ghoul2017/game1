@@ -18,7 +18,7 @@ game1 是一个 2.5D RPG 项目，包含 Unity 客户端、.NET 8 权威服务�
 - `server/`：游戏服务端
 - `robot/`：协议级自动化测试
 - `tools/`：配置和工程工具
-- `docs/`：测试、Robot 和遗留问题文档
+- `docs/`：缺陷、计划任务、工作记录、测试和 Robot 文档
 
 ## 快速启动
 
@@ -45,4 +45,7 @@ Robot 会连接本地服务端，登录时可能自动注册账号并写入 Mong
 
 - [当前功能测试文档](docs/test-manual.md)
 - [Robot 使用手册](docs/Robot使用手册.md)
-- [遗留问题](docs/遗留问题.md)
+- [缺陷列表](docs/缺陷列表.md)
+- [计划任务](docs/计划任务.md)
+- [测试列表](docs/测试列表.md)
+- [工作记录](docs/工作记录/README.md)
