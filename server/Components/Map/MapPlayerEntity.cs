@@ -30,10 +30,12 @@ public class MapPlayerEntity : MapObjectEntity
         entity.Line = line;
         entity.X = x;
         entity.Y = y;
-        entity.SetName(playerEntity.RoleData.Name);
+        var roleDataComponent = playerEntity.GetComponent<RoleDataComponent>();
+        var attributeComponent = playerEntity.GetComponent<RoleAttributeComponent>();
+        entity.SetName(roleDataComponent.Name);
         entity.PlayerEntity = playerEntity;
         var fight = entity.AddComponent<FightUnitComponent>();
-        fight.Attr = playerEntity.RoleAttribute.ToFightAttribute();
+        fight.Attr = attributeComponent.ToFightAttribute();
         fight.AddSkill(new Skill(1));
         return entity;
     }

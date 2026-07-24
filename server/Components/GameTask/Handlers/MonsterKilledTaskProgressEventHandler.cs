@@ -14,10 +14,11 @@ public sealed class MonsterKilledTaskProgressEventHandler : ISyncEventHandler<Ev
             return;
         }
 
-        var changed = player.RoleTask.UpdateProgress(TaskGoalType.KillMonster, e.MonsterCfgId, 1);
+        var taskComponent = player.GetComponent<RoleTaskComponent>();
+        var changed = taskComponent.UpdateProgress(TaskGoalType.KillMonster, e.MonsterCfgId, 1);
         if (changed.Count > 0)
         {
-            player.RoleTask.NotifyTaskChanged(e.KillerId, changed);
+            taskComponent.NotifyTaskChanged(e.KillerId, changed);
         }
     }
 }

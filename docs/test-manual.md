@@ -117,7 +117,7 @@ Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tabl
 | 2005 | 复活卷轴 | 消耗品 |
 | 4001 | 野猪獠牙 | 任务材料 |
 
-注意：道具使用功能尚未完成。`ItemEffectConfig` 的主键是 `Id`，而 `ItemEffectSystem` 当前按物品 `ConfigId` 读取效果配置；请求 `Count` 与效果次数的语义也未定义。完成独立功能任务前，不把物品扣除视为道具使用功能通过。
+注意：道具使用功能尚未完成。`ItemEffectConfig` 的主键是 `Id`，而 `ItemEffectHelper` 当前按物品 `ConfigId` 读取效果配置；请求 `Count` 与效果次数的语义也未定义。完成独立功能任务前，不把物品扣除视为道具使用功能通过。
 
 ## 4. 自动化冒烟测试
 

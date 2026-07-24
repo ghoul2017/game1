@@ -26,8 +26,8 @@ ChatComponent 挂载在 `Context.Server` 上，只维护世界聊天冷却记录
 | 文件 | 职责 |
 |------|------|
 | `ChatComponent.cs` | Module 级 Component，世界聊天冷却记录 |
-| `ChatSystem.cs` | 聊天逻辑扩展方法 |
-| `Handlers/ChatReqHandler.cs` | ChatReq 消息处理 |
+| `ChatSystem.cs` | 系统广播和冷却清理组件扩展 |
+| `Handlers/ChatReqHandler.cs` | ChatReq 校验、频道业务和消息分发 |
 | `Handlers/PlayerOfflineCleanChatCooldownEventHandler.cs` | PlayerOffline → 清理聊天冷却 |
 
 ## 聊天处理
@@ -40,7 +40,7 @@ ChatReq(channel, content, targetName)
   ├── 3. 按频道分发：
   │     ├── World：检查冷却 → 更新冷却时间 → 构造 ChatNtf → Broadcast
   │     └── Private：校验目标名非空且不是自己 → 查找目标 → 构造 ChatNtf → SendToPlayer
-  └── 4. 返回 (errorMessage, ntf, targetRoleId)
+  └── 4. 直接填充 ChatAck，成功时完成消息分发
 ```
 
 ## 跨模块协作

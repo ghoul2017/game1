@@ -14,21 +14,8 @@ public sealed class MailGetItemReqHandler : PlayerRpcMessageHandler<MailGetItemR
 
     protected override async Task ExecuteAsync(PlayerEntity player, MailGetItemReq req, MailGetItemAck res)
     {
-        RoleMailComponent? mailComponent = player.GetComponent<RoleMailComponent>();
-        if (mailComponent == null)
-        {
-            res.ErrorMessage = "邮件数据未初始化";
-            Log.Error($"邮件组件未初始化 RoleId:{player.Id}");
-            return;
-        }
-
-        RoleBagComponent? bagComponent = player.GetComponent<RoleBagComponent>();
-        if (bagComponent == null)
-        {
-            res.ErrorMessage = "背包数据未初始化";
-            Log.Error($"背包组件未初始化 RoleId:{player.Id}");
-            return;
-        }
+        var mailComponent = player.GetComponent<RoleMailComponent>();
+        var bagComponent = player.GetComponent<RoleBagComponent>();
 
         var attachmentCount = 0;
 

@@ -221,9 +221,9 @@ public class GameMap
         Log.Info($"地图 {CfgId} AI 定时器已停止");
     }
 
-    /// <summary>AI更新入口（由 GameTimer 每秒触发，委托给 MonsterSystem）</summary>
+    /// <summary>AI更新入口（由 GameTimer 每秒触发，委托给 MonsterHelper）</summary>
     private void UpdateAllMonsters()
     {
-        MonsterSystem.UpdateAllMonsters(this);
+        MonsterHelper.UpdateAllMonsters(this);
     }
 }

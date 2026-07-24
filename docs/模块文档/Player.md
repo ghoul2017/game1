@@ -10,6 +10,8 @@ Player 模块管理在线玩家的运行时聚合 `PlayerEntity`、会话绑定�
 
 `PlayerEntity` 在选角入场时创建、下线后从在线索引移除。在线期间以内存对象为业务权威：任务、战斗奖励、背包和邮件操作同步修改内存并调用 `MarkDirty()`，业务方法不等待数据库。
 
+业务实体不提供 `RoleData`、`RoleAttribute`、`RoleBag`、`RoleMail`、`RoleTask` 或 `Online` 快捷属性；调用方通过必需语义的 `GetComponent<T>()` 获取组件。`Context.Players` 等 Module 级全局入口保留。
+
 服务端从游戏主线程启动网络监听和会话接收，异步网络链路通过 `SynchronizationContext` 自动恢复到 `GameSynchronizationContext`；`GameTimer` 的线程池回调则显式投递回该上下文。因此玩家业务、断线清理、脏版本更新和定时器业务回调在游戏主线程串行执行，无需额外的网络二次调度。
 
 `PlayerComponent` 维护三套在线索引：

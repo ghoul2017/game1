@@ -17,11 +17,6 @@ public sealed class LoginReqHandler : RpcMessageHandler<LoginReq, LoginRes>
     protected override async Task ExecuteAsync(TcpSession session, LoginReq req, LoginRes res)
     {
         var userComponent = Context.Server.GetComponent<UserComponent>();
-        if (userComponent == null)
-        {
-            res.ErrorMessage = "用户模块未初始化";
-            return;
-        }
 
         var username = req.Username;
         Log.Info($"登录请求 Session:{session.SessionId} User:{username}");

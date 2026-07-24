@@ -22,8 +22,8 @@ public static class PlayerSystem
     /// <summary>玩家上线</summary>
     public static void AddPlayer(this PlayerComponent self, PlayerEntity player)
     {
-        var online = player.Online;
-        var roleData = player.RoleData;
+        var online = player.GetComponent<PlayerOnlineComponent>();
+        var roleData = player.GetComponent<RoleDataComponent>();
 
         if (self.Players.TryGetValue(player.Id, out var oldPlayer))
         {
@@ -53,8 +53,8 @@ public static class PlayerSystem
     /// <summary>玩家下线（内部）</summary>
     public static void RemovePlayer(this PlayerComponent self, PlayerEntity player)
     {
-        var online = player.Online;
-        var roleData = player.RoleData;
+        var online = player.GetComponent<PlayerOnlineComponent>();
+        var roleData = player.GetComponent<RoleDataComponent>();
 
         self.Players.Remove(player.Id);
         self.PlayersByUserId.Remove(online.UserId);
@@ -97,14 +97,14 @@ public static class PlayerSystem
     {
         foreach (var player in self.Players.Values)
         {
-            player.Online.Session?.Send(msg);
+            player.GetComponent<PlayerOnlineComponent>().Session?.Send(msg);
         }
     }
 
     public static void SendToPlayer(this PlayerComponent self, long roleId, IMessage msg)
     {
         var player = self.GetByRoleId(roleId);
-        player?.Online.Session?.Send(msg);
+        player?.GetComponent<PlayerOnlineComponent>().Session?.Send(msg);
     }
 
     /// <summary>进入游戏：创建 PlayerEntity + 加载角色数据 + 绑定会话 + 生成 Token + 发布上线事件</summary>
@@ -134,7 +134,7 @@ public static class PlayerSystem
 
         // 绑定会话
         session.RoleId = roleId;
-        player.Online.Session = session;
+        player.GetComponent<PlayerOnlineComponent>().Session = session;
 
         // 生成重连Token（含roleId）并写入角色
         var token = TokenSigner.Instance.Generate(userId, roleId);
@@ -192,10 +192,10 @@ public static class PlayerSystem
         if (player == null)
             return;
 
-        var roleAttr = player.RoleAttribute;
+        var roleAttr = player.GetComponent<RoleAttributeComponent>();
         roleAttr.Exp += exp;
 
-        int newLevel = CalculateLevel(roleAttr.Exp);
+        int newLevel = PlayerHelper.CalculateLevel(roleAttr.Exp);
         var leveledUp = newLevel > roleAttr.Level;
         if (leveledUp)
         {
@@ -229,7 +229,7 @@ public static class PlayerSystem
         if (player == null)
             return;
 
-        var roleAttr = player.RoleAttribute;
+        var roleAttr = player.GetComponent<RoleAttributeComponent>();
         roleAttr.Gold += gold;
         roleAttr.MarkDirty();
 
@@ -244,39 +244,29 @@ public static class PlayerSystem
         if (player == null)
             return;
 
-        var result = player.RoleBag.AddItem(configId, count);
-        if (result.Success)
-        {
-            self.SendToPlayer(roleId, new ItemGainNtf
-            {
-                ConfigId = configId,
-                Count = result.AddedCount,
-            });
-            EventBus.Instance.Publish(new EventType.PlayerItemGainedEvent { RoleId = roleId, ConfigId = configId, Count = result.AddedCount });
-            Log.Info($"发放物品 RoleId:{roleId} ConfigId:{configId} Count:{result.AddedCount}");
-        }
-        else
-        {
-            Log.Warn($"背包已满，无法发放物品 RoleId:{roleId} ConfigId:{configId}");
-        }
-    }
+        var bagComponent = player.GetComponent<RoleBagComponent>();
 
-    /// <summary>根据经验计算等级（每级需100*level点经验）</summary>
-    public static int CalculateLevel(int exp)
-    {
-        int level = 1;
-        int totalExp = 0;
-        while (true)
+        if (!bagComponent.CanAddItems([configId], [count], out var errorMessage))
         {
-            int required = 100 * level;
-            if (totalExp + required > exp)
-                break;
-            totalExp += required;
-            level++;
-            if (level >= 100)
-                break;
+            Log.Warn($"无法发放物品 RoleId:{roleId} ConfigId:{configId} Count:{count} {errorMessage}");
+            return;
         }
-        return level;
+
+        var addedCount = bagComponent.AddItem(configId, count);
+        if (addedCount != count)
+        {
+            var message = $"物品预检通过后添加失败 RoleId:{roleId} ConfigId:{configId} Count:{count} AddedCount:{addedCount}";
+            Log.Error(message);
+            throw new InvalidOperationException(message);
+        }
+
+        self.SendToPlayer(roleId, new ItemGainNtf
+        {
+            ConfigId = configId,
+            Count = addedCount,
+        });
+        EventBus.Instance.Publish(new EventType.PlayerItemGainedEvent { RoleId = roleId, ConfigId = configId, Count = addedCount });
+        Log.Info($"发放物品 RoleId:{roleId} ConfigId:{configId} Count:{addedCount}");
     }
 
 }

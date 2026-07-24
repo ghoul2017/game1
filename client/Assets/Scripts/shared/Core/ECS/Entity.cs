@@ -53,10 +53,23 @@ namespace Shared.Core.ECS
             _components.Add(type, component);
         }
 
-        public T? GetComponent<T>() where T : Component
+        /// <summary>获取必需组件；缺失表示实体状态违反约束。</summary>
+        public T GetComponent<T>() where T : Component
         {
             Type type = typeof(T);
-            return _components.GetValueOrDefault(type) as T;
+            if (_components.TryGetValue(type, out var component) && component is T typedComponent)
+            {
+                return typedComponent;
+            }
+
+            throw new InvalidOperationException(
+                $"{GetType().Name} Id:{Id} 缺少必需组件 {type.Name}");
+        }
+
+        /// <summary>尝试获取可选组件。</summary>
+        public T? TryGetComponent<T>() where T : Component
+        {
+            return _components.GetValueOrDefault(typeof(T)) as T;
         }
 
         /// <summary>按类型获取组件（非泛型，用于反射调用）</summary>

@@ -12,15 +12,12 @@ namespace Game.Components.Mail;
 /// </summary>
 public static class RoleMailSystem
 {
-    private const int MaxMailCount = 100;
+    public const int MaxVisibleMailCount = 100;
 
     /// <summary>发送邮件给指定角色</summary>
-    public static MailResult SendMail(this RoleMailComponent self, string sender, string title, string content,
+    public static void SendMail(this RoleMailComponent self, string sender, string title, string content,
         List<MailAttachment>? attachments = null, long expireTime = 0)
     {
-        if (self.Mails.Count >= MaxMailCount)
-            return MailResult.Fail("邮箱已满");
-
         var mail = new RoleMail
         {
             Id = IdGenerator.Instance.NextId(),
@@ -28,7 +25,11 @@ public static class RoleMailSystem
             Sender = sender,
             Title = title,
             Content = content,
-            Attachments = attachments ?? [],
+            Attachments = attachments?.Select(item => new MailAttachment
+            {
+                ConfigId = item.ConfigId,
+                Count = item.Count,
+            }).ToList() ?? [],
             SendTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             ExpireTime = expireTime,
             State = 0,
@@ -37,53 +38,10 @@ public static class RoleMailSystem
         self.Mails[mail.Id] = mail;
         self.MarkDirty();
 
-        return MailResult.Ok(mail.Id);
-    }
-
-    /// <summary>获取邮件列表（按发送时间倒序）</summary>
-    public static List<RoleMail> GetMailList(this RoleMailComponent self)
-    {
-        return self.Mails.Values
-            .Where(m => !m.IsExpired)
-            .OrderByDescending(m => m.SendTime)
-            .ToList();
-    }
-
-    /// <summary>标记邮件已读</summary>
-    public static MarkResult MarkRead(this RoleMailComponent self, List<long> mailIds)
-    {
-        var readIds = new List<long>();
-
-        foreach (var mailId in mailIds)
+        Context.Players.SendToPlayer(self.Id, new MailNewNtf
         {
-            if (self.Mails.TryGetValue(mailId, out var mail) && !mail.IsRead)
-            {
-                mail.State = 1;
-                readIds.Add(mailId);
-            }
-        }
-
-        return readIds.Count > 0 ? MarkResult.Ok(readIds) : MarkResult.None();
-    }
-
-    /// <summary>删除邮件</summary>
-    public static DeleteResult DeleteMails(this RoleMailComponent self, List<long> mailIds)
-    {
-        var deletedIds = new List<long>();
-
-        foreach (var mailId in mailIds)
-        {
-            if (!self.Mails.TryGetValue(mailId, out var mail))
-                continue;
-
-            if (mail.HasUnclaimedAttachment)
-                continue;
-
-            self.Mails.Remove(mailId);
-            deletedIds.Add(mailId);
-        }
-
-        return deletedIds.Count > 0 ? DeleteResult.Ok(deletedIds) : DeleteResult.None();
+            Mail = self.ToMailInfo(mail),
+        });
     }
 
     /// <summary>获取未读邮件数量</summary>
@@ -111,24 +69,4 @@ public static class RoleMailSystem
             ExpireTime = mail.ExpireTime,
         };
     }
-
-}
-
-
-public record MailResult(bool Success, string ErrorMessage = "", long MailId = 0)
-{
-    public static MailResult Ok(long mailId) => new(true, "", mailId);
-    public static MailResult Fail(string message) => new(false, message, 0);
-}
-
-public record MarkResult(bool Changed, List<long> ReadIds)
-{
-    public static MarkResult Ok(List<long> ids) => new(true, ids);
-    public static MarkResult None() => new(false, []);
-}
-
-public record DeleteResult(bool Changed, List<long> DeletedIds)
-{
-    public static DeleteResult Ok(List<long> ids) => new(true, ids);
-    public static DeleteResult None() => new(false, []);
 }

@@ -14,10 +14,11 @@ public sealed class PlayerItemGainedTaskProgressEventHandler : ISyncEventHandler
             return;
         }
 
-        var changed = player.RoleTask.UpdateProgress(TaskGoalType.CollectItem, e.ConfigId, e.Count);
+        var taskComponent = player.GetComponent<RoleTaskComponent>();
+        var changed = taskComponent.UpdateProgress(TaskGoalType.CollectItem, e.ConfigId, e.Count);
         if (changed.Count > 0)
         {
-            player.RoleTask.NotifyTaskChanged(e.RoleId, changed);
+            taskComponent.NotifyTaskChanged(e.RoleId, changed);
         }
     }
 }

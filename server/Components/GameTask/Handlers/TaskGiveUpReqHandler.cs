@@ -12,18 +12,26 @@ public sealed class TaskGiveUpReqHandler : PlayerRpcMessageHandler<TaskGiveUpReq
 
     protected override async Task ExecuteAsync(PlayerEntity player, TaskGiveUpReq req, TaskGiveUpAck res)
     {
-        var result = player.RoleTask.GiveUpTask(req.TaskId);
-
-        if (result.Success)
-        {
-            Log.Info($"放弃任务 RoleId:{player.Id} TaskId:{req.TaskId}");
-        }
-        else
-        {
-            res.ErrorMessage = result.ErrorMessage;
-        }
-
+        var taskComponent = player.GetComponent<RoleTaskComponent>();
         res.TaskId = req.TaskId;
+
+        var task = taskComponent.GetByTaskId(req.TaskId);
+        if (task == null)
+        {
+            res.ErrorMessage = "任务不存在";
+            return;
+        }
+
+        if (!task.IsInProgress)
+        {
+            res.ErrorMessage = "任务已完成";
+            return;
+        }
+
+        taskComponent.Tasks.Remove(task);
+        taskComponent.MarkDirty();
+
+        Log.Info($"放弃任务 RoleId:{player.Id} TaskId:{req.TaskId}");
         await Task.CompletedTask;
     }
 }

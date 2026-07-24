@@ -12,7 +12,16 @@ public sealed class BagUseItemReqHandler : PlayerRpcMessageHandler<BagUseItemReq
 
     protected override async Task ExecuteAsync(PlayerEntity player, BagUseItemReq req, BagUseItemAck res)
     {
-        var bagItem = player.RoleBag.GetByIndex(req.Index);
+        var bagComponent = player.GetComponent<RoleBagComponent>();
+        var attributeComponent = player.GetComponent<RoleAttributeComponent>();
+
+        if (req.Count <= 0)
+        {
+            res.ErrorMessage = "物品数量错误";
+            return;
+        }
+
+        var bagItem = bagComponent.GetByIndex(req.Index);
         if (bagItem == null)
         {
             res.ErrorMessage = "物品不存在";
@@ -33,17 +42,17 @@ public sealed class BagUseItemReqHandler : PlayerRpcMessageHandler<BagUseItemReq
             return;
         }
 
-        var useResult = player.RoleBag.UseItem(req.Index, req.Count);
-        if (!useResult.Success)
+        if (!bagComponent.RemoveByIndex(req.Index, req.Count))
         {
-            res.ErrorMessage = useResult.ErrorMessage;
-            return;
+            var message = $"物品校验通过后扣除失败 RoleId:{player.Id} Index:{req.Index} Count:{req.Count}";
+            Log.Error(message);
+            throw new InvalidOperationException(message);
         }
 
-        var effectResult = ItemEffectSystem.ApplyItemEffect(player.Id, configId);
+        var effectType = ItemEffectHelper.ApplyItemEffect(player.Id, attributeComponent, configId);
         res.ConfigId = configId;
 
-        Log.Info($"使用物品 RoleId:{player.Id} ConfigId:{configId} Count:{req.Count} EffectType:{effectResult.EffectType}");
+        Log.Info($"使用物品 RoleId:{player.Id} ConfigId:{configId} Count:{req.Count} EffectType:{effectType}");
         await Task.CompletedTask;
     }
 }

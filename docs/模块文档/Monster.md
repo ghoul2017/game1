@@ -51,7 +51,7 @@ FightUnitComponent 在 `MonsterEntity.Create` 时直接创建，不再需要 Reg
 | `MonsterAiComponent.cs` | AI 运行时状态 |
 | `AiState.cs` | AI 状态枚举 |
 
-已删除：`MonsterComponent.cs`、`MonsterSystem.cs`、`MonsterHandlers.cs`（逻辑迁入 GameMap）。
+已删除旧的全局 `MonsterComponent.cs` 和 `MonsterHandlers.cs`；当前怪物实体行为由 `MonsterEntity`、`MonsterAiComponent` 与 `MonsterHelper` 协作完成。
 
 ## 怪物生命周期
 
@@ -116,7 +116,7 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 
 ### 4. 死亡与奖励
 
-怪物死亡由 FightSystem 检测（HP ≤ 0），直接调用 `map.OnMonsterKilled()`：
+怪物死亡由 FightHelper 检测（HP ≤ 0），直接调用 `map.OnMonsterKilled()`：
 
 ```
 从地图移除 → map.RemoveObject（AOI 移除 + 广播离开视野）
@@ -156,12 +156,12 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 | 交互方 | 方向 | 内容 |
 |--------|------|------|
 | Map | 双向 | GameMap 本身属于 Map 模块，内部使用 AOI 广播和玩家查询 |
-| Fight | 双向 | 怪物 FightUnitComponent 常驻；FightSystem 检测死亡后调用 `map.OnMonsterKilled()` |
+| Fight | 双向 | 怪物 FightUnitComponent 常驻；FightHelper 检测死亡后调用 `map.OnMonsterKilled()` |
 | Player | 单向 | 怪物死亡后通过同步的 `GrantExp/GrantGold/GrantItem` 修改内存并标脏 |
 | Config | 单向 | 读取 `MonsterConfig` 驱动所有行为参数 |
 | GameTask | 被动 | `MonsterKilledEvent` 驱动击杀任务进度 |
 
-**关键设计决策**：Fight → GameMap 的死亡通知走直接方法调用而非事件。原因：FightSystem 明确知道怪物死亡后的处理逻辑，事件只用于需要通知多个模块的场景（如任务进度）。
+**关键设计决策**：Fight → GameMap 的死亡通知走直接方法调用而非事件。原因：FightHelper 明确知道怪物死亡后的处理逻辑，事件只用于需要通知多个模块的场景（如任务进度）。
 
 ## 配置驱动
 

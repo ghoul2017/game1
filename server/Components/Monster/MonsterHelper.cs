@@ -15,9 +15,9 @@ namespace Game.Components.Monster;
 /// 怪物系统。提供刷怪、AI、死亡、掉落、刷新等功能。
 /// 作为 GameMap 扩展方法，无状态设计。
 /// </summary>
-public static class MonsterSystem
+public static class MonsterHelper
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(MonsterSystem));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(MonsterHelper));
 
     /// <summary>初始化地图怪物（地图创建时调用）</summary>
     public static void InitMonsters(this GameMap map)
@@ -155,7 +155,10 @@ public static class MonsterSystem
     /// <summary>待机AI</summary>
     private static void UpdateAiIdle(GameMap map, MonsterEntity monster)
     {
-        if (monster.Info.Config.AiType == 2 || monster.Info.Config.AiType == 3)
+        var config = monster.Info.Config ??
+            throw new InvalidOperationException($"怪物缺少配置 MonsterId:{monster.Id}");
+
+        if (config.AiType == 2 || config.AiType == 3)
         {
             monster.Ai.AiState = AiState.Patrol;
             monster.Ai.PatrolTarget = GetRandomPatrolPoint(map, monster);
@@ -203,6 +206,9 @@ public static class MonsterSystem
     /// <summary>追击AI</summary>
     private static void UpdateAiChase(GameMap map, MonsterEntity monster, long now)
     {
+        var config = monster.Info.Config ??
+            throw new InvalidOperationException($"怪物缺少配置 MonsterId:{monster.Id}");
+
         if (monster.Ai.ChaseTarget == null)
             return;
 
@@ -218,12 +224,12 @@ public static class MonsterSystem
             Math.Abs(targetPlayer.X - monster.X),
             Math.Abs(targetPlayer.Y - monster.Y));
 
-        if (dist <= monster.Info.Config.AttackRange)
+        if (dist <= config.AttackRange)
         {
             monster.Ai.AiState = AiState.Attack;
             monster.Ai.LastAttackTime = now;
         }
-        else if (dist > monster.Info.Config.SightRange)
+        else if (dist > config.SightRange)
         {
             monster.Ai.AiState = AiState.Idle;
             monster.Ai.ChaseTarget = null;
@@ -254,7 +260,7 @@ public static class MonsterSystem
         if (now - monster.Ai.LastAttackTime < attackInterval)
             return;
 
-        FightSystem.UseSkill(monster.ObjectId, 1, monster.X, monster.Y, targetPlayer.RoleId);
+        FightHelper.UseSkill(monster.ObjectId, 1, monster.X, monster.Y, targetPlayer.RoleId);
         monster.Ai.LastAttackTime = now;
 
         monster.Ai.AiState = AiState.Idle;

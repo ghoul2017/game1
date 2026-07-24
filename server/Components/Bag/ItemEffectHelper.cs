@@ -11,9 +11,9 @@ namespace Game.Components.Bag;
 /// <summary>
 /// 物品效果系统。处理物品使用后的实际效果。
 /// </summary>
-public static class ItemEffectSystem
+public static class ItemEffectHelper
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(ItemEffectSystem));
+    private static readonly ILog Log = LogManager.GetLogger(nameof(ItemEffectHelper));
 
 
     public const int EffectHp = 1;
@@ -24,30 +24,15 @@ public static class ItemEffectSystem
     /// <summary>
     /// 使用物品并触发效果。
     /// </summary>
-    public static ItemUseResult ApplyItemEffect(long roleId, int configId)
+    public static int ApplyItemEffect(long roleId, RoleAttributeComponent attr, int configId)
     {
-        var result = new ItemUseResult();
-
-        var player = Context.Players.GetByRoleId(roleId);
-        if (player == null)
-        {
-            result.ErrorMessage = "玩家不在线";
-            return result;
-        }
-
         // 获取物品效果配置
         var effectConfig = ConfigManager.Get<ItemEffectConfig>(configId);
         if (effectConfig == null)
         {
-            result.EffectType = 0;
             Log.Debug($"物品 {configId} 无效果配置");
-            return result;
+            return 0;
         }
-
-        result.EffectType = effectConfig.EffectType;
-        result.Value = effectConfig.Value1;
-
-        var attr = player.RoleAttribute;
 
         switch (effectConfig.EffectType)
         {
@@ -68,7 +53,7 @@ public static class ItemEffectSystem
             attr.MarkDirty();
 
         Log.Info($"物品效果 RoleId:{roleId} ConfigId:{configId} EffectType:{effectConfig.EffectType} Value:{effectConfig.Value1}");
-        return result;
+        return effectConfig.EffectType;
     }
 
 
@@ -98,7 +83,7 @@ public static class ItemEffectSystem
     private static void ApplyReviveEffect(long roleId, int hpPercent)
     {
         Log.Info($"复活请求 RoleId:{roleId} HpPercent:{hpPercent}");
-        var fightUnit = FightSystem.GetFightUnit(roleId);
+        var fightUnit = FightHelper.GetFightUnit(roleId);
         if (fightUnit != null)
         {
             fightUnit.Attr.Hp = fightUnit.Attr.MaxHp * hpPercent / 100;
@@ -120,14 +105,4 @@ public static class ItemEffectSystem
         Context.Players.SendToPlayer(roleId, ntf);
     }
 
-}
-
-/// <summary>
-/// 物品使用结果
-/// </summary>
-public class ItemUseResult
-{
-    public string ErrorMessage { get; set; } = "";
-    public int EffectType { get; set; }
-    public int Value { get; set; }
 }

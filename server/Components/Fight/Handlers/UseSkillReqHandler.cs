@@ -9,8 +9,7 @@ public sealed class UseSkillReqHandler : PlayerRpcMessageHandler<UseSkillReq, Us
 {
     protected override async Task ExecuteAsync(PlayerEntity player, UseSkillReq req, UseSkillAck res)
     {
-        var result = FightSystem.UseSkill(player.Id, req.SkillId, req.X, req.Y, req.TargetId);
-        res.ErrorMessage = result.ErrorMessage;
+        res.ErrorMessage = FightHelper.UseSkill(player.Id, req.SkillId, req.X, req.Y, req.TargetId);
 
         await Task.CompletedTask;
     }

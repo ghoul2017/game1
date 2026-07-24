@@ -10,8 +10,8 @@ public sealed class QueryTaskListReqHandler : PlayerRpcMessageHandler<QueryTaskL
 {
     protected override async Task ExecuteAsync(PlayerEntity player, QueryTaskListReq req, QueryTaskListAck res)
     {
-        var tasks = player.RoleTask.GetTaskList();
-        res.Tasks = tasks.Select(player.RoleTask.ToTaskInfo).ToList();
+        var taskComponent = player.GetComponent<RoleTaskComponent>();
+        res.Tasks = taskComponent.Tasks.Select(RoleTaskHelper.ToInfo).ToList();
         await Task.CompletedTask;
     }
 }

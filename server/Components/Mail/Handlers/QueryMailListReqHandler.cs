@@ -10,8 +10,15 @@ public sealed class QueryMailListReqHandler : PlayerRpcMessageHandler<QueryMailL
 {
     protected override async Task ExecuteAsync(PlayerEntity player, QueryMailListReq req, QueryMailListAck res)
     {
-        var mails = player.RoleMail.GetMailList();
-        res.Mails = mails.Select(player.RoleMail.ToMailInfo).ToList();
+        var mailComponent = player.GetComponent<RoleMailComponent>();
+
+        res.Mails = mailComponent.Mails.Values
+            .Where(mail => !mail.IsExpired)
+            .OrderByDescending(mail => mail.SendTime)
+            .Take(RoleMailSystem.MaxVisibleMailCount)
+            .Select(mailComponent.ToMailInfo)
+            .ToList();
+
         await Task.CompletedTask;
     }
 }

@@ -14,10 +14,11 @@ public sealed class PlayerLevelUpTaskProgressEventHandler : ISyncEventHandler<Ev
             return;
         }
 
-        var changed = player.RoleTask.UpdateProgress(TaskGoalType.ReachLevel, e.NewLevel, 1);
+        var taskComponent = player.GetComponent<RoleTaskComponent>();
+        var changed = taskComponent.UpdateProgress(TaskGoalType.ReachLevel, e.NewLevel, 1);
         if (changed.Count > 0)
         {
-            player.RoleTask.NotifyTaskChanged(e.RoleId, changed);
+            taskComponent.NotifyTaskChanged(e.RoleId, changed);
         }
     }
 }

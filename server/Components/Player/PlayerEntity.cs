@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Game.Components.Bag;
-using Game.Components.Mail;
-using Game.Components.GameTask;
 using Shared.Core.ECS;
 
 namespace Game.Components.Player;
@@ -14,24 +11,6 @@ namespace Game.Components.Player;
 public class PlayerEntity : Entity
 {
     private readonly Dictionary<Type, long> _dirtyVersions = [];
-
-    /// <summary>在线状态组件</summary>
-    public PlayerOnlineComponent Online => GetComponent<PlayerOnlineComponent>();
-
-    /// <summary>角色持久化数据组件</summary>
-    public RoleDataComponent RoleData => GetComponent<RoleDataComponent>();
-
-    /// <summary>角色属性组件</summary>
-    public RoleAttributeComponent RoleAttribute => GetComponent<RoleAttributeComponent>();
-
-    /// <summary>角色背包组件</summary>
-    public RoleBagComponent RoleBag => GetComponent<RoleBagComponent>();
-
-    /// <summary>角色邮件组件</summary>
-    public RoleMailComponent RoleMail => GetComponent<RoleMailComponent>();
-
-    /// <summary>角色任务组件</summary>
-    public RoleTaskComponent RoleTask => GetComponent<RoleTaskComponent>();
 
     internal void MarkDirty(Type componentType)
     {

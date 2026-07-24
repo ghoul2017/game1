@@ -4,7 +4,7 @@
 
 ## 定位
 
-Fight 模块是服务端战斗的运算核心——技能使用、伤害计算、命中/暴击/闪避判定、HP 管理、死亡/复活。所有战斗逻辑在 `FightCore`（纯函数）和 `FightSystem`（流程编排）中完成，战斗单元（`FightUnitComponent`）挂载在 `MapObjectEntity` 上随实体存亡。
+Fight 模块是服务端战斗的运算核心——技能使用、伤害计算、命中/暴击/闪避判定、HP 管理、死亡/复活。战斗逻辑分布在 `FightCore`（纯计算）、`FightHelper`（全局查找与流程编排）和 `FightSystem`（FightUnitComponent 扩展）中，战斗单元随 `MapObjectEntity` 存亡。
 
 战斗是**纯内存运算**，不持久化。玩家下线或离开地图时战斗单元随实体销毁。
 
@@ -19,20 +19,22 @@ Fight 模块是服务端战斗的运算核心——技能使用、伤害计算�
 | 层 | 文件 | 职责 |
 |----|------|------|
 | 纯函数 | `FightCore.cs` | 伤害计算、命中/暴击/闪避判定，无副作用 |
-| 流程编排 | `FightSystem.cs` | UseSkill 流程、死亡检测、广播通知 |
+| 流程编排 | `FightHelper.cs` | UseSkill 流程、死亡检测、广播通知 |
+| 组件行为 | `FightSystem.cs` | 伤害、治疗、仇恨、技能和状态重置扩展 |
 | 数据容器 | `FightUnitComponent.cs` | 战斗属性、技能列表、冷却、仇恨 |
 
 `FightCore` 不依赖任何 System 或 Component，只接收 `FightUnitComponent` 和配置参数，可独立测试。
 
 ### 死亡通知走直接调用
 
-FightSystem 检测到怪物死亡后，直接调用 `map.OnMonsterKilled()` 处理后续（移除、掉落、刷新定时器），而非通过事件中转。事件只用于需要通知多个模块的场景（如 `MonsterKilledEvent` 驱动任务进度）。
+FightHelper 检测到怪物死亡后，直接调用 `map.OnMonsterKilled()` 处理后续（移除、掉落、刷新定时器），而非通过事件中转。事件只用于需要通知多个模块的场景（如 `MonsterKilledEvent` 驱动任务进度）。
 
 ### 保留的文件
 
 | 文件 | 职责 |
 |------|------|
-| `FightSystem.cs` | 战斗流程编排（FightUnitComponent 扩展方法 + UseSkill + 死亡处理） |
+| `FightSystem.cs` | FightUnitComponent 状态扩展 |
+| `FightHelper.cs` | 战斗查找、技能流程、死亡和复活编排 |
 | `FightCore.cs` | 伤害计算纯函数 |
 | `FightUnitComponent.cs` | 战斗单元 Component（属性/技能/冷却/仇恨） |
 | `FightAttribute.cs` | 战斗属性数据结构（ProtoContract，兼容网络序列化） |
@@ -40,7 +42,7 @@ FightSystem 检测到怪物死亡后，直接调用 `map.OnMonsterKilled()` 处�
 | `Handlers/UseSkillReqHandler.cs` | UseSkillReq 消息处理 |
 | `Handlers/SetPkModeReqHandler.cs` | SetPkModeReq 消息处理 |
 
-已删除：`FightComponent.cs`（逻辑迁入 FightSystem，FightUnitComponent 改为 MapObjectEntity 级）。
+已删除：`FightComponent.cs`（战斗单元改为 MapObjectEntity 级组件）。
 
 ## 战斗流程
 
@@ -73,7 +75,7 @@ FightCore.CalculateDamage
 ### 死亡处理
 
 ```
-FightSystem.OnUnitKilled
+FightHelper.OnUnitKilled
   │
   ├── 记录 KillerId / KillerSkillId
   ├── 怪物 → map.OnMonsterKilled()（直接调用，不经过事件）
@@ -113,7 +115,7 @@ FightSystem.OnUnitKilled
 | Map | 双向 | FindMapObject 查找、AOI 广播；FightUnitComponent 挂载在 MapObjectEntity 上 |
 | Player | 单向 | `RoleAttributeComponent.ToFightAttribute()` 转换属性；`SendToPlayer` 推送通知 |
 | Monster | 双向 | AI 攻击 → UseSkill；OnUnitKilled → `map.OnMonsterKilled()` |
-| Bag | 单向（反向） | ItemEffectSystem 复活效果 → `FightSystem.Revive()` |
+| Bag | 单向（反向） | ItemEffectHelper 获取 FightUnitComponent 并应用复活效果 |
 | GameTask | 被动 | `MonsterKilledEvent` 驱动击杀任务进度 |
 | Config | 单向 | 读取 `SkillConfig` 驱动伤害参数 |
 

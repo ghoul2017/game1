@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Game.Components.Player;
 using Shared.Core;
-using Shared.Core.Log;
 
 namespace Game.Components.Bag;
 
@@ -12,13 +11,7 @@ namespace Game.Components.Bag;
 /// </summary>
 public static class RoleBagSystem
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleBagSystem));
-
     public const int DefaultMaxStack = 999;
-
-    public const int EffectHp = 1;
-    public const int EffectMp = 2;
-    public const int EffectRevive = 5;
 
     /// <summary>整批检测道具是否可以完整加入背包，不修改背包内容</summary>
     public static bool CanAddItems(this RoleBagComponent self,
@@ -85,11 +78,11 @@ public static class RoleBagSystem
     }
 
     /// <summary>添加物品（自动找空格或叠加）</summary>
-    public static AddItemResult AddItem(this RoleBagComponent self, int configId, int count,
+    public static int AddItem(this RoleBagComponent self, int configId, int count,
         int maxStack = DefaultMaxStack)
     {
-        if (count <= 0)
-            return AddItemResult.Fail("参数错误");
+        if (count <= 0 || maxStack <= 0)
+            return 0;
 
         var remaining = count;
         var changed = false;
@@ -116,7 +109,7 @@ public static class RoleBagSystem
             {
                 if (changed)
                     self.MarkDirty();
-                return AddItemResult.Partial(count - remaining, "背包已满");
+                return count - remaining;
             }
 
             var addCount = Math.Min(remaining, maxStack);
@@ -136,7 +129,7 @@ public static class RoleBagSystem
 
         if (changed)
             self.MarkDirty();
-        return AddItemResult.Ok(count);
+        return count;
     }
 
     /// <summary>批量添加道具，不回退已经完成的添加</summary>
@@ -148,11 +141,11 @@ public static class RoleBagSystem
 
         for (var index = 0; index < configIds.Length; index++)
         {
-            var result = self.AddItem(configIds[index], counts[index]);
-            if (!result.Success)
+            var addedCount = self.AddItem(configIds[index], counts[index]);
+            if (addedCount != counts[index])
             {
                 return
-                    $"添加道具失败 ConfigId:{configIds[index]} Count:{counts[index]} {result.ErrorMessage}";
+                    $"添加道具失败 ConfigId:{configIds[index]} Count:{counts[index]} AddedCount:{addedCount}";
             }
         }
 
@@ -269,10 +262,10 @@ public static class RoleBagSystem
     }
 
     /// <summary>交换两个格子的物品</summary>
-    public static bool Swap(this RoleBagComponent self, int index1, int index2)
+    public static void Swap(this RoleBagComponent self, int index1, int index2)
     {
         if (index1 == index2)
-            return true;
+            return;
 
         self.Items.Remove(index1, out var item1);
         self.Items.Remove(index2, out var item2);
@@ -291,39 +284,6 @@ public static class RoleBagSystem
 
         if (item1 != null || item2 != null)
             self.MarkDirty();
-        return true;
-    }
-
-    /// <summary>使用物品</summary>
-    public static UseItemResult UseItem(this RoleBagComponent self, int index, int count)
-    {
-        if (count <= 0)
-            return UseItemResult.Fail("参数错误");
-
-        if (!self.Items.TryGetValue(index, out var item))
-            return UseItemResult.Fail("物品不存在");
-
-        if (item.Count < count)
-            return UseItemResult.Fail("物品数量不足");
-
-        // 扣除物品
-        if (item.Count == count)
-        {
-            self.Items.Remove(index);
-        }
-        else
-        {
-            item.Count -= count;
-        }
-
-        self.MarkDirty();
-        return UseItemResult.Ok(item.ConfigId, count);
-    }
-
-    /// <summary>获取背包信息（所有物品快照）</summary>
-    public static List<BagItem> GetItems(this RoleBagComponent self)
-    {
-        return self.Items.Values.ToList();
     }
 
     private static int FindEmptyIndex(RoleBagComponent self)
@@ -336,19 +296,4 @@ public static class RoleBagSystem
 
         return -1;
     }
-}
-
-/// <summary>添加物品结果</summary>
-public record AddItemResult(int AddedCount, bool Success, string ErrorMessage = "")
-{
-    public static AddItemResult Ok(int count) => new(count, true);
-    public static AddItemResult Partial(int count, string message) => new(count, false, message);
-    public static AddItemResult Fail(string message) => new(0, false, message);
-}
-
-/// <summary>使用物品结果</summary>
-public record UseItemResult(int ConfigId, int UsedCount, bool Success, string ErrorMessage = "")
-{
-    public static UseItemResult Ok(int configId, int count) => new(configId, count, true);
-    public static UseItemResult Fail(string message) => new(0, 0, false, message);
 }
