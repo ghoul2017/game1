@@ -70,6 +70,8 @@ namespace Client.View
                     slotObj.transform.SetParent(gridObj.transform, false);
                     var slotRect = slotObj.AddComponent<RectTransform>();
                     slotRect.sizeDelta = new Vector2(SLOT_SIZE, SLOT_SIZE);
+                    slotRect.anchorMin = new Vector2(0, 1);
+                    slotRect.anchorMax = new Vector2(0, 1);
                     slotRect.pivot = new Vector2(0, 1);
                     slotRect.anchoredPosition = new Vector2(x, y);
 
@@ -117,7 +119,7 @@ namespace Client.View
                 }
             }
 
-            float bottomY = -60 - gridH - 20;
+            float bottomY = -panelH * 0.5f + 30f;
 
             var tidyBtn = UIBuilder.CreateButton(content, "TidyBtn", "整 理", 120, 40, 18,
                 UIBuilder.ButtonNormal, UIBuilder.Gold);

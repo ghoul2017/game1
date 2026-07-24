@@ -150,7 +150,7 @@ namespace Client.View
             dtmRect.offsetMax = new Vector2(-10, 28);
 
             // 底部按钮
-            float bottomY = bodyTop - bodyH - 10f;
+            float bottomY = -panelH * 0.5f + 30f;
 
             // 接取行：输入框 + 按钮
             _acceptInput = UIBuilder.CreateInputField(content, "AcceptInput", "输入任务ID...", 120, 38, 15);

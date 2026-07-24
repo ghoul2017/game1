@@ -164,7 +164,7 @@ namespace Client.View
             dtmRect.offsetMax = new Vector2(-10, 48);
 
             // Bottom buttons
-            float bottomY = bodyTop - bodyH - 10f;
+            float bottomY = -panelH * 0.5f + 30f;
 
             _readBtn = UIBuilder.CreateButton(content, "ReadBtn", "全部已读", 110, 38, 16,
                 UIBuilder.ButtonNormal, UIBuilder.TextWhite);
