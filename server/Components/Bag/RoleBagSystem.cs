@@ -14,13 +14,79 @@ public static class RoleBagSystem
 {
     private static readonly ILog Log = LogManager.GetLogger(nameof(RoleBagSystem));
 
+    public const int DefaultMaxStack = 999;
 
     public const int EffectHp = 1;
     public const int EffectMp = 2;
     public const int EffectRevive = 5;
 
+    /// <summary>整批检测道具是否可以完整加入背包，不修改背包内容</summary>
+    public static bool CanAddItems(this RoleBagComponent self,
+        int[] configIds, int[] counts, out string errorMessage,
+        int maxStack = DefaultMaxStack)
+    {
+        errorMessage = "";
+        if (configIds.Length != counts.Length)
+        {
+            errorMessage = "道具配置和数量长度不一致";
+            return false;
+        }
+
+        if (maxStack <= 0)
+        {
+            errorMessage = "堆叠上限错误";
+            return false;
+        }
+
+        var addCounts = new Dictionary<int, long>();
+        for (var index = 0; index < configIds.Length; index++)
+        {
+            var configId = configIds[index];
+            var count = counts[index];
+            if (count <= 0)
+            {
+                errorMessage = "道具数量错误";
+                return false;
+            }
+
+            addCounts[configId] = addCounts.GetValueOrDefault(configId) + count;
+        }
+
+        var emptySlotCount = 0;
+        for (var index = 0; index < self.Capacity; index++)
+        {
+            if (!self.Items.ContainsKey(index))
+                emptySlotCount++;
+        }
+
+        long requiredSlotCount = 0;
+        foreach (var (configId, addCount) in addCounts)
+        {
+            long stackSpace = 0;
+            foreach (var item in self.Items.Values)
+            {
+                if (item.ConfigId == configId && item.Count < maxStack)
+                    stackSpace += maxStack - item.Count;
+            }
+
+            var remaining = addCount - stackSpace;
+            if (remaining <= 0)
+                continue;
+
+            requiredSlotCount += (remaining + maxStack - 1) / maxStack;
+            if (requiredSlotCount > emptySlotCount)
+            {
+                errorMessage = "背包空间不足";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>添加物品（自动找空格或叠加）</summary>
-    public static AddItemResult AddItem(this RoleBagComponent self, int configId, int count, int maxStack = 999)
+    public static AddItemResult AddItem(this RoleBagComponent self, int configId, int count,
+        int maxStack = DefaultMaxStack)
     {
         if (count <= 0)
             return AddItemResult.Fail("参数错误");
@@ -71,6 +137,26 @@ public static class RoleBagSystem
         if (changed)
             self.MarkDirty();
         return AddItemResult.Ok(count);
+    }
+
+    /// <summary>批量添加道具，不回退已经完成的添加</summary>
+    /// <returns>成功返回空字符串，失败返回错误信息</returns>
+    public static string AddItems(this RoleBagComponent self, int[] configIds, int[] counts)
+    {
+        if (configIds.Length != counts.Length)
+            return "道具配置和数量长度不一致";
+
+        for (var index = 0; index < configIds.Length; index++)
+        {
+            var result = self.AddItem(configIds[index], counts[index]);
+            if (!result.Success)
+            {
+                return
+                    $"添加道具失败 ConfigId:{configIds[index]} Count:{counts[index]} {result.ErrorMessage}";
+            }
+        }
+
+        return "";
     }
 
     /// <summary>移除物品（按配置ID）</summary>
@@ -178,6 +264,7 @@ public static class RoleBagSystem
             };
             index++;
         }
+
         self.MarkDirty();
     }
 
@@ -190,8 +277,17 @@ public static class RoleBagSystem
         self.Items.Remove(index1, out var item1);
         self.Items.Remove(index2, out var item2);
 
-        if (item1 != null) { item1.Index = index2; self.Items[index2] = item1; }
-        if (item2 != null) { item2.Index = index1; self.Items[index1] = item2; }
+        if (item1 != null)
+        {
+            item1.Index = index2;
+            self.Items[index2] = item1;
+        }
+
+        if (item2 != null)
+        {
+            item2.Index = index1;
+            self.Items[index1] = item2;
+        }
 
         if (item1 != null || item2 != null)
             self.MarkDirty();
@@ -237,6 +333,7 @@ public static class RoleBagSystem
             if (!self.Items.ContainsKey(i))
                 return i;
         }
+
         return -1;
     }
 }

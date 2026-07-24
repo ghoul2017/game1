@@ -1,8 +1,6 @@
-using Game.Components.Bag;
 using Game.Components.Player;
 using Shared.Common.Protos;
 using Shared.Core;
-using Shared.Core.Log;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,12 +8,10 @@ using System.Linq;
 namespace Game.Components.Mail;
 
 /// <summary>
-/// 邮件系统。提供邮件收发、已读标记、附件领取、删除等功能。
+/// 邮件系统。提供邮件收发、已读标记和删除等功能。
 /// </summary>
 public static class RoleMailSystem
 {
-    private static readonly ILog Log = LogManager.GetLogger(nameof(RoleMailSystem));
-
     private const int MaxMailCount = 100;
 
     /// <summary>发送邮件给指定角色</summary>
@@ -68,41 +64,6 @@ public static class RoleMailSystem
         }
 
         return readIds.Count > 0 ? MarkResult.Ok(readIds) : MarkResult.None();
-    }
-
-    /// <summary>领取附件（将物品加入背包）</summary>
-    public static ClaimResult ClaimAttachments(this RoleMailComponent self, List<long> mailIds)
-    {
-        var player = Context.Players.GetByRoleId(self.Id);
-        if (player == null)
-            return ClaimResult.None();
-
-        var claimedIds = new List<long>();
-        var allItems = new List<MailAttachment>();
-
-        foreach (var mailId in mailIds)
-        {
-            if (!self.Mails.TryGetValue(mailId, out var mail))
-                continue;
-            if (mail.IsClaimed || !mail.HasUnclaimedAttachment)
-                continue;
-
-            allItems.AddRange(mail.Attachments);
-            mail.State = 2;
-            claimedIds.Add(mailId);
-        }
-
-        if (claimedIds.Count == 0)
-            return ClaimResult.None();
-
-        foreach (var att in allItems)
-        {
-            player.RoleBag.AddItem(att.ConfigId, att.Count);
-        }
-
-        self.MarkDirty();
-
-        return ClaimResult.Ok(claimedIds, allItems);
     }
 
     /// <summary>删除邮件</summary>
@@ -164,12 +125,6 @@ public record MarkResult(bool Changed, List<long> ReadIds)
 {
     public static MarkResult Ok(List<long> ids) => new(true, ids);
     public static MarkResult None() => new(false, []);
-}
-
-public record ClaimResult(bool Success, List<long> ClaimedIds, List<MailAttachment> Items)
-{
-    public static ClaimResult Ok(List<long> ids, List<MailAttachment> items) => new(true, ids, items);
-    public static ClaimResult None() => new(false, [], []);
 }
 
 public record DeleteResult(bool Changed, List<long> DeletedIds)

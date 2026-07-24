@@ -51,7 +51,6 @@ namespace Shared.Common.Protos
     {
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public List<long> ClaimedMailIds { get; set; } = new List<long>();
-        [ProtoMember(3)] public List<MailAttachmentInfo> Items { get; set; } = new List<MailAttachmentInfo>();
     }
 
 
