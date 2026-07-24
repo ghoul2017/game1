@@ -13,7 +13,13 @@ public class Xlsx2CsvTool : ITool
         // 解析参数: xlsx2csv [inputDir] [outputDir] [-f filename]
         string inputDir = "xlsx";
         string? singleFile = null;
-        string outputDir = Path.Combine("..", "server", "Data", "Tables");
+        string outputDir = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "client",
+            "Assets",
+            "StreamingAssets",
+            "Tables"));
 
         var positional = new List<string>();
         for (int i = 0; i < args.Length; i++)

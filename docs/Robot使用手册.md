@@ -11,7 +11,7 @@ Robot 是独立于 Unity 的命令行测试工具，通过 TCP 连接服务端�
 - 开始前运行 `git status --short --branch`，确认当前任务是否仅允许运行既有场景，还是同时授权修改 Robot 代码。
 - 构建本身不改变游戏数据；连接服务端、登录、创建角色、进入游戏或运行其他业务场景会读写 MongoDB，执行前必须确认测试环境和账号范围。
 - 默认只连接 `127.0.0.1:9000`。连接远程地址前必须确认目标是获准测试的环境，不得自行连接生产服务。
-- 启动服务端时优先以仓库 `bin/` 为工作目录运行构建产物，并记录 PID；需要直接运行源码时可从 `server/` 执行 `dotnet run`。只停止本任务启动且已核对归属的进程。
+- 启动服务端时以仓库 `bin/` 为工作目录运行构建产物，并记录 PID。只停止本任务启动且已核对归属的进程。
 - 场景失败时保留原始响应、日志和数据库状态，先定位协议、环境或业务根因，不新增绕过断言或伪成功分支。
 
 ## 环境要求
@@ -43,14 +43,14 @@ dotnet build robot/Robot.csproj
 dotnet build server/Server.csproj
 ```
 
-`Server.csproj` 会把 `appsettings.json` 和 `Data/Tables/*.csv` 复制到仓库统一输出目录 `bin/`。另开终端，以 `bin/` 为工作目录启动服务端：
+`Server.csproj` 会把 `appsettings.json` 和客户端唯一配置源 `client/Assets/StreamingAssets/Tables/*.csv` 复制到仓库统一输出目录 `bin/`。另开终端，以 `bin/` 为工作目录启动服务端：
 
 ```bash
 cd bin
 dotnet Server.dll
 ```
 
-Rider 调试直接启动 `bin/Server` 时使用同一套输出配置和表。需要跳过输出目录、直接运行源码时，也可从 `server/` 执行 `dotnet run --project Server.csproj`；不要从仓库根直接执行该命令，因为程序按当前工作目录读取相对路径。
+Rider 调试直接启动 `bin/Server` 时使用同一套输出配置和表。服务端只从构建后的 `bin/` 目录运行，不使用 `dotnet run --project server/Server.csproj` 启动。
 
 回到仓库根目录运行当前已注册场景：
 
@@ -216,7 +216,7 @@ public class EnterGameTest : TestScenario
 
 Robot 使用共享的 `ILog` + `LogManager`。未初始化时使用 `ConsoleFallbackLogger` 直接输出到控制台。
 
-服务端日志按进程工作目录解析：从 `bin/` 启动构建产物时位于 `bin/log/`；从 `server/` 直接运行源码时位于 `server/log/`。
+服务端日志按进程工作目录解析，位于 `bin/log/`。
 
 ### 常见问题
 

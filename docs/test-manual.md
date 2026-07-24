@@ -27,7 +27,7 @@
 - 客户端逻辑和面板：`client/Assets/Scripts/Logic/**/*.cs`、`client/Assets/Scripts/View/Panels/*.cs`、`client/Assets/Scripts/View/Scene/*.cs`
 - 协议定义：`client/Assets/Scripts/shared/Common/Protos/*.cs`
 - Robot 自动化入口：`robot/Program.cs`、`robot/LoginTest.cs`
-- 配置表：`server/Data/Tables/*.csv`
+- 配置表：`client/Assets/StreamingAssets/Tables/*.csv`
 
 测试判定以代码、配置、日志和实际 UI 现象为准；本文只作为执行清单。
 
@@ -42,7 +42,7 @@
 
 ### 2.2 启动服务端
 
-仓库根 `Directory.Build.props` 将 .NET 输出统一到 `bin/`；`server/Server.csproj` 会把 `appsettings.json` 和 `Data/Tables/*.csv` 复制到该目录。先构建，再以 `bin/` 为工作目录运行输出程序集：
+仓库根 `Directory.Build.props` 将 .NET 输出统一到 `bin/`；`server/Server.csproj` 会把 `appsettings.json` 和客户端唯一配置源 `client/Assets/StreamingAssets/Tables/*.csv` 复制到该目录。先构建，再以 `bin/` 为工作目录运行输出程序集：
 
 ```bash
 dotnet build server/Server.csproj
@@ -57,7 +57,7 @@ dotnet Server.dll
 - 地图初始化成功，日志包含“默认地图初始化完成”。
 - 网络监听成功，日志包含“监听 0.0.0.0:9000”。
 
-Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tables`。开发时也可从 `server/` 目录执行 `dotnet run --project Server.csproj`，此时读取源码目录内的配置和表。不要从仓库根直接执行 `dotnet run --project server/Server.csproj`，因为程序按当前工作目录解析这些相对路径。
+Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tables`。服务端只从构建后的 `bin/` 目录运行；不要用 `dotnet run --project server/Server.csproj` 启动，因为程序按当前工作目录解析配置和表的相对路径。
 
 ### 2.3 启动客户端
 
@@ -76,7 +76,7 @@ Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tabl
 | 来源 | 查看方式 |
 |------|----------|
 | 服务端控制台 | 启动服务端的终端 |
-| 服务端文件日志 | `bin/` 启动时为 `bin/log/*.log`；`server/` 源码启动时为 `server/log/*.log` |
+| 服务端文件日志 | `bin/log/*.log` |
 | Unity 日志 | Editor Console |
 | Robot 日志 | 运行 Robot 的终端 |
 

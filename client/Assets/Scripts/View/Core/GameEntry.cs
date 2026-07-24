@@ -24,11 +24,6 @@ namespace Client.View
 
         private static string GetTablesDirectory()
         {
-#if UNITY_EDITOR
-            var devTablesDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "server", "Data", "Tables"));
-            if (Directory.Exists(devTablesDir))
-                return devTablesDir;
-#endif
             return Path.Combine(Application.streamingAssetsPath, "Tables");
         }
     }

@@ -19,7 +19,7 @@
         <None Update="appsettings.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <Content Include="Data\Tables\**\*.csv">
+        <Content Include="..\client\Assets\StreamingAssets\Tables\**\*.csv">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <Link>Data\Tables\%(RecursiveDir)%(Filename)%(Extension)</Link>
         </Content>
