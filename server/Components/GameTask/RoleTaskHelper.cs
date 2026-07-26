@@ -33,7 +33,7 @@ public static class RoleTaskHelper
             var pair = part.Trim().Split(':');
             if (pair.Length != 2 ||
                 !int.TryParse(pair[0], out var configId) ||
-                !int.TryParse(pair[1], out var count) ||
+                !long.TryParse(pair[1], out var count) ||
                 configId <= 0 ||
                 count <= 0)
             {

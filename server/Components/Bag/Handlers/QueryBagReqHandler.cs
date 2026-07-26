@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Threading.Tasks;
 using Game.Components.Player;
 using Shared.Common.Protos;
@@ -11,9 +10,11 @@ public sealed class QueryBagReqHandler : PlayerRpcMessageHandler<QueryBagReq, Qu
     protected override async Task ExecuteAsync(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
         var bagComponent = player.GetComponent<RoleBagComponent>();
+        RoleBagHelper.EnsureValidState(bagComponent);
 
         res.Capacity = bagComponent.Capacity;
-        res.Items = bagComponent.Items.Values.Select(RoleBagHelper.ToInfo).ToList();
+        foreach (var (uid, item) in bagComponent.Items)
+            res.Items[uid] = RoleBagHelper.ToInfo(item);
         await Task.CompletedTask;
     }
 }

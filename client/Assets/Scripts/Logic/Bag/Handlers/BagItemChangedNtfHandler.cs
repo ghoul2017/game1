@@ -1,6 +1,6 @@
+using System;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
-using Shared.Core.Event;
 using Shared.Core.Network;
 
 namespace Client.Logic
@@ -9,30 +9,25 @@ namespace Client.Logic
     {
         protected override async Task ExecuteAsync(TcpSession session, BagItemChangedNtf ntf)
         {
-            var controller = BagController.Instance;
-            if (ntf.RemovedIndices != null)
+            BagController controller = BagController.Instance;
+            if (controller.RoleId <= 0)
             {
-                foreach (int idx in ntf.RemovedIndices)
-                {
-                    controller.ItemMap.Remove(idx);
-                }
-                controller.Items.RemoveAll(it => ntf.RemovedIndices.Contains(it.Index));
+                await Task.CompletedTask;
+                return;
             }
 
-            if (ntf.ChangedItems != null)
+            if (ntf.Items != null && ntf.RemovedUids != null)
             {
-                foreach (var item in ntf.ChangedItems)
+                foreach (long uid in ntf.RemovedUids)
                 {
-                    controller.ItemMap[item.Index] = item;
-                    int existIdx = controller.Items.FindIndex(it => it.Index == item.Index);
-                    if (existIdx >= 0)
-                        controller.Items[existIdx] = item;
-                    else
-                        controller.Items.Add(item);
+                    if (ntf.Items.ContainsKey(uid))
+                        throw new InvalidOperationException("背包变化中同一 Uid 同时被更新和删除: " + uid);
                 }
             }
 
-            EventBus.Instance.Publish(new EventType.BagDataChangedEvent());
+            controller.ApplyChangedItems(ntf.Items);
+            controller.RemoveUids(ntf.RemovedUids);
+            BagController.PublishDataChanged();
             await Task.CompletedTask;
         }
     }

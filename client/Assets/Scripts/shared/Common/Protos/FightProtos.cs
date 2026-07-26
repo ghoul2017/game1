@@ -143,7 +143,7 @@ namespace Shared.Common.Protos
     {
         [ProtoMember(1)] public int ConfigId { get; set; }
 
-        [ProtoMember(2)] public int Count { get; set; }
+        [ProtoMember(2)] public long Count { get; set; }
     }
 
     /// <summary>

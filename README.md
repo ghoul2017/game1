@@ -22,6 +22,8 @@ game1 是一个 2.5D RPG 项目，包含 Unity 客户端、.NET 8 权威服务�
 
 ## 快速启动
 
+当前 UID 背包与旧 Index 背包 BSON 不兼容。时间戳新账号可以直接创建当前结构；复用旧角色前必须按 [Bag 模块文档](docs/模块文档/Bag.md) 核对环境与数据授权并完成精确重建。
+
 先启动本地 MongoDB，再从仓库根目录构建服务端：
 
 ```powershell
@@ -36,12 +38,16 @@ Pop-Location
 ## 最小验证
 
 ```powershell
+dotnet build shared/Shared.csproj
 dotnet build server/Server.csproj
+dotnet build client-logic/ClientLogic.csproj
 dotnet build robot/Robot.csproj
-dotnet run --project robot/Robot.csproj -- --scenario login_test
+dotnet build tools/tools.csproj
+bash scripts/check-client-boundary
+bash scripts/check-protocol
 ```
 
-Robot 会连接本地服务端，登录时可能自动注册账号并写入 MongoDB。完整步骤和测试边界见：
+背包、任务和持久化行为通过 Robot 连接真实服务端验证。Robot 登录时可能自动注册账号并写入 MongoDB，必须在获得对应环境和数据授权后运行。完整步骤和测试边界见：
 
 - [当前功能测试文档](docs/test-manual.md)
 - [Robot 使用手册](docs/Robot使用手册.md)

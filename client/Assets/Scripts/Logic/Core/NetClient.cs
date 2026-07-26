@@ -163,6 +163,7 @@ namespace Client.Logic
         public void Dispose()
         {
             _running = false;
+            BagController.Instance.ResetForRole(0);
             DisposeSession(LogoutReason.NetDisconnected, "Destroyed");
             if (Instance == this) Instance = null;
         }
@@ -280,6 +281,7 @@ namespace Client.Logic
             else
             {
                 _state = ConnState.Disconnected;
+                BagController.Instance.ResetForRole(0);
                 EventBus.Instance.Publish(new EventType.NetErrorEvent { Reason = reason });
             }
         }
@@ -321,6 +323,7 @@ namespace Client.Logic
             if (_userDisconnect)
             {
                 _state = ConnState.Disconnected;
+                BagController.Instance.ResetForRole(0);
                 Log.Info("[NetClient] Disconnected by user");
                 EventBus.Instance.Publish(new EventType.NetDisconnectedEvent());
                 return;
@@ -339,6 +342,7 @@ namespace Client.Logic
             else
             {
                 _state = ConnState.Disconnected;
+                BagController.Instance.ResetForRole(0);
                 Log.Info("[NetClient] Disconnected");
                 EventBus.Instance.Publish(new EventType.NetDisconnectedEvent());
             }
@@ -420,6 +424,7 @@ namespace Client.Logic
                         new EnterGameReq { RoleId = GameData.CurrentRole.RoleId });
                     if (!string.IsNullOrEmpty(enterGameRes.ErrorMessage))
                     {
+                        BagController.Instance.ResetForRole(0);
                         EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = enterGameRes.ErrorMessage });
                         return;
                     }
@@ -433,6 +438,7 @@ namespace Client.Logic
                 GameData.Token = "";
                 GameData.CurrentRole = null;
                 GameData.CurrentMap = null;
+                BagController.Instance.ResetForRole(0);
 
                 _state = ConnState.Connected;
                 EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = res.ErrorMessage });

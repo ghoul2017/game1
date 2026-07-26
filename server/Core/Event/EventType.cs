@@ -1,4 +1,4 @@
-﻿using Game.Components.Player;
+using Game.Components.Player;
 using Shared.Common.Enums;
 
 namespace Shared.Core.Event;
@@ -76,7 +76,7 @@ public static class EventType
     {
         public long RoleId;
         public int ConfigId;
-        public int Count;
+        public long Count;
     }
 
     /// <summary>玩家战斗死亡</summary>

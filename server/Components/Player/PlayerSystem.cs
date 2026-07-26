@@ -238,35 +238,36 @@ public static class PlayerSystem
     }
 
     /// <summary>发放物品给玩家</summary>
-    public static void GrantItem(this PlayerComponent self, long roleId, int configId, int count)
+    public static void GrantItem(this PlayerComponent self, long roleId, int configId, long count)
     {
         var player = self.GetByRoleId(roleId);
         if (player == null)
             return;
 
         var bagComponent = player.GetComponent<RoleBagComponent>();
-
-        if (!bagComponent.CanAddItems([configId], [count], out var errorMessage))
-        {
-            Log.Warn($"无法发放物品 RoleId:{roleId} ConfigId:{configId} Count:{count} {errorMessage}");
-            return;
-        }
-
-        var addedCount = bagComponent.AddItem(configId, count);
-        if (addedCount != count)
-        {
-            var message = $"物品预检通过后添加失败 RoleId:{roleId} ConfigId:{configId} Count:{count} AddedCount:{addedCount}";
-            Log.Error(message);
-            throw new InvalidOperationException(message);
-        }
-
-        self.SendToPlayer(roleId, new ItemGainNtf
+        var gainedItems = bagComponent.AddItems([new BagItemAddData
         {
             ConfigId = configId,
-            Count = addedCount,
-        });
-        EventBus.Instance.Publish(new EventType.PlayerItemGainedEvent { RoleId = roleId, ConfigId = configId, Count = addedCount });
-        Log.Info($"发放物品 RoleId:{roleId} ConfigId:{configId} Count:{addedCount}");
+            Count = count,
+            Bind = false,
+            ExpireTime = 0,
+        }]);
+
+        foreach (var gainedItem in gainedItems)
+        {
+            self.SendToPlayer(roleId, new ItemGainNtf
+            {
+                ConfigId = gainedItem.ConfigId,
+                Count = gainedItem.Count,
+            });
+            EventBus.Instance.Publish(new EventType.PlayerItemGainedEvent
+            {
+                RoleId = roleId,
+                ConfigId = gainedItem.ConfigId,
+                Count = gainedItem.Count,
+            });
+            Log.Info($"发放物品 RoleId:{roleId} ConfigId:{gainedItem.ConfigId} Count:{gainedItem.Count}");
+        }
     }
 
 }

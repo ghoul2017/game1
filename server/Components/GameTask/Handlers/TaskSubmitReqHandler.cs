@@ -54,26 +54,34 @@ public sealed class TaskSubmitReqHandler : PlayerRpcMessageHandler<TaskSubmitReq
             return;
         }
 
-        var configIds = rewards.Select(reward => reward.ConfigId).ToArray();
-        var counts = rewards.Select(reward => reward.Count).ToArray();
-        if (!bagComponent.CanAddItems(configIds, counts, out var errorMessage))
+        var addItems = rewards.Select(reward => new BagItemAddData
+        {
+            ConfigId = reward.ConfigId,
+            Count = reward.Count,
+            Bind = false,
+            ExpireTime = 0,
+        }).ToArray();
+        if (!RoleBagHelper.TryValidateAddItems(addItems, out var errorMessage))
         {
             res.ErrorMessage = errorMessage;
+            return;
+        }
+
+        if (bagComponent.IsFull())
+        {
+            res.ErrorMessage = "背包已满";
             return;
         }
 
         task.State = 2;
         taskComponent.MarkDirty();
 
-        var addError = bagComponent.AddItems(configIds, counts);
-        if (!string.IsNullOrEmpty(addError))
+        var gainedItems = bagComponent.AddItems(addItems);
+        res.Rewards = gainedItems.Select(item => new TaskRewardInfo
         {
-            var message = $"任务奖励预检通过后添加失败 RoleId:{player.Id} TaskId:{req.TaskId} {addError}";
-            Log.Error(message);
-            throw new InvalidOperationException(message);
-        }
-
-        res.Rewards = rewards;
+            ConfigId = item.ConfigId,
+            Count = item.Count,
+        }).ToList();
         Log.Info($"提交任务领奖 RoleId:{player.Id} TaskId:{req.TaskId} RewardCount:{rewards.Count}");
 
         await Task.CompletedTask;

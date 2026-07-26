@@ -2,53 +2,85 @@
 
 目标读者：人类。
 
-## 已确认但未实施的重构
-
-无 Index 的 `Uid → BagItem` 实例栈、表驱动堆叠、业务可选容量判断、协议硬切、客户端改造和 Demo 数据重建计划见 `docs/背包UID实例栈重构计划.md`（任务 `GAME1-BAG-04`）。
-
-以下内容描述当前代码；在重构完成并通过验证前，不得把计划中的目标行为当作现状。
-
 ## 定位
 
-Bag 管理玩家物品的增删、整理和交换，保留尚未完成的道具使用入口，也是邮件附件、任务奖励与怪物掉落的最终入口。`RoleBagComponent` 持久化到 `role_bag_component`。
+Bag 管理玩家的 UID 物品实例栈，是邮件附件、任务奖励和怪物掉落的最终入包入口。`RoleBagComponent` 持久化到 `role_bag_component`；服务端不保存格子 Index 或手工展示顺序。
 
-## 数据结构与持久化
+## 数据结构与不变量
 
-运行时以 `Dictionary<int, BagItem>` 保存“格子索引 → 物品”。MongoDB 使用 `ArrayOfDocuments` 表示整数键，避免 Document 字典要求字符串键导致序列化失败。
+运行时和持久化结构为：
 
-`AddItem`、`RemoveItem`、`RemoveByIndex`、`Tidy` 和 `Swap` 都同步修改内存并标脏。业务方法不保存数据库；Player 批量持久化系统在定时、断线或停服批次中写入该集合。
+```text
+Dictionary<long, BagItem> Items
+  Key = BagItem.Uid
 
-## 主要操作
+BagItem
+  long Uid
+  int ConfigId
+  long Count
+  bool Bind
+  long ExpireTime
+```
 
-### 添加物品
+非字符串字典键使用 MongoDB `ArrayOfDocuments` 表示。Uid 必须为正数且 Key 必须等于 `BagItem.Uid`；ConfigId 必须存在，栈数量必须满足 `0 < Count <= ItemConfig.MaxStack`。配置把 MaxStack 降到已有栈数量以下时，背包操作会暴露数据不变量错误，不会静默裁切或拆栈。
 
-1. 优先叠加到同配置且未满的格子。
-2. 剩余数量依次放入最小空闲格子。
-3. 返回实际添加数量；空间不足时已经发生的部分添加仍会标脏。
+旧 Index 背包与当前 BSON 不兼容，项目不提供迁移、双读或 SchemaVersion。时间戳新账号会直接创建当前结构；复用旧角色前必须取得精确数据库和集合删除授权，再单独重建 `role_bag_component` 中的目标数据。本次 Robot 只创建新账号与角色，没有删除已有数据。
 
-任务提交先通过 `CanAddItems` 整批预检奖励，再写已领取状态并调用 `AddItems` 发放；预检后的意外失败直接暴露，不恢复背包快照。
+## 添加与堆叠
 
-### 使用物品（功能未完成）
+对外唯一添加入口是 `AddItems(IReadOnlyList<BagItemAddData>)`：
 
-当前代码只有功能骨架：
+1. 在修改前完整验证数组、ConfigId、正数量、配置存在和正 MaxStack，并按 `(ConfigId, Bind, ExpireTime)` 聚合重复输入。
+2. 只把三项堆叠身份完全一致的物品合并，按 Uid 升序填充已有未满栈。
+3. 剩余数量严格按表格 `ItemConfig.MaxStack` 拆成新 Uid；装备通过 `MaxStack=1` 自然保持一件一栈。
+4. 批次合法后完整写入，不读取容量，也不会因中途超限停止。
+5. 实际变化只标脏一次，并由背包内部发送一条 `BagItemChangedNtf`。通知中的 `Items` 是变化栈的最终绝对快照，不是增量。
+6. 返回值是按堆叠身份聚合的本次获得展示数组；其 Count 是本次获得量，不是拆栈后的最终数量。
 
-1. Handler 校验格子、数量和消耗品 ConfigId 范围。
-2. Handler 调用 `RemoveByIndex` 同步扣除物品并标脏。
-3. `ItemEffectHelper.ApplyItemEffect` 尝试应用 HP、MP 或复活效果。
+`ExpireTime` 当前只是普通 long 元数据：不与当前时间比较，不作废、不清理、不隐藏，仍计入容量、查询和扣除；只有数值完全相同的栈才能合并。
 
-该链路尚未按 `ItemId` 建立效果配置关联，请求 `Count` 与效果次数的语义也未确定，不能视为已交付功能。实现任务还需确认复活卷轴配置，并保证无有效效果时不只扣除物品后返回成功。
+## 容量与业务准入
 
-## 跨模块关系
+Capacity 默认是 100，但只是业务准入阈值：
 
-| 来源/目标 | 行为 |
-|-----------|------|
-| Mail | 领取附件后调用 `AddItem` |
-| GameTask | 提交任务后调用 `AddItem` |
-| Monster | 掉落后调用 `GrantItem` → `AddItem` |
-| Fight / Player | 未完成的道具效果入口计划修改战斗或角色属性 |
+```text
+IsFull = Items.Count > Capacity
+```
 
-## 已知局限
+因此 100/100 仍不是满包，101/100 才是满包。一个在批次开始前取得准入的业务必须完整发放，即使结束后远超 100；直接调用 AddItems 时，即使当前已经超限也会完整添加。
 
-1. 物品过期尚未清理。
-2. 部分添加的通知语义仍需在内容阶段统一。
-3. 与任务、邮件等其他集合之间不提供原子提交。
+| 来源 | 是否在调用 AddItems 前检查 IsFull |
+| --- | --- |
+| 任务提交奖励 | 检查；先写任务已提交状态，最后 AddItems |
+| 邮件附件 | 按 MailId 逐封检查；先写该邮件已领取状态，最后 AddItems |
+| 怪物掉落 / 通用 GrantItem | 不检查；不可挂起来源始终完整添加 |
+
+容量不冻结查询、使用请求或扣除。整栈扣除使栈数降回 Capacity 或以下后，IsFull 自动恢复为 false。
+
+## 扣除与查询
+
+- `RemoveItemsByUid` 先验证整个 Uid/数量字典，任一项失败时完全不修改。部分扣除推送最终 Count，扣到零则删除栈并推送 `RemovedUids`。
+- `RemoveItemsByConfigId` 汇总确认数量足够后按 Uid 升序扣除；当前 Bind 和 ExpireTime 不改变可消耗资格。
+- `GetItem(uid)` 按 Uid 查询；调用方不得直接修改返回对象。
+- `GetItemCount(configId)` 使用 checked long 汇总全部 Bind、ExpireTime 和过去时间的栈。
+
+所有成功扣除批次只标脏一次并由背包内部推送一次；调用方不重复发送背包变化通知。
+
+## 使用物品
+
+协议固定为 `BagUseItemReq.Uid`，语义是使用该 Uid 的一件物品。`GAME1-BAG-01` 完成前，服务端对所有请求稳定返回 `BagUseItemAck.Error = "道具使用功能未完成"`，不会扣物品、改属性或发送背包变化通知。
+
+## 协议与客户端
+
+- `QueryBagAck.Items` 是 `Dictionary<long, BagItemInfo>` 完整快照，Capacity 可以小于 Items.Count。
+- `BagItemChangedNtf.Items` 是变化栈最终快照，`RemovedUids` 表示已删除栈；同一 Uid 不能同时出现在两者中。
+- Tidy、Swap、Index、空格搜索及对应消息已经删除；协议不兼容旧客户端。
+- `BagController` 按 Uid 缓存，进角时清空并查询全量快照，变化通知按绝对数量覆盖；迟到快照会再次核对 RoleId 与角色代次。
+- 临时断线可以保留只读快照，但禁止发送背包操作；踢下线、永久重连失败、主动断开或切换角色会清空缓存。
+- `BagPanel` 按 ConfigId、Uid 升序生成动态滚动条目，显示 `Items.Count / Capacity`，点击条目发送 Uid，确认框固定为 `x1`。
+
+## 保存与验证状态
+
+在线修改只更新玩家权威内存并标脏，仍由 Player 批量持久化系统在定时、断线和正常停服时保存。任务、邮件和背包分集合写入，不提供跨集合原子事务。
+
+当前代码已通过共享、服务端、客户端 Logic、Robot、tools 构建以及客户端边界和协议检查。`task_persistence_test` 已连接本地构建服务和 MongoDB，验证 Uid 快照、单次通知、任务奖励、未实现使用不扣除及多次断线保存/重登。表驱动拆栈、Bind/ExpireTime、100/101 容量等需要专门数据的边界，以及 Unity Editor/PlayMode UI 仍在 `docs/测试列表.md` 跟踪。

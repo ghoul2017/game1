@@ -18,7 +18,7 @@ public static class RoleTaskSystem
     /// 更新任务进度（事件驱动）。
     /// </summary>
     public static List<int> UpdateProgress(
-        this RoleTaskComponent self, int goalType, int goalParam, int count)
+        this RoleTaskComponent self, int goalType, int goalParam, long count)
     {
         if (count <= 0)
             return [];
@@ -40,7 +40,9 @@ public static class RoleTaskSystem
                 if (goal.IsFinished)
                     continue;
 
-                goal.CurrentCount = Math.Min(goal.CurrentCount + count, goal.TargetCount);
+                var remaining = (long)goal.TargetCount - goal.CurrentCount;
+                var increment = Math.Min(count, remaining);
+                goal.CurrentCount += checked((int)increment);
                 changed = true;
             }
 

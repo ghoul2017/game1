@@ -12,7 +12,7 @@ if [ -f client/Assembly-CSharp.csproj ] &&
     dotnet build game1.sln
 else
     echo "未发现 Unity 生成的 client/Assembly-CSharp*.csproj，跳过 game1.sln 构建。"
-    echo "请用 Unity 2021.3.26f1c1 打开 client 并执行 Assets > Refresh 后，再运行 dotnet build game1.sln。"
+    echo "请用 Unity 2022.3.62f3c1 打开 client 并执行 Assets > Refresh 后，再运行 dotnet build game1.sln。"
     dotnet build shared/Shared.csproj
     dotnet build client-logic/ClientLogic.csproj
     dotnet build server/Server.csproj

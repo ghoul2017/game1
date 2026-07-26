@@ -42,16 +42,17 @@ GameTask 管理任务接取、事件驱动进度、提交领奖和放弃。`Role
 
 ### 进度
 
-`UpdateProgress` 只匹配进行中的任务，按 `GoalType + GoalParam` 增加数量并限制到目标值。全部目标完成时设置 `State=1` 和 `CompleteTime`，最后统一标脏。
+`UpdateProgress` 只匹配进行中的任务，按 `GoalType + GoalParam` 增加数量并限制到目标值。物品获得事件数量为 long，系统先用 long 计算目标剩余量和本次增量，确认增量处于 int 范围后再写入仍为 int 的 CurrentCount。全部目标完成时设置 `State=1` 和 `CompleteTime`，最后统一标脏。
 
 ### 提交领奖
 
 1. 校验任务处于 `State=1`。
-2. 严格解析 `RewardItems` 的 `itemId:count`。
-3. 同步加入背包；任一物品添加失败时恢复提交前的背包内存快照。
-4. 奖励全部加入后设置任务 `State=2`，任务和背包分别标脏。
+2. 严格解析 `RewardItems` 的 `itemId:long count`，并在修改前验证物品配置和表格 MaxStack。
+3. 只有当前背包 `Items.Count > Capacity` 时返回“背包已满”；100/100 仍可提交完整奖励批次。
+4. 通过校验后先设置任务 `State=2` 并标脏，最后调用背包 AddItems 完整发奖。
+5. `TaskSubmitAck.Rewards` 使用 AddItems 返回的本次获得展示量；背包变化通知只由 AddItems 发送。
 
-任务与背包保存在不同集合，当前不使用奖励回执或跨集合事务。进程在两个集合的写入之间异常退出时，可能出现部分落库；这是当前 Demo/框架阶段确认接受的取舍，不应在业务方法中改回即时 `await` 保存。
+完整预检后的意外添加失败直接暴露并保留已写任务状态，不创建快照或回滚。任务与背包保存在不同集合，当前不使用奖励回执或跨集合事务。进程在两个集合的写入之间异常退出时，可能出现部分落库；这是当前 Demo/框架阶段确认接受的取舍，不应在业务方法中改回即时 `await` 保存。
 
 ## 上线加载与结构
 

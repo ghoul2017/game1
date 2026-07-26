@@ -26,11 +26,22 @@ public sealed class MailGetItemReqHandler : PlayerRpcMessageHandler<MailGetItemR
             if (!mail.HasUnclaimedAttachment)
                 continue;
 
-            var configIds = mail.Attachments.Select(item => item.ConfigId).ToArray();
-            var counts = mail.Attachments.Select(item => item.Count).ToArray();
-            if (!bagComponent.CanAddItems(configIds, counts, out var errorMessage))
+            var addItems = mail.Attachments.Select(item => new BagItemAddData
+            {
+                ConfigId = item.ConfigId,
+                Count = item.Count,
+                Bind = false,
+                ExpireTime = 0,
+            }).ToArray();
+            if (!RoleBagHelper.TryValidateAddItems(addItems, out var errorMessage))
             {
                 res.ErrorMessage = errorMessage;
+                break;
+            }
+
+            if (bagComponent.IsFull())
+            {
+                res.ErrorMessage = "背包已满";
                 break;
             }
 
@@ -38,13 +49,7 @@ public sealed class MailGetItemReqHandler : PlayerRpcMessageHandler<MailGetItemR
             res.ClaimedMailIds.Add(mail.Id);
             mailComponent.MarkDirty();
 
-            var addError = bagComponent.AddItems(configIds, counts);
-            if (!string.IsNullOrEmpty(addError))
-            {
-                var message = $"附件预检通过后添加失败 RoleId:{player.Id} {addError}";
-                Log.Error(message);
-                throw new InvalidOperationException(message);
-            }
+            bagComponent.AddItems(addItems);
 
             attachmentCount += mail.Attachments.Count;
         }

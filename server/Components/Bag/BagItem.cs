@@ -1,7 +1,7 @@
 namespace Game.Components.Bag;
 
 /// <summary>
-/// 背包物品。每个格子一个实例。
+/// 背包物品实例栈。
 /// </summary>
 public class BagItem
 {
@@ -12,14 +12,11 @@ public class BagItem
     public int ConfigId { get; set; }
 
     /// <summary>数量</summary>
-    public int Count { get; set; }
-
-    /// <summary>格子索引</summary>
-    public int Index { get; set; }
+    public long Count { get; set; }
 
     /// <summary>是否绑定</summary>
     public bool Bind { get; set; }
 
-    /// <summary>过期时间（Unix毫秒，0=永不过期）</summary>
+    /// <summary>当前只作为不透明堆叠元数据，不参与有效性判断。</summary>
     public long ExpireTime { get; set; }
 }

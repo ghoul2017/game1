@@ -24,6 +24,7 @@ namespace Client.Logic
             GameData.Token = "";
             GameData.CurrentRole = null;
             GameData.CurrentMap = null;
+            BagController.Instance.ResetForRole(0);
             EventBus.Instance.Publish(new EventType.NetKickedEvent { Reason = ntf.Reason });
             client.DisposeSession(LogoutReason.NetDisconnected, "Kicked by server");
             await Task.CompletedTask;

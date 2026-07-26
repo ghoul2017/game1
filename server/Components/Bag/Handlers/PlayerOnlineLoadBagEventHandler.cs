@@ -20,6 +20,8 @@ public sealed class PlayerOnlineLoadBagEventHandler : IAsyncEventHandler<EventTy
             await MongoDb.Instance.InsertAsync(bag);
             Log.Info($"创建新背包 RoleId:{player.Id}");
         }
+
+        RoleBagHelper.EnsureValidState(bag);
         player.AddComponent(bag);
     }
 }

@@ -106,23 +106,55 @@ namespace Robot
 
             var bagBeforeSubmit = await Session.CallAsync<QueryBagAck>(new QueryBagReq());
             Assertions.True(string.IsNullOrEmpty(bagBeforeSubmit.ErrorMessage), $"提交前查询背包应成功: {bagBeforeSubmit.ErrorMessage}");
-            var rewardCountBeforeSubmit = bagBeforeSubmit.Items
+            AssertBagSnapshot(bagBeforeSubmit, "提交前背包");
+            var rewardCountBeforeSubmit = bagBeforeSubmit.Items.Values
                 .Where(item => item.ConfigId == RewardItemId)
                 .Sum(item => item.Count);
 
+            var bagChangedTask = Session.WaitForAsync<BagItemChangedNtf>();
+            var duplicateBagChangedTask = Session.WaitForAsync<BagItemChangedNtf>(2_000);
             var submitAck = await Session.CallAsync<TaskSubmitAck>(new TaskSubmitReq { TaskId = TaskId });
             Assertions.True(string.IsNullOrEmpty(submitAck.ErrorMessage), $"提交任务应成功: {submitAck.ErrorMessage}");
             var reward = submitAck.Rewards.SingleOrDefault(item => item.ConfigId == RewardItemId);
             Assertions.NotNull(reward, $"提交响应应包含物品奖励 {RewardItemId}");
             Assertions.Equal(1, reward!.Count, "提交响应中的奖励数量应与任务配置一致");
 
+            var bagChanged = await bagChangedTask;
+            foreach (var pair in bagChanged.Items)
+                Assertions.Equal(pair.Key, pair.Value.Uid, "背包变化通知的 Key 必须等于物品 Uid");
+            Assertions.True(
+                bagChanged.RemovedUids.All(uid => !bagChanged.Items.ContainsKey(uid)),
+                "同一 Uid 不能在一次通知中同时更新和删除");
+            Assertions.True(
+                bagChanged.Items.Values.Any(item => item.ConfigId == RewardItemId),
+                "提交奖励应通过背包变化通知推送最终栈快照");
+            try
+            {
+                await duplicateBagChangedTask;
+                Assertions.Fail("一次任务奖励 AddItems 不得重复推送背包变化通知");
+            }
+            catch (TimeoutException)
+            {
+                // 预期只有一条背包变化通知。
+            }
+
             var duplicateSubmitAck = await Session.CallAsync<TaskSubmitAck>(new TaskSubmitReq { TaskId = TaskId });
             Assertions.Equal("任务已提交", duplicateSubmitAck.ErrorMessage, "重复提交应返回稳定业务错误");
 
             var bagAck = await Session.CallAsync<QueryBagAck>(new QueryBagReq());
             Assertions.True(string.IsNullOrEmpty(bagAck.ErrorMessage), $"查询背包应成功: {bagAck.ErrorMessage}");
-            var rewardCount = bagAck.Items.Where(item => item.ConfigId == RewardItemId).Sum(item => item.Count);
+            AssertBagSnapshot(bagAck, "提交后背包");
+            var rewardCount = bagAck.Items.Values.Where(item => item.ConfigId == RewardItemId).Sum(item => item.Count);
             Assertions.Equal(rewardCountBeforeSubmit + 1, rewardCount, "首次提交应在已有掉落基础上增加一份任务奖励");
+
+            var rewardUid = bagAck.Items.Values.First(item => item.ConfigId == RewardItemId).Uid;
+            var useAck = await Session.CallAsync<BagUseItemAck>(new BagUseItemReq { Uid = rewardUid });
+            Assertions.Equal("道具使用功能未完成", useAck.Error, "物品使用未实现时应返回稳定错误");
+            var bagAfterUse = await Session.CallAsync<QueryBagAck>(new QueryBagReq());
+            var rewardCountAfterUse = bagAfterUse.Items.Values
+                .Where(item => item.ConfigId == RewardItemId)
+                .Sum(item => item.Count);
+            Assertions.Equal(rewardCount, rewardCountAfterUse, "未实现的物品使用不得扣除道具");
 
             await DisconnectAndWaitForBatchSaveAsync();
             await Session.ReconnectAsync();
@@ -131,7 +163,8 @@ namespace Robot
             var submittedTask = submittedList.Tasks.Single(t => t.TaskId == TaskId);
             Assertions.Equal(2, submittedTask.State, "领奖后重登应恢复已提交状态");
             var reloadedBag = await Session.CallAsync<QueryBagAck>(new QueryBagReq());
-            var reloadedRewardCount = reloadedBag.Items.Where(item => item.ConfigId == RewardItemId).Sum(item => item.Count);
+            AssertBagSnapshot(reloadedBag, "重登背包");
+            var reloadedRewardCount = reloadedBag.Items.Values.Where(item => item.ConfigId == RewardItemId).Sum(item => item.Count);
             Assertions.Equal(rewardCount, reloadedRewardCount, "领奖后重登应恢复奖励且不得重复发放");
 
             Log($"任务持久化验证完成: Username={_username}, RoleId={role.RoleId}, TaskId={TaskId}, Progress={killGoal.CurrentCount}, Reward={RewardItemId}:{rewardCount}");
@@ -141,6 +174,15 @@ namespace Robot
         {
             Session.Disconnect();
             await Task.Delay(DisconnectSaveWaitMs);
+        }
+
+        private static void AssertBagSnapshot(QueryBagAck ack, string context)
+        {
+            foreach (var pair in ack.Items)
+            {
+                Assertions.Equal(pair.Key, pair.Value.Uid, context + "的 Key 必须等于物品 Uid");
+                Assertions.True(pair.Value.Count > 0, context + "的物品数量必须为正数");
+            }
         }
 
         private async Task<RoleInfo> LoginAndEnterAsync(long expectedRoleId = 0)

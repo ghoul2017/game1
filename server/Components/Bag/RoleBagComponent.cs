@@ -16,15 +16,10 @@ public class RoleBagComponent : Component, IEntity
     [BsonId]
     public long Id { get; set; }
 
-    /// <summary>背包容量（最大格子数）</summary>
+    /// <summary>业务满包判断阈值；物品栈数量允许超过该值。</summary>
     public int Capacity { get; set; } = 100;
 
-    /// <summary>物品字典：格子索引 → BagItem</summary>
+    /// <summary>物品字典：Uid → BagItem。</summary>
     [BsonDictionaryOptions(DictionaryRepresentation.ArrayOfDocuments)]
-    public Dictionary<int, BagItem> Items { get; set; } = new();
-
-    internal BagItem? GetByIndex(int index)
-    {
-        return Items.TryGetValue(index, out var item) ? item : null;
-    }
+    public Dictionary<long, BagItem> Items { get; set; } = new();
 }

@@ -17,6 +17,16 @@ namespace Client.Logic
                 Level = ntf.Level,
                 Job = GameData.GetJobName(ntf.Job)
             };
+            BagController.Instance.ResetForRole(ntf.RoleId);
+
+            // Robot 复用 Logic 消息注册，但不拥有 Unity 客户端的 NetClient 生命周期。
+            if (NetClient.Instance == null)
+            {
+                await Task.CompletedTask;
+                return;
+            }
+
+            _ = BagController.Instance.QueryBag();
             controller.StatusText = "正在进入地图...";
             controller.HasError = false;
             EventBus.Instance.Publish(new EventType.RoleSelectDataChangedEvent());
