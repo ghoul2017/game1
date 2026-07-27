@@ -9,4 +9,18 @@ trim_trailing_whitespace = true
 [*.cs]
 indent_style = space
 indent_size = 4
-max_line_length = 1000
+max_line_length = 120
+
+# 局部变量优先使用显式类型；匿名类型和有明确理由的 foreach 迭代变量按中枢 C# 规则例外处理。
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = false:suggestion
+csharp_style_var_elsewhere = false:suggestion
+dotnet_diagnostic.IDE0008.severity = suggestion
+
+# 类型、成员和可执行代码块使用 Allman 风格；初始化器按中枢的 120 字符规则单独检查。
+csharp_new_line_before_open_brace = accessors, anonymous_methods, control_blocks, events, indexers, lambdas, local_functions, methods, properties, types
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_preserve_single_line_blocks = false
+dotnet_diagnostic.IDE0055.severity = suggestion
