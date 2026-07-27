@@ -1,19 +1,14 @@
-using Shared.Core.Database;
 using MongoDB.Bson.Serialization.Attributes;
 using Shared.Core.ECS;
 
 namespace Game.Components.Player;
 
 /// <summary>
-/// 角色持久化数据组件。直接持有所有角色字段，实现 IEntity。
-/// 对应 MongoDB 集合: role_data_component
+/// 角色持久化数据组件。作为 PlayerEntity 完整文档的嵌入数据保存。
 /// </summary>
 [ComponentOf(typeof(PlayerEntity))]
-public class RoleDataComponent : Component, IEntity
+public class RoleDataComponent : Component
 {
-    [BsonId]
-    public long Id { get; set; }
-
     /// <summary>所属用户ID</summary>
     public long UserId { get; set; }
 

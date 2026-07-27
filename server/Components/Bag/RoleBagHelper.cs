@@ -62,10 +62,8 @@ public static class RoleBagHelper
     {
         if (items.Count == 0 && removedUids.Count == 0)
             return;
-        if (self.Parent is not PlayerEntity player)
-            throw new InvalidOperationException($"背包未挂载到玩家 RoleId:{self.Id}");
 
-        player.GetComponent<PlayerOnlineComponent>().Session?.Send(new BagItemChangedNtf
+        self.Parent!.GetComponent<PlayerOnlineComponent>().Session?.Send(new BagItemChangedNtf
         {
             Items = new List<BagItemInfo>(items.Values),
             RemovedUids = removedUids,

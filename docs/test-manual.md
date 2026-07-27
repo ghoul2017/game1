@@ -653,7 +653,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 - 成功后列表新增任务。
 - Toast 显示 `接取任务成功`。
 - 重复接取同一任务返回 `任务已接取`。
-- 内存立即出现任务；断线触发批量保存后，MongoDB `role_task_component.Tasks` 为数组并包含任务 1。
+- 内存立即出现任务；断线触发批量保存后，MongoDB `player_entity.role_task.Tasks` 为数组并包含任务 1。
 - 重新登录并进入游戏后返回相同 `AcceptTime`。这验证的是持久化恢复，不是 `ReconnectReq` 协议。
 
 ### TASK-03 接取输入校验
@@ -693,7 +693,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 | 重复提交任务 | 领奖后再次发送同一提交请求 | 返回 `任务已提交`，背包奖励不重复增加 |
 | 领奖后重新登录 | 完成提交后断线并重新登录 | 任务状态为 2，奖励总数与提交完成后一致 |
 
-野猪 101 可能随机掉落 `1001`，自动化判断任务奖励时应断言提交前后数量增加 1，不能断言背包内 `1001` 总数恰好为 1。任务与背包分集合批量保存，当前不验证跨集合原子性。
+野猪 101 可能随机掉落 `1001`，自动化判断任务奖励时应断言提交前后数量增加 1，不能断言背包内 `1001` 总数恰好为 1。任务与背包随同一份 `player_entity` 快照保存，并通过重登验证恢复。
 
 当前已接入事件驱动的目标类型：击杀怪物、收集物品、达到等级。对话 NPC、进入场景、使用物品、击杀玩家、通关副本目标类型已有定义但未接入驱动。
 
@@ -767,7 +767,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 - Robot 当前覆盖登录、任务持久化，并在任务场景中覆盖背包 Uid 快照、提交奖励单次通知和未实现使用不扣除；完整容量/扣除、邮件、聊天、AOI 和 `ReconnectReq` 仍需独立场景。
 - 邮件正向流程没有内置触发入口，需要预置邮件或补测试工具。
 - 聊天 UI 当前没有私聊目标输入框，正向私聊只能通过协议测试。
-- 旧 `role_bag_component` 数据不兼容当前 Uid BSON；未经精确 Demo 数据库与集合删除授权不能运行旧角色验证。
+- 旧 `role_*_component` 集合不再读取；没有 `player_entity` 的角色按新玩家创建数据，旧进度不会参与当前验证。
 - 背包动态 UI、超过 64 栈滚动和角色生命周期尚未经过当前版本 Unity Editor/PlayMode 验证。
 - 道具使用效果尚未完成：请求已固定为按 Uid 使用一件，但效果配置关联、实际扣除和 2005 语义需在独立功能任务中补齐。
 - 任务配置中的前置任务、最低等级、经验和金币奖励字段当前没有完整接入提交发奖流程；提交主要发放 `RewardItems`。
@@ -778,7 +778,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 ## 15. 建议回归顺序
 
 1. `dotnet build robot/Robot.csproj`
-2. 取得当前环境和数据授权并启动 MongoDB 与新服务端；使用时间戳新账号时无需删除旧集合，只有复用旧角色时才先完成精确数据重建。
+2. 取得当前环境和数据授权并启动 MongoDB 与新服务端；优先使用时间戳新账号，复用只有旧 Component 集合的角色会创建新的 `player_entity`，不保留旧进度。
 3. 跑 `login_test` Robot 冒烟。
 4. 跑 `task_persistence_test`，确认独立测试角色的任务进度、提交状态和奖励在断线批次保存并重新登录后保持一致。
 5. Unity PlayMode 跑 `USER-01` 到 `ROLE-04`。

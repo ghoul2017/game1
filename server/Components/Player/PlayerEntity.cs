@@ -1,44 +1,66 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using Game.Components.Bag;
+using Game.Components.GameTask;
+using Game.Components.Mail;
+using Shared.Core.Database;
 using Shared.Core.ECS;
 
 namespace Game.Components.Player;
 
 /// <summary>
-/// 玩家实体。Id = RoleId。在线玩家的运行时容器。
+/// 玩家聚合根。Id = RoleId，持久化到 player_entity 集合。
 /// </summary>
-public class PlayerEntity : Entity
+public class PlayerEntity : Entity, IEntity
 {
-    private readonly Dictionary<Type, long> _dirtyVersions = [];
+    private long _dirtyVersion;
+    private bool _hasDirtyData;
 
-    internal void MarkDirty(Type componentType)
+    internal void MarkDirty()
     {
-        _dirtyVersions[componentType] = _dirtyVersions.GetValueOrDefault(componentType) + 1;
+        _dirtyVersion++;
+        _hasDirtyData = true;
     }
 
-    internal List<KeyValuePair<Type, long>> GetDirtyVersions()
+    internal bool TryGetDirtyVersion(out long version)
     {
-        return _dirtyVersions.ToList();
+        version = _dirtyVersion;
+        return _hasDirtyData;
     }
 
-    internal void ConfirmSaved(Type componentType, long version)
+    internal void ConfirmSaved(long version)
     {
-        if (_dirtyVersions.TryGetValue(componentType, out var currentVersion) && currentVersion == version)
-            _dirtyVersions.Remove(componentType);
+        if (_dirtyVersion == version)
+            _hasDirtyData = false;
     }
 
-    internal bool HasDirtyData => _dirtyVersions.Count > 0;
+    internal bool HasDirtyData => _hasDirtyData;
 
-    /// <summary>创建玩家实体（选角入场时调用）</summary>
-    public static PlayerEntity Create(long roleId, long userId)
+    internal void RestoreComponentParents()
     {
-        var entity = CreateEntityById<PlayerEntity>(roleId);
-        var online = entity.AddComponent<PlayerOnlineComponent>();
+        foreach (Component component in GetAllComponents())
+            component.SetParent(this);
+    }
+
+    public static PlayerEntity Create(long roleId, long userId, string name, int level, int job)
+    {
+        PlayerEntity entity = CreateEntityById<PlayerEntity>(roleId);
+        entity.AddComponent(new RoleDataComponent
+        {
+            UserId = userId,
+            Name = name,
+            Level = level,
+            Job = job,
+            CreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+        });
+        entity.AddComponent<RoleAttributeComponent>();
+        entity.AddComponent(new RoleBagComponent { Capacity = 100 });
+        entity.AddComponent<RoleMailComponent>();
+        entity.AddComponent<RoleTaskComponent>();
+
+        PlayerOnlineComponent online = entity.AddComponent<PlayerOnlineComponent>();
         online.UserId = userId;
         online.LoginTime = DateTime.UtcNow;
         online.LastActiveTime = DateTime.UtcNow;
-
         return entity;
     }
 }

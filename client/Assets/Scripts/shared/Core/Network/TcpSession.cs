@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +32,7 @@ namespace Shared.Core.Network
 
         public long SessionId { get; }
         public bool IsConnected { get; private set; }
+        public string RemoteIp { get; }
 
         /// <summary>绑定的用户ID（登录后设置）</summary>
         public long UserId { get; set; }
@@ -58,6 +60,7 @@ namespace Shared.Core.Network
             _socket = socket;
             _router = router;
             SessionId = IdGenerator.Instance.NextId();
+            RemoteIp = (socket.RemoteEndPoint as IPEndPoint)?.Address.ToString() ?? string.Empty;
             IsConnected = true;
         }
 

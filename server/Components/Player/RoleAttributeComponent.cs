@@ -1,20 +1,15 @@
 using Game.Components.Fight;
-using Shared.Core.Database;
-using MongoDB.Bson.Serialization.Attributes;
 using Shared.Core.ECS;
 
 namespace Game.Components.Player;
 
 /// <summary>
-/// 角色属性组件。持久化到 MongoDB（集合名 role_attribute_component）。
+/// 角色属性组件。作为 PlayerEntity 完整文档的嵌入数据保存。
 /// </summary>
 [ComponentOf(typeof(PlayerEntity))]
-public class RoleAttributeComponent : Component, IEntity
+public class RoleAttributeComponent : Component
 {
     public const int SurvivalHp = 1_000_000_000;
-
-    [BsonId]
-    public long Id { get; set; }
 
     /// <summary>当前HP</summary>
     public int Hp { get; set; } = SurvivalHp;

@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Game.Components.Bag;
+using Game.Components.GameTask;
+using Game.Components.Mail;
+using Game.Components.Player;
 using Game.Components.User;
 using Shared.Core;
 using Shared.Core.Database;
+using Shared.Core.ECS;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -29,6 +33,7 @@ public class MongoDb
 
     public async Task Init(MongoDbOptions options)
     {
+        ConfigurePlayerEntitySerialization();
         _client = new MongoClient(options.ConnectionString);
         _database = _client.GetDatabase(options.DatabaseName);
 
@@ -72,14 +77,14 @@ public class MongoDb
         await collection.ReplaceOneAsync(filter, doc, new ReplaceOptions { IsUpsert = true });
     }
 
-    public async Task UpdateBatchAsync(Type entityType, IReadOnlyList<BsonDocument> documents)
+    public async Task UpdateBatchAsync<T>(IReadOnlyList<BsonDocument> documents) where T : class, IEntity
     {
         if (documents.Count == 0)
             return;
         if (_database == null)
             throw new InvalidOperationException("MongoDb 未初始化");
 
-        var collection = _database.GetCollection<BsonDocument>(ConvertToUnderscore(entityType.Name));
+        var collection = _database.GetCollection<BsonDocument>(ConvertToUnderscore(typeof(T).Name));
         var writes = new List<WriteModel<BsonDocument>>(documents.Count);
         foreach (var document in documents)
         {
@@ -189,6 +194,22 @@ public class MongoDb
             }
         }
         return sb.ToString();
+    }
+
+    private static void ConfigurePlayerEntitySerialization()
+    {
+        BsonClassMap.RegisterClassMap<Entity>(classMap =>
+        {
+            classMap.MapField("_id").SetElementName("_id");
+            classMap.MapField("_components").SetElementName("components");
+        });
+        BsonClassMap.RegisterClassMap<Component>(classMap => classMap.SetIsRootClass(true));
+        BsonClassMap.RegisterClassMap<RoleDataComponent>();
+        BsonClassMap.RegisterClassMap<RoleAttributeComponent>();
+        BsonClassMap.RegisterClassMap<RoleBagComponent>();
+        BsonClassMap.RegisterClassMap<RoleMailComponent>();
+        BsonClassMap.RegisterClassMap<RoleTaskComponent>();
+        BsonClassMap.RegisterClassMap<PlayerOnlineComponent>();
     }
 
 }

@@ -94,6 +94,7 @@ public static class AppStart
             var player = Context.Players.GetByRoleId(session.RoleId);
             if (player != null)
             {
+                player.RefreshOnlineActivity(session.LastActiveTime);
                 player.GetComponent<PlayerOnlineComponent>().Session = null;
                 Context.Players.QueueDetachedPlayerSave(player);
                 Context.Players.RemovePlayer(session.RoleId);

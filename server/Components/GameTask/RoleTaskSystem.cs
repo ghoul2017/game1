@@ -53,7 +53,7 @@ public static class RoleTaskSystem
             {
                 task.State = 1;
                 task.CompleteTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                Log.Info($"任务完成 RoleId:{self.Id} TaskId:{task.TaskId}");
+                Log.Info($"任务完成 RoleId:{self.Parent!.Id} TaskId:{task.TaskId}");
             }
 
             changedTaskIds.Add(task.TaskId);

@@ -18,11 +18,12 @@ public static class RoleMailSystem
     /// <summary>发送邮件给指定角色</summary>
     public static void SendMail(this RoleMailComponent self, string sender, string title, string content, int[] rewardConfigs, int[] rewardCounts, long expireTime = 0)
     {
+        long roleId = self.Parent!.Id;
         List<BagItemAddData> normalizedAttachments = BagItemAddDataGenerator.Generate(rewardConfigs, rewardCounts);
         RoleMail mail = new()
         {
             Id = IdGenerator.Instance.NextId(),
-            RoleId = self.Id,
+            RoleId = roleId,
             Sender = sender,
             Title = title,
             Content = content,
@@ -35,7 +36,7 @@ public static class RoleMailSystem
         self.Mails[mail.Id] = mail;
         self.MarkDirty();
 
-        Context.Players.SendToPlayer(self.Id, new MailNewNtf
+        Context.Players.SendToPlayer(roleId, new MailNewNtf
         {
             Mail = self.ToMailInfo(mail),
         });

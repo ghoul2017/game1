@@ -8,11 +8,9 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 
 ## 核心设计
 
-### 轻量索引与完整数据分离
+### 角色索引
 
-`UserRole` 是角色索引（UserId/Name/Level/Job），存在 `user_role` 集合，用于角色列表展示和归属验证。`RoleDataComponent`（Player 模块）是完整角色数据，存在 `role_data_component` 集合，在首次 EnterGame 时按需创建。
-
-分离的好处：登录只需读轻量索引，完整数据延迟到选角入场时才加载。
+`UserRole` 保存 UserId、Name、Level 和 Job，用于角色列表展示和归属验证。
 
 ### 自动注册
 
@@ -20,7 +18,7 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 
 ### Token 无状态验证
 
-`TokenSigner` 使用 HMAC-SHA256 签名，启动时随机生成密钥。Token 包含 userId:roleId:timestamp，验证时检查签名和过期时间。角色 Token 还计划通过 `RoleDataComponent.LastToken` 做单次有效校验，但该字段当前标记为 `BsonIgnore`，断线后重新加载的组件没有旧值，因此不能把这条重连链路视为已完成能力。
+`TokenSigner` 使用 HMAC-SHA256 签名，启动时随机生成密钥。Token 包含 userId:roleId:timestamp，验证时检查签名和过期时间。角色 Token 还计划通过 `RoleDataComponent.LastToken` 做单次有效校验，但该字段当前标记为 `BsonIgnore`，因此不能把这条重连链路视为已完成能力。
 
 ### 保留的文件
 
@@ -33,8 +31,8 @@ User 模块是游戏的入口——账号认证、角色管理、断线重连。
 | `Handlers/CreateRoleReqHandler.cs` | 创建角色消息处理 |
 | `Handlers/EnterGameReqHandler.cs` | 进入游戏消息处理 |
 | `Handlers/ReconnectReqHandler.cs` | 断线重连消息处理 |
-| `User.cs` | 账号实体（IEntity 持久化） |
-| `UserRole.cs` | 角色索引实体（IEntity 持久化） |
+| `User.cs` | 账号实体 |
+| `UserRole.cs` | 角色索引实体 |
 
 ## 登录流程
 
@@ -79,26 +77,22 @@ CreateRoleReq(name, job)
   └── 5. 创建 UserRole → MongoDB user_role 集合
 ```
 
-只写 `user_role` 集合。`role_data_component` 集合在首次 EnterGame 时按需创建。
-
 ## 进入游戏
 
 ```
 EnterGameReq(roleId)
   │
   ├── 1. 校验登录状态
-  ├── 2. 用 UserRole 验证角色归属（轻量索引，不加载完整数据）
+  ├── 2. 用 UserRole 验证角色归属
   ├── 3. 调用 PlayerSystem.EnterGame
-  │     ├── 加载/创建 RoleDataComponent
   │     ├── 绑定会话 + 生成 Token
-  │     ├── AddPlayer
-  │     ├── PublishAsync(PlayerOnlineEvent) → 各模块级联加载
+  │     ├── 注册在线玩家
   │     └── 发送 EnterGameNtf（角色数据）
   ├── 4. EnterGameRes(errorMessage, token)
   └── 5. EnterGameNtf(roleId, name, level, job)
 ```
 
-**PlayerOnlineEvent 先于 EnterGameNtf**：保证 PlayerEntity 级组件已挂载完成，客户端收到 EnterGameNtf 后立即发送 EnterMapReq 时不会进入半初始化状态。EnterGameRes 精简到只含 ErrorMessage + Token。
+EnterGameRes 精简到只含 ErrorMessage + Token。
 
 ## 断线重连（当前未闭环）
 
@@ -112,7 +106,7 @@ ReconnectReq(token, roleId)
   └── 5. 生成新 Token，更新 LastToken
 ```
 
-设计上重连成功后客户端再发送 `EnterGameReq`，走正常进入游戏流程。当前 `LastToken` 不持久化，而 `ReconnectReqHandler` 会重新从 MongoDB 加载 RoleData；带 roleId 的 Token 因而无法通过 LastToken 匹配。Robot 的任务持久化场景使用的是“断线后重新登录并进入游戏”，不等同于验证 `ReconnectReq`。
+设计上重连成功后客户端再发送 `EnterGameReq`，走正常进入游戏流程。当前 `LastToken` 不持久化，带 roleId 的 Token 因而无法通过 LastToken 匹配。
 
 ## 踢人
 
@@ -135,7 +129,7 @@ ReconnectReq(token, roleId)
 | EventBus | 单向 | ServerInitUserComponentEventHandler 订阅 ServerInitEvent |
 | TokenSigner | 单向 | Token 签名验证 |
 
-核心依赖链：**User 登录 → 进入游戏（UserRole 验证）→ PlayerSystem.EnterGame → PlayerOnlineEvent → 各模块挂载 Component + 加载数据 → EnterGameNtf**
+核心依赖链：**User 登录 → UserRole 验证 → PlayerSystem.EnterGame → PlayerOnlineEvent → EnterGameNtf**
 
 ## 已知局限
 

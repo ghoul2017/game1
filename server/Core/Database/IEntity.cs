@@ -5,5 +5,5 @@ namespace Shared.Core.Database;
 /// </summary>
 public interface IEntity
 {
-    long Id { get; set; }
+    long Id { get; }
 }

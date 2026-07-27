@@ -157,7 +157,7 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 |--------|------|------|
 | Map | 双向 | GameMap 本身属于 Map 模块，内部使用 AOI 广播和玩家查询 |
 | Fight | 双向 | 怪物 FightUnitComponent 常驻；FightHelper 检测死亡后调用 `map.OnMonsterKilled()` |
-| Player | 单向 | 怪物死亡后通过同步的 `GrantExp/GrantGold/GrantItem` 修改内存并标脏 |
+| Player | 单向 | 怪物死亡后通过同步的 `GrantExp/GrantGold/GrantItem` 发放奖励 |
 | Config | 单向 | 读取 `MonsterConfig` 驱动所有行为参数 |
 | GameTask | 被动 | `MonsterKilledEvent` 驱动击杀任务进度 |
 

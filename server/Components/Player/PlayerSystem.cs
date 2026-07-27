@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Game.Components.Bag;
+using Game.Database;
 using Shared.Common.Protos;
 using Shared.Core;
-using Shared.Core.Database;
-using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
 using Shared.Core.Network;
@@ -111,48 +110,40 @@ public static class PlayerSystem
     public static async Task<(PlayerEntity player, string token)?> EnterGame(
         this PlayerComponent self, long roleId, long userId, TcpSession session, string name, int level, int job)
     {
-        var player = PlayerEntity.Create(roleId, userId);
+        PlayerEntity? player = await PlayerPersistenceSystem.LoadPlayerAsync(roleId);
+        bool isNewPlayer = player == null;
+        player ??= PlayerEntity.Create(roleId, userId, name, level, job);
 
-        // 加载角色持久化数据，不存在则用 UserRole 数据创建
-        var roleData = await self.LoadRoleDataAsync(roleId);
-        if (roleData == null)
+        PlayerOnlineComponent online = player.GetComponent<PlayerOnlineComponent>();
+        online.UserId = userId;
+        online.LoginTime = DateTime.UtcNow;
+        online.LastActiveTime = session.LastActiveTime;
+        online.LoginIp = session.RemoteIp;
+        online.Session = session;
+
+        if (isNewPlayer)
         {
-            // 首次进入游戏，按需创建 RoleDataComponent
-            roleData = new RoleDataComponent
-            {
-                Id = roleId,
-                UserId = userId,
-                Name = name,
-                Level = level,
-                Job = job,
-                CreateTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            };
-            await MongoDb.Instance.InsertAsync(roleData);
-            Log.Info($"首次进入游戏，创建角色数据 RoleId:{roleId}");
+            await MongoDb.Instance.InsertAsync(player);
+            Log.Info($"首次进入游戏，创建玩家数据 RoleId:{roleId}");
         }
-        player.AddComponent(roleData);
+        else
+            online.MarkDirty();
 
-        // 绑定会话
+        RoleDataComponent roleData = player.GetComponent<RoleDataComponent>();
+        string token = TokenSigner.Instance.Generate(userId, roleId);
         session.RoleId = roleId;
-        player.GetComponent<PlayerOnlineComponent>().Session = session;
-
-        // 生成重连Token（含roleId）并写入角色
-        var token = TokenSigner.Instance.Generate(userId, roleId);
         session.ReconnectToken = token;
         roleData.LastToken = token;
 
         self.AddPlayer(player);
-
-        // 先完成各模块上线加载，避免客户端收到 EnterGameNtf 后立即进图时访问未挂载组件。
         await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { Player = player });
 
-        // 通知客户端进入游戏准备就绪
-        session.Send(new Shared.Common.Protos.EnterGameNtf
+        session.Send(new EnterGameNtf
         {
             RoleId = roleId,
             Name = roleData.Name,
             Level = roleData.Level,
-            Job = roleData.Job
+            Job = roleData.Job,
         });
 
         Log.Info($"进入游戏 UserId:{userId} RoleId:{roleId} Name:{roleData.Name}");
@@ -161,15 +152,15 @@ public static class PlayerSystem
 
     public static async Task<RoleDataComponent?> LoadRoleDataAsync(this PlayerComponent self, long roleId)
     {
-        try
-        {
-            return await MongoDb.Instance.LoadAsync<RoleDataComponent>(roleId);
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"加载角色数据失败 RoleId:{roleId}: {ex.Message}");
-            return null;
-        }
+        PlayerEntity? player = await PlayerPersistenceSystem.LoadPlayerAsync(roleId);
+        return player?.GetComponent<RoleDataComponent>();
+    }
+
+    public static void RefreshOnlineActivity(this PlayerEntity self, DateTime lastActiveTime)
+    {
+        PlayerOnlineComponent online = self.GetComponent<PlayerOnlineComponent>();
+        online.LastActiveTime = lastActiveTime;
+        online.MarkDirty();
     }
 
     public static void RemoveAll(this PlayerComponent self)

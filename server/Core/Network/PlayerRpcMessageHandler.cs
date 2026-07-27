@@ -35,6 +35,7 @@ public abstract class PlayerRpcMessageHandler<TReq, TRes> : IClassMessageHandler
             return res;
         }
 
+        player.RefreshOnlineActivity(session.LastActiveTime);
         await ExecuteAsync(player, req, res);
         return res;
     }

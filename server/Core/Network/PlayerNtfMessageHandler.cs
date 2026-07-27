@@ -28,6 +28,7 @@ public abstract class PlayerNtfMessageHandler<TNtf> : IClassMessageHandler
         if (player == null)
             return null;
 
+        player.RefreshOnlineActivity(session.LastActiveTime);
         await ExecuteAsync(player, ntf);
         return null;
     }

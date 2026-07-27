@@ -4,11 +4,11 @@
 
 ## 定位
 
-Bag 管理玩家的 UID 物品实例栈，是邮件附件、任务奖励和怪物掉落的最终入包入口。`RoleBagComponent` 持久化到 `role_bag_component`；服务端不保存格子 Index 或手工展示顺序。
+Bag 管理玩家的 UID 物品实例栈，是邮件附件、任务奖励和怪物掉落的最终入包入口。服务端不保存格子 Index 或手工展示顺序。
 
 ## 数据结构与不变量
 
-运行时和持久化结构为：
+数据结构为：
 
 ```text
 Dictionary<long, BagItem> Items
@@ -24,8 +24,6 @@ BagItem
 
 非字符串字典键使用 MongoDB `ArrayOfDocuments` 表示。Uid 必须为正数且 Key 必须等于 `BagItem.Uid`；ConfigId 必须存在，栈数量必须满足 `0 < Count <= ItemConfig.MaxStack`。
 
-旧 Index 背包与当前 BSON 不兼容，项目不提供迁移、双读或 SchemaVersion。时间戳新账号会直接创建当前结构；复用旧角色前必须取得精确数据库和集合删除授权，再单独重建 `role_bag_component` 中的目标数据。本次 Robot 只创建新账号与角色，没有删除已有数据。
-
 ## 添加与堆叠
 
 业务先通过 `BagItemAddDataGenerator` 将 `int[] RewardConfigs` 和 `int[] RewardCounts` 生成 `List<BagItemAddData>` normalized 数据，然后调用唯一添加入口 `AddItems(IReadOnlyList<BagItemAddData>)`：
@@ -34,7 +32,7 @@ BagItem
 2. `AddItems` 只读取 normalized 列表，不再验证或重新归一化；只把三项堆叠身份完全一致的物品合并，按 Uid 升序填充已有未满栈。
 3. 剩余数量严格按表格 `ItemConfig.MaxStack` 拆成新 Uid；装备通过 `MaxStack=1` 自然保持一件一栈。
 4. 批次合法后完整写入，不读取容量，也不会因中途超限停止。
-5. 实际变化只标脏一次，并由背包内部发送一条 `BagItemChangedNtf`。通知中的 `Items` 是变化栈的最终绝对快照，不是增量。
+5. 实际变化后由背包内部发送一条 `BagItemChangedNtf`。通知中的 `Items` 是变化栈的最终绝对快照，不是增量。
 6. 返值是 `List<BagItemAddData>` 本次获得展示量；其 Count 不是拆栈后的最终栈数量。`IReadOnlyList` 参数表达 `AddItems` 不得增删、替换或重排调用方的列表。
 
 `ExpireTime` 当前只是普通 long 元数据：不与当前时间比较，不作废、不清理、不隐藏，仍计入容量、查询和扣除；只有数值完全相同的栈才能合并。
@@ -64,7 +62,7 @@ IsFull = Items.Count > Capacity
 - `GetItem(uid)` 按 Uid 查询；调用方不得直接修改返回对象。
 - `GetItemCount(configId)` 使用 checked long 汇总全部 Bind、ExpireTime 和过去时间的栈。
 
-所有成功扣除批次只标脏一次并由背包内部推送一次；调用方不重复发送背包变化通知。
+所有成功扣除批次只由背包内部推送一次；调用方不重复发送背包变化通知。
 
 ## 使用物品
 
@@ -78,9 +76,3 @@ IsFull = Items.Count > Capacity
 - `BagController` 按 Uid 缓存，进角时清空并查询全量快照，变化通知按绝对数量覆盖；迟到快照会再次核对 RoleId 与角色代次。
 - 临时断线可以保留只读快照，但禁止发送背包操作；踢下线、永久重连失败、主动断开或切换角色会清空缓存。
 - `BagPanel` 按 ConfigId、Uid 升序生成动态滚动条目，显示 `Items.Count / Capacity`，点击条目发送 Uid，确认框固定为 `x1`。
-
-## 保存与验证状态
-
-在线修改只更新玩家权威内存并标脏，仍由 Player 批量持久化系统在定时、断线和正常停服时保存。任务、邮件和背包分集合写入，不提供跨集合原子事务。
-
-当前代码已通过共享、服务端、客户端 Logic、Robot、tools 构建以及客户端边界和协议检查。`task_persistence_test` 已连接本地构建服务和 MongoDB，验证 Uid 快照、单次通知、任务奖励、未实现使用不扣除及多次断线保存/重登。表驱动拆栈、Bind/ExpireTime、100/101 容量等需要专门数据的边界，以及 Unity Editor/PlayMode UI 仍在 `docs/测试列表.md` 跟踪。

@@ -5,14 +5,13 @@ using System.Threading.Tasks;
 using Game.Database;
 using MongoDB.Bson;
 using Shared.Core;
-using Shared.Core.Database;
 using Shared.Core.ECS;
 using Shared.Core.Log;
 
 namespace Game.Components.Player;
 
 /// <summary>
-/// 玩家聚合持久化。业务只修改主线程内存并标脏；本系统按批次生成快照并分集合写入。
+/// 玩家聚合持久化。业务只修改主线程内存并标脏；本系统按批次保存 PlayerEntity。
 /// </summary>
 public static class PlayerPersistenceSystem
 {
@@ -21,12 +20,7 @@ public static class PlayerPersistenceSystem
 
     public static void MarkDirty(this Component component)
     {
-        if (component is not IEntity)
-            throw new InvalidOperationException($"组件 {component.GetType().Name} 不是持久化实体");
-        if (component.Parent is not PlayerEntity player)
-            throw new InvalidOperationException($"组件 {component.GetType().Name} 未挂载到 PlayerEntity");
-
-        player.MarkDirty(component.GetType());
+        ((PlayerEntity)component.Parent!).MarkDirty();
     }
 
     public static void StartBatchSave(this PlayerComponent self)
@@ -73,14 +67,20 @@ public static class PlayerPersistenceSystem
         return self.EnqueueSave(players);
     }
 
+    internal static async Task<PlayerEntity?> LoadPlayerAsync(long roleId)
+    {
+        PlayerEntity? player = await MongoDb.Instance.LoadAsync<PlayerEntity>(roleId);
+        player?.RestoreComponentParents();
+        return player;
+    }
+
     private static Task EnqueueSave(this PlayerComponent self, List<PlayerEntity> players)
     {
         self.SaveQueue = SaveAfterAsync(self, self.SaveQueue, players);
         return self.SaveQueue;
     }
 
-    private static async Task SaveAfterAsync(
-        PlayerComponent self, Task previousSave, List<PlayerEntity> players)
+    private static async Task SaveAfterAsync(PlayerComponent self, Task previousSave, List<PlayerEntity> players)
     {
         try
         {
@@ -98,28 +98,21 @@ public static class PlayerPersistenceSystem
             return;
         }
 
-        var savedCount = 0;
-        foreach (var group in snapshots.GroupBy(snapshot => snapshot.EntityType))
+        try
         {
-            var groupSnapshots = group.ToList();
-            try
-            {
-                await MongoDb.Instance.UpdateBatchAsync(
-                    group.Key, groupSnapshots.Select(snapshot => snapshot.Document).ToList());
-                foreach (var snapshot in groupSnapshots)
-                {
-                    snapshot.Player.ConfirmSaved(snapshot.EntityType, snapshot.Version);
-                    savedCount++;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"玩家批量保存失败 Component:{group.Key.Name} Count:{groupSnapshots.Count}", ex);
-            }
+            var documents = snapshots.Select(snapshot => snapshot.Document).ToList();
+            await MongoDb.Instance.UpdateBatchAsync<PlayerEntity>(documents);
+            foreach (var snapshot in snapshots)
+                snapshot.Player.ConfirmSaved(snapshot.Version);
+
+            Log.Info($"玩家批量保存完成 PlayerCount:{players.Count} SnapshotCount:{snapshots.Count}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"玩家批量保存失败 PlayerCount:{snapshots.Count}", ex);
         }
 
         RemoveCleanPendingPlayers(self, players);
-        Log.Info($"玩家批量保存完成 PlayerCount:{players.Count} ComponentCount:{savedCount}");
     }
 
     private static List<PlayerSaveSnapshot> CaptureSnapshots(List<PlayerEntity> players)
@@ -127,28 +120,23 @@ public static class PlayerPersistenceSystem
         var snapshots = new List<PlayerSaveSnapshot>();
         foreach (var player in players)
         {
-            foreach (var dirtyVersion in player.GetDirtyVersions())
+            if (!player.TryGetDirtyVersion(out long dirtyVersion))
             {
-                var component = player.GetComponent(dirtyVersion.Key);
-                if (component is not IEntity entity)
-                {
-                    Log.Error($"玩家脏组件无法持久化 RoleId:{player.Id} Component:{dirtyVersion.Key.Name}");
-                    continue;
-                }
+                continue;
+            }
 
-                try
-                {
-                    var document = entity.ToBsonDocument(dirtyVersion.Key);
-                    document["_id"] = entity.Id;
-                    snapshots.Add(new PlayerSaveSnapshot(
-                        player, dirtyVersion.Key, dirtyVersion.Value, document));
-                }
-                catch (Exception ex)
-                {
-                    Log.Error($"生成玩家保存快照失败 RoleId:{player.Id} Component:{dirtyVersion.Key.Name}", ex);
-                }
+            try
+            {
+                var document = player.ToBsonDocument();
+                document["_id"] = player.Id;
+                snapshots.Add(new PlayerSaveSnapshot(player, dirtyVersion, document));
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"生成玩家保存快照失败 RoleId:{player.Id}", ex);
             }
         }
+
         return snapshots;
     }
 
@@ -161,6 +149,5 @@ public static class PlayerPersistenceSystem
         }
     }
 
-    private sealed record PlayerSaveSnapshot(
-        PlayerEntity Player, Type EntityType, long Version, BsonDocument Document);
+    private sealed record PlayerSaveSnapshot(PlayerEntity Player, long Version, BsonDocument Document);
 }
