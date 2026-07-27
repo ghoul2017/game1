@@ -1,7 +1,7 @@
 namespace Game.Components.Bag;
 
 /// <summary>
-/// 道具添加输入，也是业务层获得展示使用的归一化数据。
+/// 尚未分配 UID 的待入包道具，也是业务层获得展示使用的归一化数据。
 /// </summary>
 public sealed class BagItemAddData
 {

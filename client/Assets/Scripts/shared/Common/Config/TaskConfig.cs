@@ -62,8 +62,11 @@ namespace Shared.Common.Config
         /// <summary>奖励金币</summary>
         public int RewardGold { get; set; }
 
-        /// <summary>奖励物品列表（格式：物品ID:数量,物品ID:数量）</summary>
-        public string RewardItems { get; set; } = "";
+        /// <summary>奖励道具配置 ID</summary>
+        public int[] RewardConfigs { get; set; } = new int[0];
+
+        /// <summary>奖励道具数量，与 RewardConfigs 按索引对应</summary>
+        public int[] RewardCounts { get; set; } = new int[0];
 
         /// <summary>前置任务ID（0表示无前置）</summary>
         public int PreTaskId { get; set; }

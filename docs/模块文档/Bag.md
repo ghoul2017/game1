@@ -22,20 +22,20 @@ BagItem
   long ExpireTime
 ```
 
-非字符串字典键使用 MongoDB `ArrayOfDocuments` 表示。Uid 必须为正数且 Key 必须等于 `BagItem.Uid`；ConfigId 必须存在，栈数量必须满足 `0 < Count <= ItemConfig.MaxStack`。配置把 MaxStack 降到已有栈数量以下时，背包操作会暴露数据不变量错误，不会静默裁切或拆栈。
+非字符串字典键使用 MongoDB `ArrayOfDocuments` 表示。Uid 必须为正数且 Key 必须等于 `BagItem.Uid`；ConfigId 必须存在，栈数量必须满足 `0 < Count <= ItemConfig.MaxStack`。
 
 旧 Index 背包与当前 BSON 不兼容，项目不提供迁移、双读或 SchemaVersion。时间戳新账号会直接创建当前结构；复用旧角色前必须取得精确数据库和集合删除授权，再单独重建 `role_bag_component` 中的目标数据。本次 Robot 只创建新账号与角色，没有删除已有数据。
 
 ## 添加与堆叠
 
-对外唯一添加入口是 `AddItems(IReadOnlyList<BagItemAddData>)`：
+业务先通过 `BagItemAddDataGenerator` 将 `int[] RewardConfigs` 和 `int[] RewardCounts` 生成 `List<BagItemAddData>` normalized 数据，然后调用唯一添加入口 `AddItems(IReadOnlyList<BagItemAddData>)`：
 
-1. 在修改前完整验证数组、ConfigId、正数量、配置存在和正 MaxStack，并按 `(ConfigId, Bind, ExpireTime)` 聚合重复输入。
-2. 只把三项堆叠身份完全一致的物品合并，按 Uid 升序填充已有未满栈。
+1. 生成器验证两个数组等长、ConfigId、正数量、配置存在和正 MaxStack，并按 `(ConfigId, Bind, ExpireTime)` 聚合重复输入。
+2. `AddItems` 只读取 normalized 列表，不再验证或重新归一化；只把三项堆叠身份完全一致的物品合并，按 Uid 升序填充已有未满栈。
 3. 剩余数量严格按表格 `ItemConfig.MaxStack` 拆成新 Uid；装备通过 `MaxStack=1` 自然保持一件一栈。
 4. 批次合法后完整写入，不读取容量，也不会因中途超限停止。
 5. 实际变化只标脏一次，并由背包内部发送一条 `BagItemChangedNtf`。通知中的 `Items` 是变化栈的最终绝对快照，不是增量。
-6. 返回值是按堆叠身份聚合的本次获得展示数组；其 Count 是本次获得量，不是拆栈后的最终数量。
+6. 返值是 `List<BagItemAddData>` 本次获得展示量；其 Count 不是拆栈后的最终栈数量。`IReadOnlyList` 参数表达 `AddItems` 不得增删、替换或重排调用方的列表。
 
 `ExpireTime` 当前只是普通 long 元数据：不与当前时间比较，不作废、不清理、不隐藏，仍计入容量、查询和扣除；只有数值完全相同的栈才能合并。
 
@@ -72,8 +72,8 @@ IsFull = Items.Count > Capacity
 
 ## 协议与客户端
 
-- `QueryBagAck.Items` 是 `Dictionary<long, BagItemInfo>` 完整快照，Capacity 可以小于 Items.Count。
-- `BagItemChangedNtf.Items` 是变化栈最终快照，`RemovedUids` 表示已删除栈；同一 Uid 不能同时出现在两者中。
+- `QueryBagAck.Items` 是 `List<BagItemInfo>` 完整快照，列表中的 Uid 必须为正数且唯一；Capacity 可以小于 Items.Count。
+- `BagItemChangedNtf.Items` 是 `List<BagItemInfo>` 变化栈最终快照，`RemovedUids` 表示已删除栈；同一 Uid 不能同时出现在两者中。
 - Tidy、Swap、Index、空格搜索及对应消息已经删除；协议不兼容旧客户端。
 - `BagController` 按 Uid 缓存，进角时清空并查询全量快照，变化通知按绝对数量覆盖；迟到快照会再次核对 RoleId 与角色代次。
 - 临时断线可以保留只读快照，但禁止发送背包操作；踢下线、永久重连失败、主动断开或切换角色会清空缓存。

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shared.Common.Protos;
+using Shared.Core.Event;
 using Shared.Core.Network;
 
 namespace Client.Logic
@@ -16,18 +18,17 @@ namespace Client.Logic
                 return;
             }
 
-            if (ntf.Items != null && ntf.RemovedUids != null)
+            if (ntf.Items != null && ntf.Items.Count != 0)
+            {
+                foreach (var item in ntf.Items)
+                    controller.Items[item.Uid] = item;
+            }
+            if (ntf.RemovedUids != null)
             {
                 foreach (long uid in ntf.RemovedUids)
-                {
-                    if (ntf.Items.ContainsKey(uid))
-                        throw new InvalidOperationException("背包变化中同一 Uid 同时被更新和删除: " + uid);
-                }
+                    controller.Items.Remove(uid);
             }
-
-            controller.ApplyChangedItems(ntf.Items);
-            controller.RemoveUids(ntf.RemovedUids);
-            BagController.PublishDataChanged();
+            EventBus.Instance.Publish(new EventType.BagDataChangedEvent());
             await Task.CompletedTask;
         }
     }

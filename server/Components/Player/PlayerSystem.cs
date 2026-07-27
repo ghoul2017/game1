@@ -240,18 +240,13 @@ public static class PlayerSystem
     /// <summary>发放物品给玩家</summary>
     public static void GrantItem(this PlayerComponent self, long roleId, int configId, long count)
     {
-        var player = self.GetByRoleId(roleId);
+        PlayerEntity? player = self.GetByRoleId(roleId);
         if (player == null)
             return;
 
-        var bagComponent = player.GetComponent<RoleBagComponent>();
-        var gainedItems = bagComponent.AddItems([new BagItemAddData
-        {
-            ConfigId = configId,
-            Count = count,
-            Bind = false,
-            ExpireTime = 0,
-        }]);
+        RoleBagComponent bagComponent = player.GetComponent<RoleBagComponent>();
+        List<BagItemAddData> normalizedItems = BagItemAddDataGenerator.Generate(configId, count);
+        List<BagItemAddData> gainedItems = bagComponent.AddItems(normalizedItems);
 
         foreach (var gainedItem in gainedItems)
         {
@@ -266,7 +261,7 @@ public static class PlayerSystem
                 ConfigId = gainedItem.ConfigId,
                 Count = gainedItem.Count,
             });
-            Log.Info($"发放物品 RoleId:{roleId} ConfigId:{gainedItem.ConfigId} Count:{gainedItem.Count}");
+            Log.Info($"[背包] 发放物品 RoleId:{roleId} ConfigId:{gainedItem.ConfigId} Count:{gainedItem.Count}");
         }
     }
 

@@ -88,17 +88,10 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public string Sender { get; set; } = "";
         [ProtoMember(3)] public string Title { get; set; } = "";
         [ProtoMember(4)] public string Content { get; set; } = "";
-        [ProtoMember(5)] public List<MailAttachmentInfo> Attachments { get; set; } = new List<MailAttachmentInfo>();
+        [ProtoMember(5)] public List<BagItemAddInfo> Attachments { get; set; } = new List<BagItemAddInfo>();
         [ProtoMember(6)] public long SendTime { get; set; }
         [ProtoMember(7)] public int State { get; set; }
         [ProtoMember(8)] public long ExpireTime { get; set; }
-    }
-
-    [ProtoContract]
-    public class MailAttachmentInfo
-    {
-        [ProtoMember(1)] public int ConfigId { get; set; }
-        [ProtoMember(2)] public int Count { get; set; }
     }
 
 }

@@ -51,7 +51,7 @@ namespace Shared.Common.Protos
     {
         [ProtoMember(1)] public string ErrorMessage { get; set; } = "";
         [ProtoMember(2)] public int TaskId { get; set; }
-        [ProtoMember(3)] public List<TaskRewardInfo> Rewards { get; set; } = new List<TaskRewardInfo>();
+        [ProtoMember(3)] public List<ItemTipsData> Rewards { get; set; } = new List<ItemTipsData>();
     }
 
 
@@ -99,13 +99,6 @@ namespace Shared.Common.Protos
         [ProtoMember(2)] public int GoalParam { get; set; }
         [ProtoMember(3)] public int CurrentCount { get; set; }
         [ProtoMember(4)] public int TargetCount { get; set; }
-    }
-
-    [ProtoContract]
-    public class TaskRewardInfo
-    {
-        [ProtoMember(1)] public int ConfigId { get; set; }
-        [ProtoMember(2)] public long Count { get; set; }
     }
 
 }

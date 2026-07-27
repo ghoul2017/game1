@@ -17,11 +17,11 @@ public sealed class TaskSubmitReqHandler : PlayerRpcMessageHandler<TaskSubmitReq
 
     protected override async Task ExecuteAsync(PlayerEntity player, TaskSubmitReq req, TaskSubmitAck res)
     {
-        var taskComponent = player.GetComponent<RoleTaskComponent>();
-        var bagComponent = player.GetComponent<RoleBagComponent>();
+        RoleTaskComponent taskComponent = player.GetComponent<RoleTaskComponent>();
+        RoleBagComponent bagComponent = player.GetComponent<RoleBagComponent>();
         res.TaskId = req.TaskId;
 
-        var task = taskComponent.GetByTaskId(req.TaskId);
+        RoleTask? task = taskComponent.GetByTaskId(req.TaskId);
         if (task == null)
         {
             res.ErrorMessage = "任务不存在";
@@ -40,7 +40,7 @@ public sealed class TaskSubmitReqHandler : PlayerRpcMessageHandler<TaskSubmitReq
             return;
         }
 
-        var config = ConfigManager.Get<TaskConfig>(req.TaskId);
+        TaskConfig? config = ConfigManager.Get<TaskConfig>(req.TaskId);
         if (config == null)
         {
             res.ErrorMessage = "任务不存在";
@@ -48,20 +48,7 @@ public sealed class TaskSubmitReqHandler : PlayerRpcMessageHandler<TaskSubmitReq
             return;
         }
 
-        if (!RoleTaskHelper.TryParseRewards(config, out var rewards))
-        {
-            res.ErrorMessage = "任务奖励配置错误";
-            return;
-        }
-
-        var addItems = rewards.Select(reward => new BagItemAddData
-        {
-            ConfigId = reward.ConfigId,
-            Count = reward.Count,
-            Bind = false,
-            ExpireTime = 0,
-        }).ToArray();
-        if (!RoleBagHelper.TryValidateAddItems(addItems, out var errorMessage))
+        if (!BagItemAddDataGenerator.TryGenerate(config.RewardConfigs, config.RewardCounts, out List<BagItemAddData> normalizedItems, out string errorMessage))
         {
             res.ErrorMessage = errorMessage;
             return;
@@ -76,13 +63,13 @@ public sealed class TaskSubmitReqHandler : PlayerRpcMessageHandler<TaskSubmitReq
         task.State = 2;
         taskComponent.MarkDirty();
 
-        var gainedItems = bagComponent.AddItems(addItems);
-        res.Rewards = gainedItems.Select(item => new TaskRewardInfo
+        List<BagItemAddData> gainedItems = bagComponent.AddItems(normalizedItems);
+        res.Rewards = gainedItems.Select(item => new ItemTipsData
         {
             ConfigId = item.ConfigId,
             Count = item.Count,
         }).ToList();
-        Log.Info($"提交任务领奖 RoleId:{player.Id} TaskId:{req.TaskId} RewardCount:{rewards.Count}");
+        Log.Info($"[任务] 提交任务领奖 RoleId:{player.Id} TaskId:{req.TaskId} RewardCount:{normalizedItems.Count}");
 
         await Task.CompletedTask;
     }

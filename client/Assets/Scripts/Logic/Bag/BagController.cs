@@ -47,15 +47,34 @@ namespace Client.Logic
                     return;
                 }
 
-                if (_roleGeneration != expectedGeneration
-                    || RoleId != expectedRoleId
-                    || GameData.CurrentRole == null
-                    || GameData.CurrentRole.RoleId != expectedRoleId)
+                if (_roleGeneration != expectedGeneration)
                 {
                     return;
                 }
 
-                ReplaceSnapshot(expectedRoleId, ack.Items, ack.Capacity);
+                if (RoleId != expectedRoleId)
+                {
+                    return;
+                }
+
+                if (GameData.CurrentRole == null)
+                {
+                    return;
+                }
+
+                if (GameData.CurrentRole.RoleId != expectedRoleId)
+                {
+                    return;
+                }
+
+                IReadOnlyList<BagItemInfo> source = ack.Items ?? new List<BagItemInfo>();
+                Dictionary<long, BagItemInfo> snapshot = new Dictionary<long, BagItemInfo>();
+                foreach (var item in source)
+                    snapshot.Add(item.Uid, item);
+                Items = snapshot;
+                Capacity = ack.Capacity;
+                IsLoaded = true;
+                EventBus.Instance.Publish(new EventType.BagDataChangedEvent());
             }
             catch (Exception ex)
             {
@@ -68,37 +87,6 @@ namespace Client.Logic
             }
         }
 
-        public void ReplaceSnapshot(long roleId, Dictionary<long, BagItemInfo> items, int capacity)
-        {
-            if (roleId <= 0 || roleId != RoleId)
-                return;
-
-            Dictionary<long, BagItemInfo> snapshot = items ?? new Dictionary<long, BagItemInfo>();
-            ValidateItems(snapshot);
-            Items = new Dictionary<long, BagItemInfo>(snapshot);
-            Capacity = capacity;
-            IsLoaded = true;
-            PublishDataChanged();
-        }
-
-        public void ApplyChangedItems(Dictionary<long, BagItemInfo> items)
-        {
-            if (RoleId <= 0 || items == null || items.Count == 0)
-                return;
-
-            ValidateItems(items);
-            foreach (KeyValuePair<long, BagItemInfo> pair in items)
-                Items[pair.Key] = pair.Value;
-        }
-
-        public void RemoveUids(IReadOnlyList<long> removedUids)
-        {
-            if (RoleId <= 0 || removedUids == null)
-                return;
-
-            foreach (long uid in removedUids)
-                Items.Remove(uid);
-        }
 
         public BagItemInfo GetItem(long uid)
         {
@@ -158,25 +146,7 @@ namespace Client.Logic
             _roleGeneration++;
             _queryInProgress = false;
             if (changed)
-                PublishDataChanged();
-        }
-
-        internal static void PublishDataChanged()
-        {
-            EventBus.Instance.Publish(new EventType.BagDataChangedEvent());
-        }
-
-        private static void ValidateItems(Dictionary<long, BagItemInfo> items)
-        {
-            foreach (KeyValuePair<long, BagItemInfo> pair in items)
-            {
-                if (pair.Key <= 0 || pair.Value == null || pair.Value.Uid != pair.Key)
-                {
-                    long itemUid = pair.Value != null ? pair.Value.Uid : 0;
-                    throw new InvalidOperationException(
-                        string.Format("背包 Uid 数据不一致 Key:{0} ItemUid:{1}", pair.Key, itemUid));
-                }
-            }
+                EventBus.Instance.Publish(new EventType.BagDataChangedEvent());
         }
     }
 }

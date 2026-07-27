@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Game.Components.Player;
 using Game.Database;
 using Shared.Core.Event;
 using Shared.Core.Log;
@@ -11,17 +12,16 @@ public sealed class PlayerOnlineLoadBagEventHandler : IAsyncEventHandler<EventTy
 
     public async Task HandleAsync(EventType.PlayerOnlineEvent e)
     {
-        var player = e.Player;
+        PlayerEntity player = e.Player;
 
-        var bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(player.Id);
+        RoleBagComponent? bag = await MongoDb.Instance.LoadAsync<RoleBagComponent>(player.Id);
         if (bag == null)
         {
             bag = new RoleBagComponent { Id = player.Id, Capacity = 100 };
             await MongoDb.Instance.InsertAsync(bag);
-            Log.Info($"创建新背包 RoleId:{player.Id}");
+            Log.Info($"[背包] 创建新背包 RoleId:{player.Id}");
         }
 
-        RoleBagHelper.EnsureValidState(bag);
         player.AddComponent(bag);
     }
 }

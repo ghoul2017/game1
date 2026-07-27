@@ -9,12 +9,11 @@ public sealed class QueryBagReqHandler : PlayerRpcMessageHandler<QueryBagReq, Qu
 {
     protected override async Task ExecuteAsync(PlayerEntity player, QueryBagReq req, QueryBagAck res)
     {
-        var bagComponent = player.GetComponent<RoleBagComponent>();
-        RoleBagHelper.EnsureValidState(bagComponent);
+        RoleBagComponent bagComponent = player.GetComponent<RoleBagComponent>();
 
         res.Capacity = bagComponent.Capacity;
-        foreach (var (uid, item) in bagComponent.Items)
-            res.Items[uid] = RoleBagHelper.ToInfo(item);
+        foreach (var item in bagComponent.Items.Values)
+            res.Items.Add(RoleBagHelper.ToInfo(item));
         await Task.CompletedTask;
     }
 }

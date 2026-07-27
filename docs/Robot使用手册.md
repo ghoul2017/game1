@@ -59,7 +59,7 @@ dotnet run --project robot/Robot.csproj -- --scenario login_test
 dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 ```
 
-`task_persistence_test` 每次使用独立的 `robot_task_<时间戳>` 账号和角色，验证任务 1 的接取、重复接取、断线批次保存、重新登录、击杀 5 只野猪、进度恢复、提交领奖、重复提交和领奖后恢复。它同时检查 `QueryBagAck.Items` 的 Uid Key 不变量、提交奖励只发送一次最终 `BagItemChangedNtf`，以及 `BagUseItemReq(Uid)` 稳定返回“道具使用功能未完成”且不扣物品。断线后会等待服务端异步保存批次再重新连接。野猪可能随机掉落任务奖励同款物品，因此奖励断言比较提交前后的 long 数量增量，而不是假设背包初始总数为 0。时间戳新账号不会加载旧背包数据，因此不要求删除整个 `role_bag_component`；只有复用已有旧角色时才必须先完成精确数据重建。该场景会在 MongoDB 创建账号及角色组件并改变怪物运行状态，只能在已授权测试环境执行；测试数据清理仍需独立授权，未授权时保留并报告。
+`task_persistence_test` 每次使用独立的 `robot_task_<时间戳>` 账号和角色，验证任务 1 的接取、重复接取、断线批次保存、重新登录、击杀 5 只野猪、进度恢复、提交领奖、重复提交和领奖后恢复。它同时检查 `QueryBagAck.Items` 列表中的 Uid 为正数且唯一、提交奖励只发送一次最终 `BagItemChangedNtf`，以及 `BagUseItemReq(Uid)` 稳定返回“道具使用功能未完成”且不扣物品。断线后会等待服务端异步保存批次再重新连接。野猪可能随机掉落任务奖励同款物品，因此奖励断言比较提交前后的 long 数量增量，而不是假设背包初始总数为 0。时间戳新账号不会加载旧背包数据，因此不要求删除整个 `role_bag_component`；只有复用已有旧角色时才必须先完成精确数据重建。该场景会在 MongoDB 创建账号及角色组件并改变怪物运行状态，只能在已授权测试环境执行；测试数据清理仍需独立授权，未授权时保留并报告。
 
 输出示例：
 ```

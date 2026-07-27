@@ -14,26 +14,19 @@ public sealed class MailGetItemReqHandler : PlayerRpcMessageHandler<MailGetItemR
 
     protected override async Task ExecuteAsync(PlayerEntity player, MailGetItemReq req, MailGetItemAck res)
     {
-        var mailComponent = player.GetComponent<RoleMailComponent>();
-        var bagComponent = player.GetComponent<RoleBagComponent>();
+        RoleMailComponent mailComponent = player.GetComponent<RoleMailComponent>();
+        RoleBagComponent bagComponent = player.GetComponent<RoleBagComponent>();
 
-        var attachmentCount = 0;
+        int attachmentCount = 0;
 
         foreach (var mailId in req.MailIds.Distinct())
         {
-            if (!mailComponent.Mails.TryGetValue(mailId, out var mail))
+            if (!mailComponent.Mails.TryGetValue(mailId, out RoleMail? mail))
                 continue;
             if (!mail.HasUnclaimedAttachment)
                 continue;
 
-            var addItems = mail.Attachments.Select(item => new BagItemAddData
-            {
-                ConfigId = item.ConfigId,
-                Count = item.Count,
-                Bind = false,
-                ExpireTime = 0,
-            }).ToArray();
-            if (!RoleBagHelper.TryValidateAddItems(addItems, out var errorMessage))
+            if (!RoleBagHelper.TryValidateNormalizedItems(mail.Attachments, out string errorMessage))
             {
                 res.ErrorMessage = errorMessage;
                 break;
@@ -49,12 +42,12 @@ public sealed class MailGetItemReqHandler : PlayerRpcMessageHandler<MailGetItemR
             res.ClaimedMailIds.Add(mail.Id);
             mailComponent.MarkDirty();
 
-            bagComponent.AddItems(addItems);
+            bagComponent.AddItems(mail.Attachments);
 
             attachmentCount += mail.Attachments.Count;
         }
 
-        Log.Info($"领取邮件附件 RoleId:{player.Id} MailCount:{res.ClaimedMailIds.Count} AttachmentCount:{attachmentCount}");
+        Log.Info($"[邮件] 领取邮件附件 RoleId:{player.Id} MailCount:{res.ClaimedMailIds.Count} AttachmentCount:{attachmentCount}");
 
         await Task.CompletedTask;
     }

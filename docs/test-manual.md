@@ -461,7 +461,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 
 - 客户端发送 `QueryBagReq`。
 - 新角色首次上线时服务端创建 `RoleBagComponent`，容量为 `100`。
-- `QueryBagAck.Items` 为 `Uid → BagItemInfo` 完整快照，每个 Key 等于对应 `BagItemInfo.Uid`。
+- `QueryBagAck.Items` 为 `List<BagItemInfo>` 完整快照，每个 `BagItemInfo.Uid` 为正数且在列表内唯一。
 - 背包面板按 ConfigId、Uid 升序显示动态滚动条目，容量文本例如 `0 / 100`。
 - 预置超过 64 个栈时，全部条目可通过滚动访问；预置 105 栈时显示 `105 / 100`，不裁切。
 

@@ -9,7 +9,7 @@ public static class RoleTaskHelper
 {
     public static List<TaskGoal> CreateGoals(TaskConfig config)
     {
-        var goals = new List<TaskGoal>();
+        List<TaskGoal> goals = [];
         if (config.GoalCount >= 1)
             AddGoal(goals, config.GoalType1, config.GoalParam1, config.GoalTarget1);
 
@@ -20,35 +20,6 @@ public static class RoleTaskHelper
             AddGoal(goals, config.GoalType3, config.GoalParam3, config.GoalTarget3);
 
         return goals;
-    }
-
-    public static bool TryParseRewards(TaskConfig config, out List<TaskRewardInfo> rewards)
-    {
-        rewards = [];
-        if (string.IsNullOrEmpty(config.RewardItems))
-            return true;
-
-        foreach (var part in config.RewardItems.Split(','))
-        {
-            var pair = part.Trim().Split(':');
-            if (pair.Length != 2 ||
-                !int.TryParse(pair[0], out var configId) ||
-                !long.TryParse(pair[1], out var count) ||
-                configId <= 0 ||
-                count <= 0)
-            {
-                rewards = [];
-                return false;
-            }
-
-            rewards.Add(new TaskRewardInfo
-            {
-                ConfigId = configId,
-                Count = count,
-            });
-        }
-
-        return true;
     }
 
     public static TaskInfo ToInfo(RoleTask task)

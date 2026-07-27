@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Components.Bag;
 
 namespace Game.Components.Mail;
 
@@ -24,7 +25,7 @@ public class RoleMail
     public string Content { get; set; } = "";
 
     /// <summary>附件列表</summary>
-    public List<MailAttachment> Attachments { get; set; } = [];
+    public List<BagItemAddData> Attachments { get; set; } = [];
 
     /// <summary>发送时间（Unix毫秒）</summary>
     public long SendTime { get; set; }
@@ -46,16 +47,4 @@ public class RoleMail
 
     /// <summary>是否有未领取的附件</summary>
     public bool HasUnclaimedAttachment => !IsClaimed && Attachments.Count > 0;
-}
-
-/// <summary>
-/// 邮件附件
-/// </summary>
-public class MailAttachment
-{
-    /// <summary>物品配置ID</summary>
-    public int ConfigId { get; set; }
-
-    /// <summary>物品数量</summary>
-    public int Count { get; set; }
 }

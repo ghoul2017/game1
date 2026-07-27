@@ -1,3 +1,4 @@
+using Game.Components.Bag;
 using Game.Components.Player;
 using Shared.Common.Protos;
 using Shared.Core;
@@ -15,21 +16,17 @@ public static class RoleMailSystem
     public const int MaxVisibleMailCount = 100;
 
     /// <summary>发送邮件给指定角色</summary>
-    public static void SendMail(this RoleMailComponent self, string sender, string title, string content,
-        List<MailAttachment>? attachments = null, long expireTime = 0)
+    public static void SendMail(this RoleMailComponent self, string sender, string title, string content, int[] rewardConfigs, int[] rewardCounts, long expireTime = 0)
     {
-        var mail = new RoleMail
+        List<BagItemAddData> normalizedAttachments = BagItemAddDataGenerator.Generate(rewardConfigs, rewardCounts);
+        RoleMail mail = new()
         {
             Id = IdGenerator.Instance.NextId(),
             RoleId = self.Id,
             Sender = sender,
             Title = title,
             Content = content,
-            Attachments = attachments?.Select(item => new MailAttachment
-            {
-                ConfigId = item.ConfigId,
-                Count = item.Count,
-            }).ToList() ?? [],
+            Attachments = normalizedAttachments,
             SendTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             ExpireTime = expireTime,
             State = 0,
@@ -59,10 +56,12 @@ public static class RoleMailSystem
             Sender = mail.Sender,
             Title = mail.Title,
             Content = mail.Content,
-            Attachments = mail.Attachments.Select(a => new MailAttachmentInfo
+            Attachments = mail.Attachments.Select(a => new BagItemAddInfo
             {
                 ConfigId = a.ConfigId,
                 Count = a.Count,
+                Bind = a.Bind,
+                ExpireTime = a.ExpireTime,
             }).ToList(),
             SendTime = mail.SendTime,
             State = mail.State,
