@@ -90,9 +90,11 @@
 
 1. 使用项目精确 Unity 版本和微信官方转换 SDK 导出最小场景。
 2. 在开发者工具或目标设备进入场景并记录首次可操作时间、内存和构建/包体数据。
-3. 完成一次 WebSocket echo；不尝试复用 WebGL 不支持的 `.NET System.Net` socket。
+3. 完成一次平台二进制 echo；不直接运行 WebGL 不支持的 `.NET System.Net` socket。微信 P0 用官方 `WX.CreateTCPSocket()` 连接同局域网受控 echo；正式跨小游戏平台以平台无关传输契约和 WebSocket/WSS 为计划方向，按 `GAME1-PLATFORM-01`、`GAME1-PLATFORM-05` 实施。
 4. 完成一个现有 Protobuf 消息的 AOT/裁剪后编码解码。
 5. 完成一份配置的异步读取，禁止以同步 `StreamingAssets` 读取冒充平台通过。
+
+2026-07-29 已在微信开发者工具和 iPhone 14 Pro（iOS 17.6.1、微信 8.0.75）完成上述门禁：官方平台 TCP 在同一 Wi-Fi 网段完成 20/20 二进制 echo，真机输出 `P0_READY` 和 `P0_STABLE_60S`。正式传输、正式配置和性能基线仍按独立计划任务处理。
 
 P0 不实现业务网关、登录重写、资源热更和 SDK 全能力。任一验证失败时先修平台最短链路，不进入大量玩法制作。
 

@@ -1,0 +1,6 @@
+<linker>
+  <assembly fullname="protobuf-net.Core">
+    <type fullname="ProtoBuf.ProtoContractAttribute" preserve="all" />
+    <type fullname="ProtoBuf.ProtoMemberAttribute" preserve="all" />
+  </assembly>
+</linker>

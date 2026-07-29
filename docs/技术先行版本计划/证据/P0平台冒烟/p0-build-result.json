@@ -1,0 +1,12 @@
+{
+    "unityVersion": "2022.3.62f3c1",
+    "sdkCommit": "9de9b8d7730f65a617d9992f07c3ecfae8b9858a",
+    "appIdType": "开发号",
+    "configSource": "package-resources-async",
+    "transport": "wx.createTCPSocket",
+    "tcpAddressType": "private-lan-ipv4",
+    "tcpPort": 19090,
+    "runInBackground": true,
+    "totalSizeBytes": 71459967,
+    "buildSeconds": 7.1307816
+}
