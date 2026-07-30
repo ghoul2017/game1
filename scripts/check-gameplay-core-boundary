@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+CORE_PROJECT="gameplay-core/GameplayCore.csproj"
+CORE_ASMDEF="client/Assets/Scripts/GameplayCore/GameplayCore.asmdef"
+CORE_SOURCE="client/Assets/Scripts/GameplayCore"
+
+fail() {
+    echo "GameplayCore 边界检查失败：$1"
+    exit 1
+}
+
+require_fixed() {
+    local description="$1"
+    local expected="$2"
+    local path="$3"
+
+    if ! rg -Fq "$expected" "$path"; then
+        fail "$description"
+    fi
+}
+
+if ! command -v rg >/dev/null 2>&1; then
+    fail "缺少 rg"
+fi
+
+require_fixed "目标框架不是 netstandard2.1" \
+    "<TargetFramework>netstandard2.1</TargetFramework>" "$CORE_PROJECT"
+require_fixed "未关闭默认源码收集" \
+    "<EnableDefaultCompileItems>false</EnableDefaultCompileItems>" "$CORE_PROJECT"
+require_fixed "未链接 Unity GameplayCore 的唯一源码目录" \
+    "../client/Assets/Scripts/GameplayCore/**/*.cs" "$CORE_PROJECT"
+require_fixed "未排除 GameplayCore 源码目录中的 bin" \
+    "../client/Assets/Scripts/GameplayCore/**/bin/**/*.cs" "$CORE_PROJECT"
+require_fixed "未排除 GameplayCore 源码目录中的 obj" \
+    "../client/Assets/Scripts/GameplayCore/**/obj/**/*.cs" "$CORE_PROJECT"
+
+if rg -n '<(Project|Package)Reference' "$CORE_PROJECT"; then
+    fail "GameplayCore.csproj 不得包含 ProjectReference 或 PackageReference"
+fi
+
+compile_item_count="$(rg -c '<Compile[[:space:]]+Include=' "$CORE_PROJECT" || true)"
+compile_item_count="${compile_item_count:-0}"
+if [ "$compile_item_count" -ne 1 ]; then
+    fail "GameplayCore.csproj 必须只有一个显式 Compile Include"
+fi
+
+require_fixed "Unity 程序集必须关闭 Engine 引用" \
+    '"noEngineReferences": true' "$CORE_ASMDEF"
+require_fixed "Unity 程序集不得被预定义程序集隐式引用" \
+    '"autoReferenced": false' "$CORE_ASMDEF"
+require_fixed "Unity 程序集不得引用其他程序集" \
+    '"references": []' "$CORE_ASMDEF"
+
+forbidden_patterns=(
+    'UnityEngine'
+    'using[[:space:]]+Shared|Shared\.'
+    'using[[:space:]]+Server|Server\.'
+    'MongoDB'
+    'ProtoBuf|Protobuf'
+    'System\.Net'
+    'System\.IO'
+    'DateTimeOffset|DateTime'
+    'Stopwatch'
+    'System\.Random|UnityEngine\.Random'
+    'Task\.Run'
+    'System\.Threading|System\.Timers|\bThread\b|\bTimer\b|Concurrent'
+    'ServiceLocator'
+    'System\.Reflection'
+)
+
+for pattern in "${forbidden_patterns[@]}"; do
+    matches="$(rg -n "$pattern" "$CORE_SOURCE" -g '*.cs' || true)"
+    if [ -n "$matches" ]; then
+        printf '%s\n' "$matches"
+        fail "核心源码出现禁用依赖或 API：$pattern"
+    fi
+done
+
+consumer_matches="$(
+    rg -n 'using[[:space:]]+GameplayCore|GameplayCore\.|GameplayCore.csproj' \
+        shared client-logic server robot -g '*.cs' -g '*.csproj' || true
+)"
+if [ -n "$consumer_matches" ]; then
+    printf '%s\n' "$consumer_matches"
+    fail "T0 期间 Shared、ClientLogic、Server 或 Robot 不得引用 GameplayCore"
+fi
+
+echo "GameplayCore 边界检查通过：同源项目、Unity 程序集和禁用依赖均符合 T0 约束"

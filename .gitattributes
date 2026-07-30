@@ -1,2 +1,5 @@
 # 统一使用 LF 换行符
 * text=auto eol=lf
+
+# Unity Editor 会为空 YAML 值保留冒号后的空格，保持生成内容原样。
+*.meta whitespace=-blank-at-eol

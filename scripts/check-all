@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+bash scripts/check-gameplay-core-boundary
+dotnet build gameplay-core/GameplayCore.csproj
+dotnet test tests/GameplayCore.Tests/GameplayCore.Tests.csproj
+
 scripts/check-client-boundary
 
 if [ -f client/Assembly-CSharp.csproj ] &&
