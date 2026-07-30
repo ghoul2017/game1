@@ -86,7 +86,7 @@ consumer_matches="$(
 )"
 if [ -n "$consumer_matches" ]; then
     printf '%s\n' "$consumer_matches"
-    fail "T0 期间 Shared、ClientLogic、Server 或 Robot 不得引用 GameplayCore"
+    fail "Shared、ClientLogic、Server 或 Robot 不得引用 GameplayCore"
 fi
 
-echo "GameplayCore 边界检查通过：同源项目、Unity 程序集和禁用依赖均符合 T0 约束"
+echo "GameplayCore 边界检查通过：同源项目、Unity 程序集和禁用依赖均符合约束"

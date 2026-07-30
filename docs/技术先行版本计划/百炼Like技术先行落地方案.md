@@ -4,7 +4,8 @@
 
 ## 1. 文档定位
 
-- 文档状态：轻量重制版；P0、T0 已分别取得实施授权并通过，T1、T2 已拆解但尚未授权实施。
+- 文档状态：轻量重制版；P0、T0 已通过；T1 已获授权并实施中，纯规则、本地灰盒和自动化已完成，人工手感与
+  目标设备验证待执行；T2 已拆解但尚未授权实施。
 - 目标项目：`game1`；先完成《异界迷宫》，再以同一核心交付《奥特·宇宙军团》。
 - 本方案替代此前“先造完整确定性仿真平台、分片调度和增量同步，再做可玩版本”的技术顺序。
 - 产品事实仍以中枢 `projects/game1/docs/百炼Like改造调研与双项目交付方案.md` 为准；本文只重排技术落地路径。
@@ -37,7 +38,7 @@
 | --- | --- | --- | --- |
 | Supercell Titan | 面向移动和低端设备；共享引擎从真实游戏代码中逐步提取；快速局长要求关注启动耗时 | 先完成游戏切片，第二个真实消费者出现后再提取接口；从 P0 记录首次可操作时间和低端设备数据 | 先造“公司级游戏引擎” |
 | Photon Fusion | Dedicated Server 权威最强但有实例成本；Single/Host/Server 是不同成本与信任模型 | 本地宿主用于快速手感，正式经济闭环用服务端权威 | 把客户端 Host 当作正式经济权威 |
-| Nakama authoritative match | 单局状态隔离、固定 Tick、选择最低可接受 Tick、限制每 Tick 消息和发送队列 | 一局一个 `ExpeditionSession`、单写者、低 Tick 起步、状态合并和有界队列 | 未压测先做多线程分片或 1,000 局目标 |
+| Nakama authoritative match | 单局状态隔离、固定 Tick、选择最低可接受 Tick、限制每 Tick 消息和发送队列 | 一局一个 `ExpeditionRun`、规则单写者、低 Tick 起步、状态合并和有界队列 | 未压测先做多线程分片或 1,000 局目标 |
 | Photon Quantum | 跨平台确定性、预测、回滚和固定点形成一整套专用体系 | 只保留固定 Tick、显式种子和同版本可重复测试 | T0 自研固定点、跨平台校验和、回滚框架 |
 | Unity Netcode 选型 | 大规模高复杂度才偏向 Entities；小规模对象玩法可使用更轻方案 | 普通 C# 领域对象和 Unity 视图 | 为单人 PvE 局内引入 DOTS/ECS |
 | Agones | 面向 Kubernetes 上的大规模专用游戏服编排 | 达到真实多进程部署需求后再评估 | 首个 Demo 上 Kubernetes/Agones |
@@ -108,7 +109,7 @@ flowchart LR
     Local --> Core["GameplayCore 纯规则"]
     Input --> Remote["远端 ExpeditionHost"]
     Remote --> Transport["现有封包 + 目标平台 Transport"]
-    Transport --> Server["服务端 ExpeditionSession"]
+    Transport --> Server["服务端 ExpeditionHost"]
     Server --> Core
     Core --> Snapshot["完整状态 + 少量语义事件"]
     Snapshot --> Input
@@ -165,7 +166,8 @@ Unity View   -> GameplayCore 的展示所需状态；不修改权威结算
 正式在线 PvE 使用服务端权威：
 
 - 客户端只提交量化移动方向、交互目标和单调输入序号，不提交位置、伤害、掉落或结果。
-- 一个 `ExpeditionSession` 由一个服务端写入者顺序推进；先挂在现有服务进程的单一调度点，不建仿真分片。
+- 一个 `ExpeditionRun` 由一个服务端宿主顺序调用 `ExpeditionSimulation.Advance`；先挂在现有服务进程的单一
+  调度点，不建仿真分片。
 - 首版下行完整小快照，频率从 5–10 Hz 起测；不做基线、delta、回滚缓冲和复杂兴趣管理。
 - 客户端保留最近权威位置和未确认输入，只预测队伍根移动；敌人、掉落和结算只表现服务端结果。
 - 小偏差平滑纠正；越墙、过门和状态切换等硬不变量立即纠正。

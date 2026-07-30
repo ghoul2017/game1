@@ -1,0 +1,17 @@
+{
+    "name": "Client.Expedition.WeChat",
+    "rootNamespace": "Client.Expedition.WeChat",
+    "references": [
+        "Unity.ugui",
+        "Wx"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/ExpeditionHandfeelScene.unity
+    guid: 83b1d33ca2d713d43b8fcafe34493db9
+  - enabled: 1
     path: Assets/Scenes/GameScene.unity
     guid: 63db867477734af479fc747508b3a2e1
   - enabled: 1

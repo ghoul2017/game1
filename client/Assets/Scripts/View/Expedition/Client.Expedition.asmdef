@@ -1,0 +1,17 @@
+{
+    "name": "Client.Expedition",
+    "rootNamespace": "Client.Expedition",
+    "references": [
+        "GameplayCore",
+        "Unity.ugui"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

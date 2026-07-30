@@ -1,0 +1,21 @@
+{
+    "name": "Client.Expedition.PlayMode",
+    "rootNamespace": "Client.Expedition.Tests",
+    "references": [
+        "Client.Expedition",
+        "Client.Expedition.WeChat",
+        "GameplayCore"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}
