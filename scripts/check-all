@@ -4,24 +4,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-bash scripts/check-gameplay-core-boundary
-dotnet build gameplay-core/GameplayCore.csproj
-dotnet test tests/GameplayCore.Tests/GameplayCore.Tests.csproj
-
-scripts/check-client-boundary
+bash scripts/check-ci
 
 if [ -f client/Assembly-CSharp.csproj ] &&
    [ -f client/Assembly-CSharp-Editor.csproj ] &&
    [ -f client/Assembly-CSharp-firstpass.csproj ]; then
+    echo
+    echo "==> [本机增强门禁] 构建包含 Unity 生成项目的 game1.sln"
     dotnet build game1.sln
 else
     echo "未发现 Unity 生成的 client/Assembly-CSharp*.csproj，跳过 game1.sln 构建。"
     echo "请用 Unity 2022.3.62f3c1 打开 client 并执行 Assets > Refresh 后，再运行 dotnet build game1.sln。"
-    dotnet build shared/Shared.csproj
-    dotnet build client-logic/ClientLogic.csproj
-    dotnet build server/Server.csproj
-    dotnet build robot/Robot.csproj
-    dotnet build tools/tools.csproj
 fi
-
-scripts/check-protocol

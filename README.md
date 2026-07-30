@@ -7,7 +7,7 @@ game1 是一个 2.5D RPG 项目，包含 Unity 客户端、.NET 8 权威服务�
 ## 环境要求
 
 - Unity `2022.3.62f3c1`
-- .NET 8 SDK
+- .NET SDK `8.0.423`（由 `global.json` 固定）
 - MongoDB，默认地址 `mongodb://127.0.0.1:27017`，数据库 `game`
 
 ## 目录
@@ -35,7 +35,38 @@ Pop-Location
 
 服务端默认监听 `0.0.0.0:9000`。客户端使用规定版本的 Unity 打开 `client/`，然后进入 PlayMode。
 
-## 最小验证
+## 本地质量门禁
+
+PowerShell 使用统一入口；脚本会自动定位 Git for Windows Bash，不会误用 WSL：
+
+```powershell
+.\scripts\check-ci.ps1
+```
+
+Git Bash 可以直接执行同一门禁：
+
+```bash
+bash scripts/check-ci
+```
+
+该入口只执行依赖边界、受管 .NET 项目构建、纯逻辑测试和协议一致性检查，不启动 Server、Robot、
+MongoDB 或 Unity。测试结果写入已忽略的 `tests/GameplayCore.Tests/bin/TestResults/`。
+
+本机已经由 Unity 生成 `Assembly-CSharp*.csproj` 时，可以追加完整 solution 构建：
+
+```powershell
+.\scripts\check-ci.ps1 -Full
+```
+
+也可以在 Git Bash 中执行：
+
+```bash
+bash scripts/check-all
+```
+
+Unity Editor 编译、PlayMode、Robot/MongoDB 和小游戏真机验证是独立门禁，不能由上述本地 CI 代替。
+
+## 分项目验证
 
 ```powershell
 dotnet build shared/Shared.csproj

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+CURRENT_STEP="初始化"
+RESULTS_DIR="tests/GameplayCore.Tests/bin/TestResults"
+
+report_error() {
+    local exit_code=$?
+    trap - ERR
+    printf '\n本地 CI 失败：%s（退出码 %s）\n' "$CURRENT_STEP" "$exit_code" >&2
+    exit "$exit_code"
+}
+
+run_step() {
+    CURRENT_STEP="$1"
+    shift
+    printf '\n==> [本地 CI] %s\n' "$CURRENT_STEP"
+    "$@"
+}
+
+check_environment() {
+    local command_name
+    for command_name in dotnet rg; do
+        if ! command -v "$command_name" >/dev/null 2>&1; then
+            printf '缺少本地 CI 依赖：%s\n' "$command_name" >&2
+            return 1
+        fi
+    done
+
+    printf '.NET SDK: '
+    dotnet --version
+    printf 'Git Bash: %s\n' "${BASH_VERSION}"
+}
+
+trap report_error ERR
+
+run_step "环境检查" check_environment
+run_step "GameplayCore 依赖边界" bash scripts/check-gameplay-core-boundary
+run_step "客户端 Logic/shared 依赖边界" bash scripts/check-client-boundary
+
+run_step "还原 GameplayCore 测试依赖" \
+    dotnet restore tests/GameplayCore.Tests/GameplayCore.Tests.csproj
+run_step "还原 Robot 项目图" dotnet restore robot/Robot.csproj
+run_step "还原 tools/Server 项目图" dotnet restore tools/tools.csproj
+
+run_step "构建 GameplayCore" dotnet build gameplay-core/GameplayCore.csproj --no-restore
+run_step "构建 Shared" dotnet build shared/Shared.csproj --no-restore
+run_step "构建 ClientLogic" dotnet build client-logic/ClientLogic.csproj --no-restore
+run_step "构建 Server" dotnet build server/Server.csproj --no-restore
+run_step "构建 Robot" dotnet build robot/Robot.csproj --no-restore
+run_step "构建 tools" dotnet build tools/tools.csproj --no-restore
+run_step "构建 GameplayCore.Tests" \
+    dotnet build tests/GameplayCore.Tests/GameplayCore.Tests.csproj --no-restore
+
+mkdir -p "$RESULTS_DIR"
+run_step "运行 GameplayCore 行为测试" \
+    dotnet test tests/GameplayCore.Tests/GameplayCore.Tests.csproj \
+        --no-build \
+        --no-restore \
+        --logger "trx;LogFileName=gameplay-core.trx" \
+        --results-directory "$RESULTS_DIR"
+
+run_step "协议一致性检查" bash scripts/check-protocol --no-build --no-restore
+
+printf '\n本地 CI 通过：边界、受管项目构建、纯逻辑测试和协议检查均完成。\n'
