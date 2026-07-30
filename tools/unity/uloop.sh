@@ -19,9 +19,9 @@ done
 case "$COMMAND" in
     clear-console|compile|control-play-mode|execute-dynamic-code|find-game-objects|focus-window|get-hierarchy|get-logs|get-project-info|get-version|list|record-input|replay-input|run-tests|screenshot|simulate-keyboard|simulate-mouse-input|simulate-mouse-ui|sync)
         if [[ "$HAS_PROJECT_PATH" -eq 0 ]]; then
-            exec npx -y uloop-cli@2.1.4 "$@" --project-path "$UNITY_PROJECT_ROOT"
+            exec npx -y uloop-cli@2.1.10 "$@" --project-path "$UNITY_PROJECT_ROOT"
         fi
         ;;
 esac
 
-exec npx -y uloop-cli@2.1.4 "$@"
+exec npx -y uloop-cli@2.1.10 "$@"

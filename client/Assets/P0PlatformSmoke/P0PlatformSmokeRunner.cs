@@ -24,23 +24,24 @@ namespace P0PlatformSmoke
         private Text _logText;
 
         [SerializeField]
-        private string _tcpAddress = "";
+        private string _tcpAddress;
 
         [SerializeField]
         private int _tcpPort;
 
         private readonly List<string> _lines = new List<string>();
-        private readonly List<byte> _receivedBytes = new List<byte>();
-        private bool _tcpConnected;
-        private bool _tcpClosed;
-        private bool _expectedClose;
         private bool _sdkInitialized;
         private string _transportError = "";
         private double _startedAt;
         private double _configReadMilliseconds;
-        private WXTCPSocket _tcpSocket;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
+        private readonly List<byte> _receivedBytes = new List<byte>();
+        private bool _tcpConnected;
+        private bool _tcpClosed;
+        private bool _expectedClose;
+        private WXTCPSocket _tcpSocket;
+
         [DllImport("__Internal")]
         private static extern void P0ExposeWechatSdkUtf8RuntimeMethods();
 #endif
@@ -324,6 +325,7 @@ namespace P0PlatformSmoke
 #endif
         }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
         private void OnTcpConnect(GeneralCallbackResult result)
         {
             _tcpConnected = true;
@@ -355,6 +357,7 @@ namespace P0PlatformSmoke
                 _transportError = string.IsNullOrWhiteSpace(reason) ? "TCP 意外关闭" : reason;
             }
         }
+#endif
 
         private void OnDestroy()
         {

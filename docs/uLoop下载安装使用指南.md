@@ -15,13 +15,17 @@
 
 - Unity 项目路径：`client/`
 - Unity 版本：`2022.3.62f3c1`，以 `client/ProjectSettings/ProjectVersion.txt` 为准
-- Unity 包：`client/Packages/manifest.json` 中的 `io.github.hatayama.uloopmcp`，当前版本 `2.1.4`
+- Unity 包：`client/Packages/manifest.json` 中的 `io.github.hatayama.uloopmcp`，当前版本 `2.1.10`
 - Unity 包来源：`client/Packages/manifest.json` 与 `client/ProjectSettings/PackageManagerSettings.asset` 中的 OpenUPM `https://package.openupm.com`
 - CLI 入口：`tools/unity/uloop.sh`
-- CLI 版本：脚本固定调用 `npx -y uloop-cli@2.1.4`
+- CLI 版本：脚本固定调用 `npx -y uloop-cli@2.1.10`
 - 本地生成目录：`client/.uloop/`、`client/.codex/skills/`、`client/UserSettings/UnityMcpSettings.json`
 
 如果本文与上述权威文件冲突，以上述文件和实际命令输出为准。
+
+uLoop 是开发工具，不是游戏运行时依赖。任何 Player 的 BuildReport、WebGL `ManagedStripped` 或最终输出中出现
+`uLoopMCP` 程序集、脚本或资源，都视为工具泄漏并阻断出包；2.1.10 的一次性验收见
+`TEST-ULOOP-PLAYER-01`，持续检查任务见 `GAME1-ENG-08`。
 
 ## AI 执行卡片
 
@@ -50,15 +54,35 @@ tools/unity/uloop.sh get-logs --log-type Error --max-count 20
 
 - 已安装 Unity Hub。
 - 已安装“权威入口”所列版本的 Unity Editor。
-- 已安装 Node.js，并能执行 `npx`。
+- 已安装 Node.js 22 或更高版本，并能执行 `npx`；uLoop 2.1.10 CLI 的 `engines.node` 要求为
+  `>=22.0.0`。
 - 本机可以访问 OpenUPM 和 npm registry。
 
-### 2. 下载 Unity 端 uLoop 包
+首次使用或升级 Node.js 后先确认：
+
+```bash
+node --version
+npx --version
+```
+
+### 2. 运行权限基线
+
+- 在项目目录、Unity 用户缓存、npm 用户缓存和构建输出目录可写的前提下，Git、.NET、Node/`npx`、
+  Unity Editor、uLoop CLI 和既有 WebGL 模块的日常运行都不需要 Windows 管理员权限。
+- 安装或更新 Program Files 下的软件与 Unity 模块、修改 UAC/防火墙/系统证书/系统 PATH、控制 Windows
+  服务时才可能需要管理员权限；这些系统操作仍需当前任务单独授权。
+- 本项目不全局安装 uLoop CLI；`npx -y` 使用用户缓存。如果 npm 全局目录不可写，应改用用户可写 prefix，
+  不以管理员权限启动 Unity 来绕过目录权限。
+- uLoop 的动态代码等级和工具开关是工具内部授权，不是 Windows 管理员权限。默认保持
+  `Restricted`，并关闭第三方工具；只有当前任务确实需要被 Restricted 阻止的 API 且负责人授权对应
+  副作用时，才临时使用 `FullAccess`。
+
+### 3. 下载 Unity 端 uLoop 包
 
 本项目已经把 Unity 包配置提交到仓库，不需要 AI 手动编辑 `manifest.json`：
 
 ```json
-"io.github.hatayama.uloopmcp": "2.1.4"
+"io.github.hatayama.uloopmcp": "2.1.10"
 ```
 
 Unity 打开 `client/` 时会按 `manifest.json` 和 `packages-lock.json` 从 OpenUPM 下载并解析该包。若是新机器首次使用，先启动 Unity 项目：
@@ -73,7 +97,7 @@ tools/unity/uloop.sh launch
 - `client/ProjectSettings/PackageManagerSettings.asset` 是否包含 `https://package.openupm.com` 和 `io.github.hatayama.uloopmcp`。
 - 本机网络是否能访问 OpenUPM。
 
-### 3. 下载 CLI
+### 4. 下载 CLI
 
 本项目不要求全局安装 `uloop`。统一使用包装脚本：
 
@@ -81,9 +105,11 @@ tools/unity/uloop.sh launch
 tools/unity/uloop.sh --help
 ```
 
-脚本会通过 `npx -y uloop-cli@2.1.4` 下载并运行 CLI。对常用 Unity 工具命令，脚本会自动追加 `--project-path <仓库>/client`，因此 Agent 不需要在常规命令里手写项目路径。
+脚本会通过 `npx -y uloop-cli@2.1.10` 下载并运行 CLI。对常用 Unity 工具命令，脚本会自动追加 `--project-path <仓库>/client`，因此 Agent 不需要在常规命令里手写项目路径。
 
-### 4. 安装或刷新 AI 技能
+升级时必须同步修改 Unity 包、`packages-lock.json` 和 CLI 固定版本，并按 `GAME1-ENG-09` 在仓库外任务副本完成验证；不得只升级其中一处。
+
+### 5. 安装或刷新 AI 技能
 
 如果当前 AI 环境需要本地 uLoop 技能说明，执行：
 
@@ -109,6 +135,11 @@ tools/unity/uloop.sh list
 ```bash
 tools/unity/uloop.sh launch --restart
 ```
+
+Unity 必须以普通用户权限运行。若窗口标题或日志提示以 Administrator 权限运行，停止该实例并报告环境条件；
+Unity 会执行项目脚本、第三方 Editor 插件和构建钩子，高权限会把误操作或恶意代码的影响从项目目录扩大到
+系统设置、注册表、其他进程及任意可写文件，也会掩盖普通权限环境才能暴露的访问控制问题。除非负责人针对
+明确任务单独授权，不把高权限 Unity 的自动化或 Player 构建作为正式验证证据。
 
 ### 编译和日志
 
