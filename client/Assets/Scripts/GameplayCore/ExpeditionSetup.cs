@@ -18,6 +18,12 @@ namespace GameplayCore
     {
         public const int MaximumMemberCount = 5;
 
+        public long RunId { get; set; }
+
+        public uint Seed { get; set; }
+
+        public ExpeditionRoomGraph RoomGraph { get; set; }
+
         public int TicksPerSecond { get; set; }
 
         public float MoveSpeedPerSecond { get; set; }
@@ -129,8 +135,33 @@ namespace GameplayCore
 
             ValidateWorld(setup);
             ValidateMembers(setup.Members);
-            ValidateEnemies(setup, setup.Enemies);
-            ValidateResources(setup, setup.Resources);
+            if (setup.RoomGraph == null)
+            {
+                ValidateEnemies(setup, setup.Enemies);
+                ValidateResources(setup, setup.Resources);
+            }
+            else
+            {
+                ValidateRoomGraph(setup);
+            }
+        }
+
+        private static void ValidateRoomGraph(ExpeditionSetup setup)
+        {
+            if (setup.RunId <= 0L)
+            {
+                throw new ArgumentOutOfRangeException(nameof(setup.RunId), "带房间图的远征必须使用正数 RunId");
+            }
+
+            if (setup.Seed != setup.RoomGraph.Seed)
+            {
+                throw new ArgumentException("远征 Seed 必须与房间图 Seed 一致", nameof(setup));
+            }
+
+            for (int index = 0; index < setup.RoomGraph.Rooms.Count; index++)
+            {
+                setup.RoomGraph.Rooms[index].ValidateContent(setup);
+            }
         }
 
         private static void ValidateWorld(ExpeditionSetup setup)
@@ -229,7 +260,7 @@ namespace GameplayCore
                     throw new ArgumentException("敌人数据不能包含空值", nameof(enemies));
                 }
 
-                ValidateEnemy(setup, enemy);
+                ValidateRoomEnemy(setup, enemy);
                 if (enemy.Kind == ExpeditionEnemyKind.Boss)
                 {
                     bossCount++;
@@ -250,7 +281,7 @@ namespace GameplayCore
             }
         }
 
-        private static void ValidateEnemy(ExpeditionSetup setup, ExpeditionEnemySetup enemy)
+        internal static void ValidateRoomEnemy(ExpeditionSetup setup, ExpeditionEnemySetup enemy)
         {
             RequireId(enemy.Id, nameof(enemy.Id));
             RequireFinite(enemy.X, nameof(enemy.X));
@@ -299,14 +330,7 @@ namespace GameplayCore
                     throw new ArgumentException("资源点数据不能包含空值", nameof(resources));
                 }
 
-                RequireId(resource.Id, nameof(resource.Id));
-                RequireFinite(resource.X, nameof(resource.X));
-                RequireFinite(resource.Y, nameof(resource.Y));
-                RequireInside(setup, resource.X, resource.Y, "资源点");
-                RequirePositive(resource.Amount, nameof(resource.Amount));
-                RequirePositive(resource.CollectionAmount, nameof(resource.CollectionAmount));
-                RequirePositive(resource.InteractionRange, nameof(resource.InteractionRange));
-                RequirePositive(resource.CollectionIntervalTicks, nameof(resource.CollectionIntervalTicks));
+                ValidateRoomResource(setup, resource);
 
                 for (int previous = 0; previous < index; previous++)
                 {
@@ -316,6 +340,18 @@ namespace GameplayCore
                     }
                 }
             }
+        }
+
+        internal static void ValidateRoomResource(ExpeditionSetup setup, ExpeditionResourceSetup resource)
+        {
+            RequireId(resource.Id, nameof(resource.Id));
+            RequireFinite(resource.X, nameof(resource.X));
+            RequireFinite(resource.Y, nameof(resource.Y));
+            RequireInside(setup, resource.X, resource.Y, "资源点");
+            RequirePositive(resource.Amount, nameof(resource.Amount));
+            RequirePositive(resource.CollectionAmount, nameof(resource.CollectionAmount));
+            RequirePositive(resource.InteractionRange, nameof(resource.InteractionRange));
+            RequirePositive(resource.CollectionIntervalTicks, nameof(resource.CollectionIntervalTicks));
         }
 
         private static void RequireId(int value, string parameterName)

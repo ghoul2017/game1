@@ -153,6 +153,11 @@ namespace GameplayCore
             ClearWarning();
         }
 
+        internal void ClearWarningForRoomTransition()
+        {
+            ClearWarning();
+        }
+
         internal int TakeDamage(int damage)
         {
             int actualDamage = Math.Min(_health, damage);

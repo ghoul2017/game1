@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace Client.Expedition
 {
     /// <summary>
-    /// 显示成员生命、局内统计、最近事件和只触发本地重开的结算界面。
+    /// 显示成员生命、局内统计、最近事件和由宿主决定后续动作的结算界面。
     /// </summary>
     public sealed class ExpeditionHud : MonoBehaviour
     {
@@ -17,6 +17,7 @@ namespace Client.Expedition
         private Text _eventText;
         private GameObject _resultPanel;
         private Text _resultText;
+        private Button _restartButton;
         private Text _statusText;
 
         public Transform CanvasTransform => transform;
@@ -25,7 +26,13 @@ namespace Client.Expedition
 
         public string Status => _statusText.text;
 
-        public static ExpeditionHud Create(Transform parent, Action restart)
+        public string LastEventText => _eventText.text;
+
+        public string ResultText => _resultText.text;
+
+        public Button RestartButton => _restartButton;
+
+        public static ExpeditionHud Create(Transform parent, Action restart, string actionLabel = "重新开始")
         {
             GameObject canvasObject = new GameObject(
                 "ExpeditionHud",
@@ -45,7 +52,7 @@ namespace Client.Expedition
             scaler.matchWidthOrHeight = 0.5f;
 
             ExpeditionHud hud = canvasObject.AddComponent<ExpeditionHud>();
-            hud.Build(restart);
+            hud.Build(restart, actionLabel);
             return hud;
         }
 
@@ -60,13 +67,13 @@ namespace Client.Expedition
             }
 
             _resultPanel.SetActive(true);
-            string phase = run.Phase == ExpeditionPhase.Completed ? "COMPLETE" : "FAILED";
+            string phase = run.Phase == ExpeditionPhase.Completed ? "远征完成" : "队伍战败";
             float seconds = (float)run.Tick / run.TicksPerSecond;
             _resultText.text =
-                $"{phase}\nTIME {seconds:0.0}s\nKILLS {run.Kills}\nRESOURCE {run.CollectedResource}";
+                $"{phase}\n用时 {seconds:0.0} 秒\n击败 {run.Kills}\n局内资源 {run.CollectedResource}";
         }
 
-        private void Build(Action restart)
+        private void Build(Action restart, string actionLabel)
         {
             _statusText = CreateText("Status", transform, 30, TextAnchor.UpperLeft);
             RectTransform statusRect = _statusText.rectTransform;
@@ -84,10 +91,10 @@ namespace Client.Expedition
             eventRect.anchoredPosition = new Vector2(0.0f, -220.0f);
             eventRect.sizeDelta = new Vector2(-80.0f, 100.0f);
 
-            CreateResultPanel(restart);
+            CreateResultPanel(restart, actionLabel);
         }
 
-        private void CreateResultPanel(Action restart)
+        private void CreateResultPanel(Action restart, string actionLabel)
         {
             _resultPanel = new GameObject("ResultPanel", typeof(RectTransform), typeof(Image));
             _resultPanel.transform.SetParent(transform, false);
@@ -118,10 +125,11 @@ namespace Client.Expedition
             buttonRect.anchoredPosition = new Vector2(0.0f, 45.0f);
             buttonRect.sizeDelta = new Vector2(360.0f, 110.0f);
             buttonObject.GetComponent<Image>().color = new Color(0.12f, 0.65f, 0.35f, 1.0f);
-            buttonObject.GetComponent<Button>().onClick.AddListener(() => restart());
+            _restartButton = buttonObject.GetComponent<Button>();
+            _restartButton.onClick.AddListener(() => restart());
 
             Text buttonText = CreateText("Label", buttonObject.transform, 42, TextAnchor.MiddleCenter);
-            buttonText.text = "RESTART";
+            buttonText.text = actionLabel;
             buttonText.rectTransform.anchorMin = Vector2.zero;
             buttonText.rectTransform.anchorMax = Vector2.one;
             buttonText.rectTransform.offsetMin = Vector2.zero;
@@ -133,8 +141,13 @@ namespace Client.Expedition
         {
             StringBuilder builder = new StringBuilder(160);
             float seconds = (float)run.Tick / run.TicksPerSecond;
-            builder.Append($"TIME {seconds:0.0}s   RESOURCE {run.CollectedResource}   KILLS {run.Kills}\n");
-            builder.Append("HP ");
+            builder.Append($"用时 {seconds:0.0} 秒   局内资源 {run.CollectedResource}   击败 {run.Kills}");
+            if (run.UsesRoomGraph)
+            {
+                builder.Append($"   房间 {run.CurrentRoomId}   已发现 {run.DiscoveredRooms.Count}");
+            }
+
+            builder.Append("\n生命 ");
 
             for (int index = 0; index < run.Members.Count; index++)
             {
@@ -144,7 +157,7 @@ namespace Client.Expedition
                     builder.Append("   ");
                 }
 
-                builder.Append($"M{member.Id} {member.Health}/{member.MaxHealth}");
+                builder.Append($"队员{member.Id} {member.Health}/{member.MaxHealth}");
             }
 
             _statusText.text = builder.ToString();
@@ -168,36 +181,65 @@ namespace Client.Expedition
             {
                 case ExpeditionEventKind.TargetChanged:
                     return current.TargetKind == ExpeditionObjectKind.None
-                        ? "TARGET CLEAR"
-                        : $"TARGET {current.TargetKind.ToString().ToUpperInvariant()} {current.TargetId}";
+                        ? "目标已清除"
+                        : $"锁定{DescribeObject(current.TargetKind)} {current.TargetId}";
                 case ExpeditionEventKind.MemberAttacked:
-                    return $"M{current.SourceId} ATTACK E{current.TargetId}  -{current.Value}";
+                    return $"队员{current.SourceId} 攻击敌人{current.TargetId}，伤害 {current.Value}";
                 case ExpeditionEventKind.EnemyAttacked:
-                    return $"E{current.SourceId} ATTACK M{current.TargetId}";
+                    return $"敌人{current.SourceId} 攻击队员{current.TargetId}";
                 case ExpeditionEventKind.MemberDamaged:
-                    return $"M{current.TargetId} DAMAGE -{current.Value}";
+                    return $"队员{current.TargetId} 受到 {current.Value} 点伤害";
                 case ExpeditionEventKind.MemberDied:
-                    return $"M{current.TargetId} DOWN";
+                    return $"队员{current.TargetId} 倒下";
                 case ExpeditionEventKind.EnemyDied:
-                    return $"E{current.TargetId} DEFEATED";
+                    return $"敌人{current.TargetId} 被击败";
                 case ExpeditionEventKind.ResourceCollected:
-                    return $"RESOURCE +{current.Value}";
+                    return $"采集局内资源 +{current.Value}";
                 case ExpeditionEventKind.ResourceDepleted:
-                    return "RESOURCE DEPLETED";
+                    return "资源点已采尽";
                 case ExpeditionEventKind.BossWarningStarted:
-                    return "BOSS WARNING - MOVE";
+                    return "首领即将攻击，请离开危险区";
                 case ExpeditionEventKind.BossWarningHit:
-                    return $"BOSS HIT ALL -{current.Value}";
+                    return $"首领命中全队，伤害 {current.Value}";
                 case ExpeditionEventKind.BossWarningDodged:
-                    return "BOSS ATTACK DODGED";
+                    return "已躲开首领攻击";
                 case ExpeditionEventKind.ExitOpened:
-                    return "EXIT OPEN";
+                    return "出口已开启";
                 case ExpeditionEventKind.Completed:
-                    return "EXPEDITION COMPLETE";
+                    return "远征完成";
                 case ExpeditionEventKind.Failed:
-                    return "SQUAD DEFEATED";
+                    return "队伍战败";
+                case ExpeditionEventKind.RoomDiscovered:
+                    return $"发现房间 {current.SourceId}";
+                case ExpeditionEventKind.RoomChanged:
+                    return $"进入房间 {current.TargetId}";
+                case ExpeditionEventKind.RoomCleared:
+                    return $"房间 {current.SourceId} 已清理";
+                case ExpeditionEventKind.RouteMarked:
+                    return $"路线已记录：{current.SourceId} -> {current.TargetId}";
+                case ExpeditionEventKind.DangerHint:
+                    return "前方检测到高危目标，请谨慎进入";
+                case ExpeditionEventKind.RoomRewarded:
+                    return $"房间奖励 +{current.Value}";
                 default:
                     return string.Empty;
+            }
+        }
+
+        private static string DescribeObject(ExpeditionObjectKind kind)
+        {
+            switch (kind)
+            {
+                case ExpeditionObjectKind.Member:
+                    return "队员";
+                case ExpeditionObjectKind.Enemy:
+                    return "敌人";
+                case ExpeditionObjectKind.Resource:
+                    return "资源点";
+                case ExpeditionObjectKind.Room:
+                    return "房间";
+                default:
+                    return "目标";
             }
         }
 

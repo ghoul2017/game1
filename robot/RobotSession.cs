@@ -20,6 +20,10 @@ namespace Robot
 
         public bool IsConnected => _session != null && _session.IsConnected;
 
+        public string Host => _host ?? throw new InvalidOperationException("尚未连接过服务端");
+
+        public int Port => _port;
+
         public long UserId
         {
             get => CurrentSession.UserId;

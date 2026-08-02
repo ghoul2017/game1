@@ -1,4 +1,6 @@
+using Game.Components.Arena;
 using Game.Components.Chat;
+using Game.Components.Expedition;
 using Game.Components.Map;
 using Game.Components.Player;
 using Shared.Core;
@@ -18,4 +20,6 @@ public static class Context
     public static PlayerComponent Players => Server.GetComponent<PlayerComponent>();
     public static ChatComponent Chat => Server.GetComponent<ChatComponent>();
     public static MapComponent Map => Server.GetComponent<MapComponent>();
+    public static ExpeditionComponent Expedition => Server.GetComponent<ExpeditionComponent>();
+    public static ArenaComponent Arena => Server.GetComponent<ArenaComponent>();
 }

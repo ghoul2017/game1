@@ -6,19 +6,25 @@ namespace Game;
 
 public static class Program
 {
-
-    static async Task<int> Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
-        var json = await File.ReadAllTextAsync("appsettings.json");
-        var config =
+        string json = await File.ReadAllTextAsync("appsettings.json");
+        AppConfig config =
             JsonSerializer.Deserialize<AppConfig>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
             ?? throw new Exception("appsettings.json 解析失败");
 
         Context.Config = config;
         LogManager.Init(Context.Config.Log);
-        
-        await AppStart.RunServer();
-        return 0;
+
+        try
+        {
+            await AppStart.RunServer();
+            return 0;
+        }
+        finally
+        {
+            LogManager.Shutdown();
+        }
     }
 }

@@ -25,6 +25,7 @@ namespace Shared.Core.Config
 
         /// <summary>扫描到的配置元信息 Type → (FileName, KeyProperty)</summary>
         private readonly Dictionary<Type, (string fileName, PropertyInfo keyProp)> _configMeta = new();
+        private readonly object _snapshotLock = new();
 
         private FileSystemWatcher? _watcher;
 
@@ -40,8 +41,7 @@ namespace Shared.Core.Config
         {
             if (!Directory.Exists(tablesDirectory))
             {
-                Log.Warn($"表目录不存在: {tablesDirectory}");
-                return;
+                throw new DirectoryNotFoundException($"表目录不存在: {tablesDirectory}");
             }
 
             ScanConfigs();
@@ -52,22 +52,62 @@ namespace Shared.Core.Config
             }
         }
 
+        /// <summary>
+        /// 返回启动前必须取得的全部 CSV 文件名。调用方可以在平台层异步加载文本。
+        /// </summary>
+        public IReadOnlyList<string> GetRequiredFileNames()
+        {
+            ScanConfigs();
+            List<string> fileNames = _configMeta.Values
+                .Select(value => value.fileName)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(fileName => fileName, StringComparer.Ordinal)
+                .ToList();
+            return fileNames.AsReadOnly();
+        }
+
+        /// <summary>
+        /// 从调用方已经取得的 CSV 文本原子加载全部配置。缺表或解析失败时保留旧快照。
+        /// </summary>
+        public void LoadAll(IReadOnlyDictionary<string, string> tableTexts)
+        {
+            if (tableTexts == null)
+            {
+                throw new ArgumentNullException(nameof(tableTexts));
+            }
+
+            ScanConfigs();
+            LoadFromTexts(tableTexts);
+            Log.Info("配置表模块异步文本加载完成");
+        }
+
         /// <summary>反射扫描程序集中所有 [ConfigTable] 标注的类</summary>
         private void ScanConfigs()
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            foreach (var type in assembly.GetTypes())
+            _configMeta.Clear();
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            foreach (Type type in assembly.GetTypes())
             {
-                var attr = type.GetCustomAttribute<ConfigTableAttribute>();
+                ConfigTableAttribute? attr = type.GetCustomAttribute<ConfigTableAttribute>();
                 if (attr == null)
+                {
                     continue;
+                }
 
-                var keyProp = type.GetProperty(attr.KeyName);
+                PropertyInfo? keyProp = type.GetProperty(attr.KeyName);
                 if (keyProp == null)
+                {
                     throw new InvalidOperationException(
                         $"配置表 {type.Name} 标注 KeyName=\"{attr.KeyName}\"，但未找到该属性");
+                }
 
-                var attrFileName = attr.FileName;
+                if (keyProp.PropertyType != typeof(int))
+                {
+                    throw new InvalidOperationException(
+                        $"配置表 {type.Name} 主键 {attr.KeyName} 必须是 int");
+                }
+
+                string attrFileName = attr.FileName;
                 if (string.IsNullOrEmpty(attrFileName))
                 {
                     attrFileName = type.Name + ".csv";
@@ -83,50 +123,128 @@ namespace Shared.Core.Config
         /// <summary>从目录加载所有已扫描的 CSV 文件</summary>
         private void LoadFromDirectory(string tablesDirectory)
         {
-            foreach (var (type, (fileName, keyProp)) in _configMeta)
+            Dictionary<string, string> tableTexts = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (string fileName in GetRequiredFileNames())
             {
-                var filePath = Path.Combine(tablesDirectory, fileName);
+                string filePath = Path.Combine(tablesDirectory, fileName);
                 if (!File.Exists(filePath))
                 {
-                    Log.Warn($"表文件不存在: {fileName}");
-                    continue;
+                    throw new FileNotFoundException($"表文件不存在: {fileName}", filePath);
                 }
 
-                var list = SimpleCsvReader.Load(type, filePath);
+                tableTexts.Add(fileName, File.ReadAllText(filePath));
+            }
 
-                // 构建索引字典
-                var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(int), type);
-                var dict = (System.Collections.IDictionary)Activator.CreateInstance(dictType)!;
-                foreach (var item in list)
+            LoadFromTexts(tableTexts);
+        }
+
+        private void LoadFromTexts(IReadOnlyDictionary<string, string> tableTexts)
+        {
+            Dictionary<Type, object> nextLists = new Dictionary<Type, object>();
+            Dictionary<Type, object> nextDicts = new Dictionary<Type, object>();
+
+            foreach (KeyValuePair<Type, (string fileName, PropertyInfo keyProp)> entry in _configMeta)
+            {
+                Type type = entry.Key;
+                string fileName = entry.Value.fileName;
+                PropertyInfo keyProp = entry.Value.keyProp;
+                if (!tableTexts.TryGetValue(fileName, out string? csvText))
                 {
-                    var key = (int)keyProp.GetValue(item)!;
-                    dict[key] = item;
+                    throw new FileNotFoundException($"表文本不存在: {fileName}", fileName);
                 }
 
-                _lists[type] = list;
-                _dicts[type] = dict;
+                (System.Collections.IList list, System.Collections.IDictionary dict) =
+                    BuildTableSnapshot(type, fileName, keyProp, csvText);
+
+                nextLists.Add(type, list);
+                nextDicts.Add(type, dict);
                 Log.Info($"加载 {fileName}: {list.Count} 条");
             }
+
+            lock (_snapshotLock)
+            {
+                _lists.Clear();
+                _dicts.Clear();
+                foreach (KeyValuePair<Type, object> entry in nextLists)
+                {
+                    _lists[entry.Key] = entry.Value;
+                }
+
+                foreach (KeyValuePair<Type, object> entry in nextDicts)
+                {
+                    _dicts[entry.Key] = entry.Value;
+                }
+            }
+        }
+
+        private static (System.Collections.IList list, System.Collections.IDictionary dict) BuildTableSnapshot(
+            Type type,
+            string fileName,
+            PropertyInfo keyProp,
+            string csvText)
+        {
+            if (string.IsNullOrWhiteSpace(csvText))
+            {
+                throw new InvalidDataException($"表文本为空: {fileName}");
+            }
+
+            System.Collections.IList list = SimpleCsvReader.LoadText(type, csvText);
+            if (list.Count == 0)
+            {
+                throw new InvalidDataException($"配置表 {fileName} 没有数据行");
+            }
+
+            Type dictType = typeof(Dictionary<,>).MakeGenericType(typeof(int), type);
+            System.Collections.IDictionary dict =
+                (System.Collections.IDictionary)Activator.CreateInstance(dictType)!;
+            foreach (object item in list)
+            {
+                int key = (int)keyProp.GetValue(item)!;
+                if (dict.Contains(key))
+                {
+                    throw new InvalidDataException($"配置表 {fileName} 包含重复主键 {key}");
+                }
+
+                dict.Add(key, item);
+            }
+
+            return (list, dict);
         }
 
         /// <summary>按主键查单条</summary>
         public static T? Get<T>(int id) where T : class
         {
-            if (!Instance._dicts.TryGetValue(typeof(T), out var dict))
-                return null;
-            return ((Dictionary<int, T>)dict).TryGetValue(id, out var val) ? val : null;
+            lock (Instance._snapshotLock)
+            {
+                if (!Instance._dicts.TryGetValue(typeof(T), out object? dict))
+                {
+                    return null;
+                }
+
+                return ((Dictionary<int, T>)dict).TryGetValue(id, out T? value) ? value : null;
+            }
         }
 
         /// <summary>获取全表数据</summary>
         public static List<T> GetAll<T>() where T : class
         {
-            return Instance._lists.TryGetValue(typeof(T), out var data) ? (List<T>)data : new();
+            lock (Instance._snapshotLock)
+            {
+                return Instance._lists.TryGetValue(typeof(T), out object? data)
+                    ? (List<T>)data
+                    : new List<T>();
+            }
         }
 
         /// <summary>获取索引字典</summary>
         public static Dictionary<int, T> GetDict<T>() where T : class
         {
-            return Instance._dicts.TryGetValue(typeof(T), out var dict) ? (Dictionary<int, T>)dict : new();
+            lock (Instance._snapshotLock)
+            {
+                return Instance._dicts.TryGetValue(typeof(T), out object? dict)
+                    ? (Dictionary<int, T>)dict
+                    : new Dictionary<int, T>();
+            }
         }
 
         /// <summary>热更新通知事件</summary>
@@ -157,19 +275,16 @@ namespace Shared.Core.Config
                 Log.Info($"检测到文件变化: {fileName}，正在热更新...");
                 try
                 {
-                    var (_, keyProp) = _configMeta[type];
-                    var list = SimpleCsvReader.Load(type, e.FullPath);
+                    (string configuredFileName, PropertyInfo keyProp) = _configMeta[type];
+                    string csvText = File.ReadAllText(e.FullPath);
+                    (System.Collections.IList list, System.Collections.IDictionary dict) =
+                        BuildTableSnapshot(type, configuredFileName, keyProp, csvText);
 
-                    var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(int), type);
-                    var dict = (System.Collections.IDictionary)Activator.CreateInstance(dictType)!;
-                    foreach (var item in list)
+                    lock (_snapshotLock)
                     {
-                        var key = (int)keyProp.GetValue(item)!;
-                        dict[key] = item;
+                        _lists[type] = list;
+                        _dicts[type] = dict;
                     }
-
-                    _lists[type] = list;
-                    _dicts[type] = dict;
                     OnTableReloaded?.Invoke(type);
                     Log.Info($"热更新完成: {fileName} ({list.Count} 条)");
                 }

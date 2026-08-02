@@ -32,7 +32,10 @@ robot/
 ├── Handlers/
 │   └── RobotClientUIEventHandler.cs # 客户端 UI 事件处理器（控制台输出）
 ├── LoginTest.cs         # 登录冒烟
-└── TaskPersistenceTest.cs # 接取、重复请求、击杀进度和两次重登恢复
+├── TaskPersistenceTest.cs # 接取、重复请求、击杀进度和两次重登恢复
+├── ExpeditionAuthorityTest.cs # 在线远征全闭环、权威拒绝、断线恢复、结算、升级和第二局
+├── ArenaIdempotencyTest.cs # Arena RequestId 幂等、固定结果和回放
+└── RobotPlayerBootstrap.cs # 新玩法场景共用的一次性账号/角色启动链
 ```
 
 ## 快速开始
@@ -57,9 +60,23 @@ Rider 调试直接启动 `bin/Server` 时使用同一套输出配置和表。服
 ```bash
 dotnet run --project robot/Robot.csproj -- --scenario login_test
 dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
+dotnet run --project robot/Robot.csproj -- --scenario expedition_authority_test
+dotnet run --project robot/Robot.csproj -- --scenario arena_idempotency_test
 ```
 
 `task_persistence_test` 每次使用独立的 `robot_task_<时间戳>` 账号和角色，验证任务 1 的接取、重复接取、断线保存、重新登录、击杀 5 只野猪、进度恢复、提交领奖、重复提交和领奖后恢复。它同时检查背包 Uid、单次变化通知和未实现道具使用不扣物品。断线后会等待 `player_entity` 保存再重新连接；新账号不读取旧 `role_*_component` 集合。该场景会写入 MongoDB 并改变怪物运行状态，未获清理授权时保留测试数据并报告。
+
+`expedition_authority_test` 使用 `robot_exp_<时间戳>` 一次性账号，验证开始 RequestId 幂等、非法方向/伪造
+RunId 拒绝、断线期间继续推进、单次轮换重连令牌、同一活动局恢复、自动走房/战斗/采集/Boss 躲避、终局、成功
+及重复结算、设施升级和第二局。它会写入 `player_entity`，并可能在服务端内存保留最长 5 分钟的远征局。
+
+`arena_idempotency_test` 使用 `robot_arena_<时间戳>` 一次性账号，验证同一 `RequestId` 只运行一次、返回同一
+`BattleId`/胜负/事件哈希，并能读取对应回放。它会写入账号和玩家数据，并在服务端内存创建一条限时 Arena 结果。
+
+2026-08-02 已在本机 `127.0.0.1:9000` 真实执行上述两条新场景，均为 `1/1` 通过。远征场景完成到第二局，
+Arena 场景验证幂等摘要与回放；时间戳账号和 `player_entity` 数据按授权保留。MongoDB 故障/重启、弱网和远程
+环境仍需独立测试，不能用本次成功冒充。最终账号、RoleId、RunId 和数据副作用见
+`docs/工作记录/2026-08.md` 的 2026-08-02 条目。
 
 输出示例：
 ```
@@ -82,10 +99,10 @@ Robot 自动化测试框架
 |------|--------|------|
 | `--host` | `127.0.0.1` | 服务端地址 |
 | `--port` | `9000` | 服务端端口 |
-| `--scenario` | 全部场景 | 指定运行场景名 |
+| `--scenario` | 默认安全场景（2 个） | 指定单一场景；会创建独立持久化数据的新场景必须显式指定 |
 
 ```bash
-# 运行全部场景
+# 运行 login_test 与 task_persistence_test 两个默认安全场景
 dotnet run --project robot/Robot.csproj
 
 # 运行指定场景

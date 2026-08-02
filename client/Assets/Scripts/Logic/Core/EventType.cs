@@ -20,6 +20,11 @@ namespace Shared.Core.Event
         {
         }
 
+        public struct RoleEnteredEvent : IEvent
+        {
+            public long RoleId;
+        }
+
         public struct BagDataChangedEvent : IEvent
         {
         }

@@ -13,12 +13,13 @@
 - 代码、配置、协议或实测结果与本文不一致时，以当前事实为准；先记录差异和影响，行为或产品语义不明确时停止并询问用户，不自行改代码或更新预期。
 - 每个用例分别记录“通过、失败、阻断、未执行”之一。只有实际结果达到该用例预期且证据层级匹配时才能标记通过。
 
-> 校准日期：2026-07-26
+> 校准日期：2026-08-02
 > 范围：基于当前本地代码、配置表、模块文档和 Robot 入口校准，用于测试现有已实现功能；历史 2026-06-08 证据仍由对应过程文档保存。
 
 ## 1. 测试范围和依据
 
-本文覆盖当前项目可观察、可执行的功能：网络握手和心跳、登录、角色创建和进入游戏、地图和移动、AOI、怪物、战斗、背包、邮件、聊天、任务、断线重连、基础 UI 面板。
+本文优先覆盖在线远征技术版本，并保留网络、账号、背包、邮件、聊天、任务与旧 RPG 的历史回归入口。旧地图、
+AOI、怪物和战斗不再属于默认产品入口，只有迁移或基础设施回归任务明确要求时才执行其用例。
 
 校准依据：
 
@@ -69,7 +70,7 @@ Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tabl
 
 - `GameEntry` 初始化配置、客户端上下文、UIManager 和 NetworkStatusPanel。
 - 界面显示 `LoadingPanel`，随后进入 `LoginPanel`。
-- 登录后流程为 `RoleSelectPanel` → 游戏场景 → `MainPanel`。
+- 当前默认在线流程为 `RoleSelectPanel` → `OnlineExpeditionGameplayView`；不会切换旧 `GameScene/MainPanel`。
 
 ### 2.4 日志位置
 
@@ -79,6 +80,22 @@ Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tabl
 | 服务端文件日志 | `bin/log/*.log` |
 | Unity 日志 | Editor Console |
 | Robot 日志 | 运行 Robot 的终端 |
+
+### 2.5 本机在线技术版本
+
+前置：MongoDB 正在监听 `127.0.0.1:27017`，Unity 使用 `2022.3.62f3c1` 打开 `client/`。
+
+1. 选择 `Tools/Online Technical/Build, Start Server and Play`。
+2. 等窗口确认所需 .NET SDK、MongoDB 与 `127.0.0.1:9000`，等待自动打开 `OnlineTechnicalScene` 并 Play。
+3. 登录；没有账号时会自动注册。创建或选择角色后应直接出现在线远征世界，而不是旧 RPG 地图。
+4. 持续按住 WASD/方向键或拖住触摸摇杆移动；观察队伍、敌人、资源、房门、路线和 Boss 危险圈随权威快照
+   更新。队伍不应按约 200 ms 快照周期向后跳；松手、撞到房间边界或切换房间时允许回到权威位置。
+5. 完成终局，执行唯一结算，回基地升级训练设施，再开始第二局；第二局代表伤害应提高。
+6. 展开“在线诊断面板”可执行 Arena 开始、回放、1 倍、4 倍和跳过；诊断抽屉不应遮挡主玩法。
+7. 用 `Tools/Online Technical/Stop Local Server` 停服，或退出 Unity；确认服务端优雅保存且 9000 不再监听。
+
+常见阻断：缺少 `global.json` 指定 SDK、27017 不可连接、9000 被未知进程占用或目标场景有未保存修改。工具不会
+自动启动 MongoDB，不会接管未知监听者，也不会把服务端能力打入 Player。
 
 ## 3. 通用测试数据
 
@@ -123,10 +140,13 @@ Rider 直接调试 `bin/Server` 时使用同一套输出配置和 `bin/Data/Tabl
 
 ### 4.1 当前已有 Robot 覆盖
 
-当前 `robot/Program.cs` 注册了两个场景：
+当前 `robot/Program.cs` 注册了四个场景；不传 `--scenario` 时只运行前两个默认安全场景：
 
 - `login_test`：使用账号 `test`、密码 `123456` 验证握手、登录、`PlayerId`、Token 和角色列表。
 - `task_persistence_test`：每次使用独立的 `robot_task_<时间戳>` 账号和角色，验证任务 1 的接取、重复错误、断线批次保存、重新登录、5 次击杀进度、提交奖励和重复提交；同时校验 Uid 背包快照、一次 AddItems 只推送一次最终变化，以及未实现的按 Uid 使用不会扣物品。
+- `expedition_authority_test`：显式运行；创建时间戳账号，覆盖远征 Start 幂等/冲突、伪造拒绝、断线恢复、
+  自动终局、结算、升级和第二局。
+- `arena_idempotency_test`：显式运行；创建时间戳账号，覆盖 Arena RequestId 幂等、固定摘要与回放。
 
 执行步骤：
 
@@ -152,12 +172,16 @@ dotnet run --project robot/Robot.csproj
 ```bash
 dotnet run --project robot/Robot.csproj -- --scenario login_test
 dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
+dotnet run --project robot/Robot.csproj -- --scenario expedition_authority_test
+dotnet run --project robot/Robot.csproj -- --scenario arena_idempotency_test
 ```
 
 预期结果：
 
 - 输出 `PASS: login_test`。
 - 单独执行任务场景时输出 `PASS: task_persistence_test`；它会创建一组测试账号/角色数据并击杀 5 只测试怪物。
+- 单独执行远征/Arena 时分别输出 `PASS: expedition_authority_test`、`PASS: arena_idempotency_test`；二者会创建
+  MongoDB 测试数据，必须显式选择。
 - 单场景汇总为 `=== 完成: 1 通过, 0 失败 ===`；不传 `--scenario` 时应汇总 2 个场景。
 - 服务端有对应握手和登录日志。
 
@@ -166,7 +190,6 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 | 场景 | 建议消息序列 | 主要断言 |
 |------|--------------|----------|
 | 创建角色 | `HandshakeReq` → `LoginReq` → `CreateRoleReq` | 成功返回 `CreateRoleRes.Role`，重复名返回 `角色名已存在` |
-| 进入游戏 | `LoginReq` → `EnterGameReq` → 等待 `EnterGameNtf` → `EnterMapReq` | Token 更新，进入地图 Ack/Ntf 成功 |
 | 背包容量边界 | 预置 99、100、101 栈后分别查询并触发任务/掉落 | 100 栈仍可完整领取批次，101 栈时任务拒绝而掉落仍完整添加 |
 | 背包扣除通知 | 预置多个 Uid 栈后调用测试入口扣除 | 部分扣除推送最终 Count，整栈删除只出现在 RemovedUids，失败批次不修改 |
 | 世界聊天 | 两个 Robot 登录进入游戏后 `ChatReq(Channel=1)` | 发送者和接收者收到 `ChatNtf`，3 秒内第二条返回冷却错误 |
@@ -306,8 +329,9 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 
 - 客户端发送 `EnterGameReq`。
 - 服务端先完成 `PlayerOnlineEvent` 级联加载，再发送 `EnterGameNtf`。
-- 客户端随后发送 `EnterMapReq`。
-- 最终进入游戏场景并显示 `MainPanel`。
+- 当前默认在线模式发布 `RoleEnteredEvent`，直接在 `OnlineTechnicalScene` 创建 `OnlineExpeditionGameplayView`；
+  不发送 `EnterMapReq`，不切换 `GameScene/MainPanel`。
+- 只有明确回归旧 RPG 保留链时，才继续验证 `EnterMapReq` 与旧 `MainPanel`，且不能把该链当默认产品入口。
 
 ## 6. 地图、移动和 AOI
 
@@ -319,7 +343,7 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 
 预期：
 
-- 默认进入新手村 `MapCfgId=1, Line=1`。
+- 仅在明确执行旧 RPG 回归时进入新手村 `MapCfgId=1, Line=1`；默认在线入口不执行本用例。
 - 出生点为 `(100,100)`。
 - 场景生成地面、玩家、相机和主界面。
 - 收到 `EnterMapNtf` 后，客户端用服务端坐标初始化场景。
@@ -760,11 +784,13 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 预期：
 
 - 客户端进入断开状态。
-- 游戏场景内收到 `MapReconnectFailedEvent` 后清理其他玩家并加载回 `SampleScene`；Unity Console 输出重连失败日志。
+- 在线入口清理角色、远征世界和旧 UI，返回 `LoginPanel` 并显示可诊断的失败原因；后续通用断线事件不覆盖
+  Kick/重连失败的具体原因。
 
 ## 14. 当前限制和测试注意事项
 
-- Robot 当前覆盖登录、任务持久化，并在任务场景中覆盖背包 Uid 快照、提交奖励单次通知和未实现使用不扣除；完整容量/扣除、邮件、聊天、AOI 和 `ReconnectReq` 仍需独立场景。
+- Robot 当前覆盖登录、任务持久化、远征完整权威闭环和 Arena 幂等/回放；完整背包容量/扣除、邮件、聊天和
+  更广的会话竞争仍需独立场景。旧地图 AOI 不再作为默认产品验证。
 - 邮件正向流程没有内置触发入口，需要预置邮件或补测试工具。
 - 聊天 UI 当前没有私聊目标输入框，正向私聊只能通过协议测试。
 - 旧 `role_*_component` 集合不再读取；没有 `player_entity` 的角色按新玩家创建数据，旧进度不会参与当前验证。
@@ -781,11 +807,11 @@ dotnet run --project robot/Robot.csproj -- --scenario task_persistence_test
 2. 取得当前环境和数据授权并启动 MongoDB 与新服务端；优先使用时间戳新账号，复用只有旧 Component 集合的角色会创建新的 `player_entity`，不保留旧进度。
 3. 跑 `login_test` Robot 冒烟。
 4. 跑 `task_persistence_test`，确认独立测试角色的任务进度、提交状态和奖励在断线批次保存并重新登录后保持一致。
-5. Unity PlayMode 跑 `USER-01` 到 `ROLE-04`。
-6. 跑 `MAP-01` 到 `MAP-04`。
-7. 跑 `BAG-01` 至 `BAG-05`、`TASK-01`、`CHAT-01`、`MAIL-01`。
-8. 有双客户端条件时跑 `USER-03`、`MAP-05`、`CHAT-01` 广播验证。
-9. 当前先验证 `BAG-04` 的稳定未实现错误；道具效果完成后再跑实际扣除与效果。有测试数据条件时跑邮件附件、任务完成和怪物掉落。
+5. 显式跑 `expedition_authority_test` 和 `arena_idempotency_test`。
+6. Unity PlayMode 跑 `USER-01` 到 `ROLE-04`，再按 2.5 节人工完成在线第一局、结算、升级和第二局。
+7. 按当前任务需要跑 `BAG-01` 至 `BAG-05`、`TASK-01`、`CHAT-01`、`MAIL-01`。
+8. 有双客户端条件时跑 `USER-03` 与 `CHAT-01` 广播；MAP/AOI/FIGHT 只在旧 RPG 迁移回归明确要求时执行。
+9. 当前先验证 `BAG-04` 的稳定未实现错误；道具效果完成后再跑实际扣除与效果。有测试数据条件时跑邮件附件。
 
 ## 16. 停止分支和最终报告
 

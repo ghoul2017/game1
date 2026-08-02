@@ -14,6 +14,16 @@ namespace GameplayCore
             float directionY,
             List<ExpeditionEvent> events)
         {
+            Advance(run, directionX, directionY, 0, events);
+        }
+
+        public static void Advance(
+            ExpeditionRun run,
+            float directionX,
+            float directionY,
+            int interactionTargetId,
+            List<ExpeditionEvent> events)
+        {
             if (run == null)
             {
                 throw new ArgumentNullException(nameof(run));
@@ -29,6 +39,11 @@ namespace GameplayCore
                 throw new ArgumentOutOfRangeException(nameof(directionX), "移动方向必须是有限数值");
             }
 
+            if (interactionTargetId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(interactionTargetId));
+            }
+
             if (run.HasEnded)
             {
                 return;
@@ -36,13 +51,88 @@ namespace GameplayCore
 
             NormalizeDirection(ref directionX, ref directionY);
             run.Move(directionX * run.MovePerTick, directionY * run.MovePerTick);
+            AdvanceRoomTransition(run, events);
             AdvanceCooldowns(run);
             AdvanceBossWarnings(run, events);
-            RefreshTarget(run, events);
+            RefreshTarget(run, interactionTargetId, events);
             AdvanceSquadAction(run, events);
             AdvanceNormalEnemies(run, events);
+            ClearCurrentRoom(run, events);
             OpenExit(run, events);
             FinishRun(run, events);
+        }
+
+        /// <summary>
+        /// 让组合层在检测到产品无关的局外失败条件时结束远征；已结束的远征不会重复产生结果或事件。
+        /// </summary>
+        public static bool TryFail(ExpeditionRun run, List<ExpeditionEvent> events)
+        {
+            if (run == null)
+            {
+                throw new ArgumentNullException(nameof(run));
+            }
+
+            if (events == null)
+            {
+                throw new ArgumentNullException(nameof(events));
+            }
+
+            if (run.HasEnded)
+            {
+                return false;
+            }
+
+            run.Finish(ExpeditionPhase.Failed);
+            events.Add(new ExpeditionEvent(
+                run.Tick, ExpeditionEventKind.Failed,
+                ExpeditionObjectKind.None, 0,
+                ExpeditionObjectKind.None, 0,
+                0, run.SquadX, run.SquadY));
+            return true;
+        }
+
+        private static void AdvanceRoomTransition(ExpeditionRun run, List<ExpeditionEvent> events)
+        {
+            if (!run.UsesRoomGraph)
+            {
+                return;
+            }
+
+            ExpeditionTargetKind previousTargetKind = run.TargetKind;
+            int previousTargetId = run.TargetId;
+            if (!run.TryTransitionRoom(out int previousRoomId, out int currentRoomId, out bool discovered))
+            {
+                return;
+            }
+
+            if (previousTargetKind != ExpeditionTargetKind.None)
+            {
+                events.Add(new ExpeditionEvent(
+                    run.Tick, ExpeditionEventKind.TargetChanged,
+                    ExpeditionObjectKind.None, 0,
+                    ExpeditionObjectKind.None, 0,
+                    previousTargetId, run.SquadX, run.SquadY));
+            }
+
+            if (discovered)
+            {
+                events.Add(new ExpeditionEvent(
+                    run.Tick, ExpeditionEventKind.RoomDiscovered,
+                    ExpeditionObjectKind.Room, currentRoomId,
+                    ExpeditionObjectKind.None, 0,
+                    0, run.SquadX, run.SquadY));
+            }
+
+            events.Add(new ExpeditionEvent(
+                run.Tick, ExpeditionEventKind.RoomChanged,
+                ExpeditionObjectKind.Room, previousRoomId,
+                ExpeditionObjectKind.Room, currentRoomId,
+                0, run.SquadX, run.SquadY));
+            events.Add(new ExpeditionEvent(
+                run.Tick, ExpeditionEventKind.RouteMarked,
+                ExpeditionObjectKind.Room, previousRoomId,
+                ExpeditionObjectKind.Room, currentRoomId,
+                0, run.SquadX, run.SquadY));
         }
 
         private static void NormalizeDirection(ref float directionX, ref float directionY)
@@ -149,10 +239,25 @@ namespace GameplayCore
             }
         }
 
-        private static void RefreshTarget(ExpeditionRun run, List<ExpeditionEvent> events)
+        private static void RefreshTarget(
+            ExpeditionRun run,
+            int interactionTargetId,
+            List<ExpeditionEvent> events)
         {
             ExpeditionTargetKind nextKind = run.TargetKind;
             int nextId = run.TargetId;
+
+            if (TryGetInteractionTarget(
+                run,
+                interactionTargetId,
+                out ExpeditionTargetKind requestedKind,
+                out int requestedId))
+            {
+                nextKind = requestedKind;
+                nextId = requestedId;
+                ChangeTarget(run, nextKind, nextId, events);
+                return;
+            }
 
             if (!CurrentTargetIsValid(run))
             {
@@ -190,6 +295,51 @@ namespace GameplayCore
             }
 
             ChangeTarget(run, nextKind, nextId, events);
+        }
+
+        private static bool TryGetInteractionTarget(
+            ExpeditionRun run,
+            int interactionTargetId,
+            out ExpeditionTargetKind targetKind,
+            out int targetId)
+        {
+            targetKind = ExpeditionTargetKind.None;
+            targetId = 0;
+            if (interactionTargetId == 0)
+            {
+                return false;
+            }
+
+            ExpeditionEnemy[] enemies = run.MutableEnemies;
+            for (int index = 0; index < enemies.Length; index++)
+            {
+                ExpeditionEnemy enemy = enemies[index];
+                if (enemy.Id == interactionTargetId && enemy.IsAlive &&
+                    IsWithin(run.SquadX, run.SquadY, enemy.X, enemy.Y, run.TargetAcquireRadius))
+                {
+                    targetKind = ExpeditionTargetKind.Enemy;
+                    targetId = enemy.Id;
+                    return true;
+                }
+            }
+
+            ExpeditionResource[] resources = run.MutableResources;
+            for (int index = 0; index < resources.Length; index++)
+            {
+                ExpeditionResource resource = resources[index];
+                if (resource.Id != interactionTargetId || resource.IsDepleted ||
+                    !IsWithin(run.SquadX, run.SquadY, resource.X, resource.Y, run.TargetAcquireRadius))
+                {
+                    continue;
+                }
+
+                ExpeditionEnemy threat = FindBestEnemy(run, run.EnemyThreatRadius);
+                targetKind = threat == null ? ExpeditionTargetKind.Resource : ExpeditionTargetKind.Enemy;
+                targetId = threat == null ? resource.Id : threat.Id;
+                return true;
+            }
+
+            return false;
         }
 
         private static bool CurrentTargetIsValid(ExpeditionRun run)
@@ -451,7 +601,7 @@ namespace GameplayCore
 
         private static void OpenExit(ExpeditionRun run, List<ExpeditionEvent> events)
         {
-            if (run.ExitOpen || run.HasLivingBoss())
+            if (run.ExitOpen || !run.IsBossRoomCleared())
             {
                 return;
             }
@@ -468,16 +618,14 @@ namespace GameplayCore
         {
             if (!run.HasLivingMember())
             {
-                run.Finish(ExpeditionPhase.Failed);
-                events.Add(new ExpeditionEvent(
-                    run.Tick, ExpeditionEventKind.Failed,
-                    ExpeditionObjectKind.None, 0,
-                    ExpeditionObjectKind.None, 0,
-                    0, run.SquadX, run.SquadY));
+                TryFail(run, events);
                 return;
             }
 
-            if (!run.ExitOpen || !IsWithin(run.SquadX, run.SquadY, run.ExitX, run.ExitY, run.ExitRadius))
+            bool completed = run.UsesRoomGraph
+                ? run.IsInExitRoom() && run.ExitOpen
+                : run.ExitOpen && IsWithin(run.SquadX, run.SquadY, run.ExitX, run.ExitY, run.ExitRadius);
+            if (!completed)
             {
                 return;
             }
@@ -488,6 +636,39 @@ namespace GameplayCore
                 ExpeditionObjectKind.None, 0,
                 ExpeditionObjectKind.None, 0,
                 0, run.ExitX, run.ExitY));
+        }
+
+        private static void ClearCurrentRoom(ExpeditionRun run, List<ExpeditionEvent> events)
+        {
+            if (!run.UsesRoomGraph || !run.IsCurrentRoomComplete())
+            {
+                return;
+            }
+
+            int roomId = run.CurrentRoomId;
+            int reward = run.ClearCurrentRoom();
+            events.Add(new ExpeditionEvent(
+                run.Tick, ExpeditionEventKind.RoomCleared,
+                ExpeditionObjectKind.Room, roomId,
+                ExpeditionObjectKind.None, 0,
+                0, run.SquadX, run.SquadY));
+            if (reward > 0)
+            {
+                events.Add(new ExpeditionEvent(
+                    run.Tick, ExpeditionEventKind.RoomRewarded,
+                    ExpeditionObjectKind.Room, roomId,
+                    ExpeditionObjectKind.None, 0,
+                    reward, run.SquadX, run.SquadY));
+            }
+
+            if (run.TryIssueDangerHint(out int targetRoomId))
+            {
+                events.Add(new ExpeditionEvent(
+                    run.Tick, ExpeditionEventKind.DangerHint,
+                    ExpeditionObjectKind.Room, roomId,
+                    ExpeditionObjectKind.Room, targetRoomId,
+                    0, run.SquadX, run.SquadY));
+            }
         }
 
         private static void ChangeTarget(

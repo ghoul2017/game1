@@ -7,6 +7,11 @@ cd "$ROOT"
 CORE_PROJECT="gameplay-core/GameplayCore.csproj"
 CORE_ASMDEF="client/Assets/Scripts/GameplayCore/GameplayCore.asmdef"
 CORE_SOURCE="client/Assets/Scripts/GameplayCore"
+PRODUCT_PROJECT="product-content/ProductContent.csproj"
+PRODUCT_SOURCE="client/Assets/Scripts/ProductContent"
+COMPOSITION_PROJECT="product-expedition/ProductExpedition.csproj"
+COMPOSITION_ASMDEF="client/Assets/Scripts/ProductExpedition/ProductExpedition.asmdef"
+COMPOSITION_SOURCE="client/Assets/Scripts/ProductExpedition"
 
 fail() {
     echo "GameplayCore 边界检查失败：$1"
@@ -80,13 +85,66 @@ for pattern in "${forbidden_patterns[@]}"; do
     fi
 done
 
-consumer_matches="$(
-    rg -n 'using[[:space:]]+GameplayCore|GameplayCore\.|GameplayCore.csproj' \
-        shared client-logic server robot -g '*.cs' -g '*.csproj' || true
-)"
-if [ -n "$consumer_matches" ]; then
-    printf '%s\n' "$consumer_matches"
-    fail "Shared、ClientLogic、Server 或 Robot 不得引用 GameplayCore"
+brand_matches="$(rg -ni 'Ultraman|\bZero\b|奥特|光之因子' "$CORE_SOURCE" -g '*.cs' || true)"
+if [ -n "$brand_matches" ]; then
+    printf '%s\n' "$brand_matches"
+    fail "GameplayCore 不得包含产品品牌词"
 fi
 
-echo "GameplayCore 边界检查通过：同源项目、Unity 程序集和禁用依赖均符合约束"
+require_fixed "ProductContent 未链接 Unity 中的唯一产品内容源码目录" \
+    "../client/Assets/Scripts/ProductContent/**/*.cs" "$PRODUCT_PROJECT"
+if rg -n '<(Project|Package)Reference' "$PRODUCT_PROJECT"; then
+    fail "ProductContent 必须保持为无外部依赖的产品层"
+fi
+
+product_forbidden_matches="$(
+    rg -n 'using[[:space:]]+(GameplayCore|Shared|Game)|GameplayCore\.|Shared\.|UnityEngine' \
+        "$PRODUCT_SOURCE" -g '*.cs' || true
+)"
+if [ -n "$product_forbidden_matches" ]; then
+    printf '%s\n' "$product_forbidden_matches"
+    fail "ProductContent 不得反向依赖 GameplayCore、Shared、Server 或 Unity"
+fi
+
+require_fixed "ProductExpedition 未链接 Unity 中的唯一组合源码目录" \
+    "../client/Assets/Scripts/ProductExpedition/**/*.cs" "$COMPOSITION_PROJECT"
+require_fixed "ProductExpedition 必须单向引用 GameplayCore" \
+    "../gameplay-core/GameplayCore.csproj" "$COMPOSITION_PROJECT"
+require_fixed "ProductExpedition 必须单向引用 ProductContent" \
+    "../product-content/ProductContent.csproj" "$COMPOSITION_PROJECT"
+require_fixed "ProductExpedition Unity 程序集必须关闭 Engine 引用" \
+    '"noEngineReferences": true' "$COMPOSITION_ASMDEF"
+require_fixed "ProductExpedition Unity 程序集必须显式引用 GameplayCore" \
+    '"GameplayCore"' "$COMPOSITION_ASMDEF"
+require_fixed "ProductExpedition Unity 程序集必须显式引用 ProductContent" \
+    '"ProductContent"' "$COMPOSITION_ASMDEF"
+
+composition_forbidden_matches="$(
+    rg -ni 'UnityEngine|using[[:space:]]+(Shared|Server)|Ultraman|\bZero\b|奥特|光之因子' \
+        "$COMPOSITION_SOURCE" -g '*.cs' || true
+)"
+if [ -n "$composition_forbidden_matches" ]; then
+    printf '%s\n' "$composition_forbidden_matches"
+    fail "ProductExpedition 组合层不得依赖 Unity/服务端或包含品牌语义"
+fi
+
+forbidden_consumer_matches="$(
+    rg -n 'using[[:space:]]+GameplayCore|GameplayCore\.|GameplayCore.csproj' \
+        shared client-logic robot -g '*.cs' -g '*.csproj' || true
+)"
+if [ -n "$forbidden_consumer_matches" ]; then
+    printf '%s\n' "$forbidden_consumer_matches"
+    fail "Shared、ClientLogic 或 Robot 不得引用 GameplayCore"
+fi
+
+require_fixed "T3 起 Server 必须单向引用 GameplayCore" \
+    '..\gameplay-core\GameplayCore.csproj' 'server/Server.csproj'
+require_fixed "产品化 Server 必须通过组合层引用 ProductExpedition" \
+    '..\product-expedition\ProductExpedition.csproj' 'server/Server.csproj'
+
+if rg -n 'client/Assets/Scripts/View|Client\\Assets\\Scripts\\View' \
+    'tests/GameplayCore.Tests/GameplayCore.Tests.csproj'; then
+    fail "GameplayCore.Tests 不得反向链接客户端 View 源码"
+fi
+
+echo "GameplayCore/ProductContent/ProductExpedition 边界检查通过：核心无品牌污染，依赖方向单向"

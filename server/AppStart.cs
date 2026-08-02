@@ -1,5 +1,7 @@
+using Game.Components.Arena;
 using Game.Components.Bag;
 using Game.Components.Chat;
+using Game.Components.Expedition;
 using Game.Components.Mail;
 using Game.Components.Map;
 using Game.Components.Player;
@@ -26,7 +28,10 @@ public static class AppStart
         // 将主逻辑投递到游戏主线程执行
         try
         {
-            await GameSynchronizationContext.Instance.PostAsync(RunServerAsync);
+            await using LocalTestServerLifetime? localTestServerLifetime =
+                LocalTestServerLifetime.StartIfConfigured();
+            bool localEditorServer = localTestServerLifetime != null;
+            await GameSynchronizationContext.Instance.PostAsync(() => RunServerAsync(localEditorServer));
         }
         finally
         {
@@ -36,7 +41,7 @@ public static class AppStart
 
 
     /// <summary>服务端主逻辑（在游戏主线程上执行）</summary>
-    private static async Task RunServerAsync()
+    private static async Task RunServerAsync(bool localEditorServer)
     {
         // 初始化配置管理器
         ConfigManager.Instance.Init(Context.Config.Tables.Directory);
@@ -48,21 +53,27 @@ public static class AppStart
         await MongoDb.Instance.Init(Context.Config.MongoDb);
 
         // 添加所有 Component 到根实体
-        var networkComponent = Context.Server.AddComponent<NetworkComponent>();
+        NetworkComponent networkComponent = Context.Server.AddComponent<NetworkComponent>();
+        networkComponent.SessionDispatcher = DispatchToGameThread;
         networkComponent.SessionDisconnected = OnSessionDisconnected;
         EventBus.Instance.Publish(new EventType.ServerInitEvent());
-        var playerComponent = Context.Server.AddComponent<PlayerComponent>();
+        PlayerComponent playerComponent = Context.Server.AddComponent<PlayerComponent>();
         playerComponent.StartBatchSave();
         Context.Server.AddComponent<ChatComponent>();
         Context.Server.AddComponent<MapComponent>();
+        ExpeditionComponent expeditionComponent = Context.Server.AddComponent<ExpeditionComponent>();
+        expeditionComponent.Configure(new GameplayCoreExpeditionSimulationFactory());
+        Context.Server.AddComponent<ArenaComponent>();
 
         // 初始化地图（含刷怪和 AI 定时器）
         Context.Map.InitDefaultMaps();
+        expeditionComponent.StartScheduler();
 
         try
         {
             // 开始网络监听
-            await networkComponent.Listen(Context.Config.Server.Host, Context.Config.Server.Port);
+            string listenHost = localEditorServer ? "127.0.0.1" : Context.Config.Server.Host;
+            await networkComponent.Listen(listenHost, Context.Config.Server.Port);
 
             // 等待关闭信号
             await ShutdownToken.Instance.WaitForShutdownAsync();
@@ -70,35 +81,69 @@ public static class AppStart
         finally
         {
             // 停服清理
+            GameTimer.StopAll();
+            expeditionComponent.StopScheduler();
             Context.Players.StopBatchSave();
             await Context.Players.FlushAllPlayersAsync();
             Context.Map.RemoveAll();
         }
     }
 
+    private static void DispatchToGameThread(Action action)
+    {
+        if (GameSynchronizationContext.IsMainThread)
+        {
+            action();
+            return;
+        }
+
+        GameSynchronizationContext.Instance.Post(_ => action(), null);
+    }
+
     private static void OnSessionDisconnected(TcpSession session, LogoutReason reason)
     {
+        UserComponent userComponent = Context.Server.GetComponent<UserComponent>();
+        UserHelper.TryBeginRecoveryWindow(
+            userComponent,
+            Context.Players,
+            session,
+            ReconnectTokenRegistry.Instance);
+
         // 清理 User 级 session 引用
-        if (session.UserId != 0)
+        if (session.UserId != 0L)
         {
-            var userComponent = Context.Server.GetComponent<UserComponent>();
-            if (userComponent.Users.TryGetValue(session.UserId, out var user))
+            if (userComponent.Users.TryGetValue(session.UserId, out User? user))
             {
-                user.Session = null;
+                if (ReferenceEquals(user.Session, session))
+                {
+                    user.PendingReconnectRoleId = 0L;
+                    user.Session = null;
+                }
             }
         }
 
         // 清理 Player 级 session 引用 + 保存数据 + 发布下线事件
-        if (session.RoleId != 0)
+        if (session.RoleId != 0L)
         {
-            var player = Context.Players.GetByRoleId(session.RoleId);
+            PlayerEntity? player = Context.Players.GetByRoleId(session.RoleId);
             if (player != null)
             {
+                PlayerOnlineComponent onlineComponent = player.GetComponent<PlayerOnlineComponent>();
+                if (!ReferenceEquals(onlineComponent.Session, session))
+                {
+                    return;
+                }
+
                 player.RefreshOnlineActivity(session.LastActiveTime);
-                player.GetComponent<PlayerOnlineComponent>().Session = null;
+                Context.Expedition.DetachRole(session.RoleId);
+                onlineComponent.Session = null;
                 Context.Players.QueueDetachedPlayerSave(player);
                 Context.Players.RemovePlayer(session.RoleId);
-                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent { RoleId = session.RoleId, Reason = reason });
+                EventBus.Instance.Publish(new EventType.PlayerOfflineEvent
+                {
+                    RoleId = session.RoleId,
+                    Reason = reason
+                });
             }
         }
     }

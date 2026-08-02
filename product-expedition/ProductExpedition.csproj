@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>ProductExpedition</AssemblyName>
+    <RootNamespace>ProductExpedition</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../gameplay-core/GameplayCore.csproj" />
+    <ProjectReference Include="../product-content/ProductContent.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../client/Assets/Scripts/ProductExpedition/**/*.cs"
+             Exclude="../client/Assets/Scripts/ProductExpedition/**/bin/**/*.cs;
+                      ../client/Assets/Scripts/ProductExpedition/**/obj/**/*.cs"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

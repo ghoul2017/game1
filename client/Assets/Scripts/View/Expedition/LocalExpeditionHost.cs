@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GameplayCore;
+using ProductExpedition;
 using UnityEngine;
 
 namespace Client.Expedition
@@ -17,6 +18,7 @@ namespace Client.Expedition
         private bool _droppedTickWarningIssued;
         private ExpeditionHud _hud;
         private ExpeditionInputView _input;
+        private ProductExpeditionRun _productRun;
         private ExpeditionRun _run;
         private float _secondsPerTick;
         private ExpeditionWorldView _world;
@@ -29,17 +31,32 @@ namespace Client.Expedition
 
         public ExpeditionInputView InputView => _input;
 
+        public ProductExpeditionRun ProductRun => _productRun;
+
         public void Initialize(
             ExpeditionRun run,
             ExpeditionInputView input,
             ExpeditionWorldView world,
             ExpeditionHud hud)
         {
+            Initialize(run, input, world, hud, ProductExpeditionRun.DefaultProductId);
+        }
+
+        public void Initialize(
+            ExpeditionRun run,
+            ExpeditionInputView input,
+            ExpeditionWorldView world,
+            ExpeditionHud hud,
+            string productId)
+        {
             _run = run ?? throw new ArgumentNullException(nameof(run));
             _input = input ?? throw new ArgumentNullException(nameof(input));
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _hud = hud ?? throw new ArgumentNullException(nameof(hud));
+            _productRun = new ProductExpeditionRun(_run, productId);
             _secondsPerTick = 1.0f / run.TicksPerSecond;
+            _accumulatedSeconds = 0.0f;
+            _droppedTickWarningIssued = false;
             _events.Clear();
             _world.Synchronize(_run, _events);
             _hud.Synchronize(_run, _events);
@@ -84,7 +101,7 @@ namespace Client.Expedition
             {
                 _accumulatedSeconds -= _secondsPerTick;
                 _events.Clear();
-                ExpeditionSimulation.Advance(_run, direction.x, direction.y, _events);
+                _productRun.Advance(direction.x, direction.y, _events);
                 _world.Synchronize(_run, _events);
                 _hud.Synchronize(_run, _events);
                 advancedTicks++;

@@ -134,10 +134,11 @@ namespace GameplayCore.Tests
         internal static List<ExpeditionEvent> Advance(
             ExpeditionRun run,
             float directionX = 0.0f,
-            float directionY = 0.0f)
+            float directionY = 0.0f,
+            int interactionTargetId = 0)
         {
             List<ExpeditionEvent> events = new List<ExpeditionEvent>();
-            ExpeditionSimulation.Advance(run, directionX, directionY, events);
+            ExpeditionSimulation.Advance(run, directionX, directionY, interactionTargetId, events);
             return events;
         }
     }

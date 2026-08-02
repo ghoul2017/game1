@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
-using Game.Components.Player;
 using Shared.Common.Protos;
-using Shared.Core;
+using Shared.Common.Enums;
 using Shared.Core.Log;
 using Shared.Core.Network;
 
@@ -13,38 +12,79 @@ public sealed class ReconnectReqHandler : RpcMessageHandler<ReconnectReq, Reconn
 
     protected override async Task ExecuteAsync(TcpSession session, ReconnectReq req, ReconnectRes res)
     {
-        var parsed = TokenSigner.Instance.Validate(req.Token);
-        if (parsed == null)
+        if (session.RoleId != 0L)
         {
-            res.ErrorMessage = "Token无效或已过期";
+            res.ErrorMessage = "当前会话已完成认证，不能重复重连";
             return;
         }
 
-        var (userId, roleId, _) = parsed.Value;
-
-        RoleDataComponent? roleData = null;
-        if (roleId > 0)
+        UserComponent userComponent = Context.Server.GetComponent<UserComponent>();
+        User? authenticatedUser = null;
+        if (session.UserId != 0L)
         {
-            roleData = await Context.Players.LoadRoleDataAsync(roleId);
-            if (roleData == null || roleData.LastToken != req.Token)
+            if (!userComponent.Users.TryGetValue(session.UserId, out authenticatedUser) ||
+                !ReferenceEquals(authenticatedUser.Session, session) ||
+                authenticatedUser.PendingReconnectRoleId != req.RoleId)
             {
-                res.ErrorMessage = "Token已失效";
+                res.ErrorMessage = "当前会话已完成认证，不能重复重连";
                 return;
             }
         }
 
-        session.UserId = userId;
-
-        var newToken = TokenSigner.Instance.Generate(userId, roleId);
-        session.ReconnectToken = newToken;
-
-        if (roleData != null)
+        if (!ReconnectTokenRegistry.Instance.TryConsumeAndRotate(
+                req.Token,
+                req.RoleId,
+                out long userId,
+                out long roleId,
+                out string newToken,
+                out bool replayed,
+                out string errorMessage))
         {
-            roleData.LastToken = newToken;
+            res.ErrorMessage = errorMessage;
+            return;
         }
 
+        if (!userComponent.Users.TryGetValue(userId, out User? user))
+        {
+            ReconnectTokenRegistry.Instance.Invalidate(userId, roleId);
+            res.ErrorMessage = "登录状态已失效";
+            return;
+        }
+
+        if (authenticatedUser != null)
+        {
+            if (!replayed || userId != session.UserId ||
+                !string.Equals(session.ReconnectToken, newToken, StringComparison.Ordinal))
+            {
+                res.ErrorMessage = "当前会话已完成认证，不能重复重连";
+                return;
+            }
+
+            res.Token = newToken;
+            await Task.CompletedTask;
+            return;
+        }
+
+        if (replayed && user.Session != null && user.Session != session && user.Session.IsConnected)
+        {
+            res.Token = newToken;
+            res.ErrorMessage = "重连已在其他会话完成";
+            return;
+        }
+
+        if (user.Session != null && user.Session != session && user.Session.IsConnected)
+        {
+            UserHelper.KickUser(user.Session, LogoutReason.AnotherSession);
+        }
+
+        user.Session = session;
+        user.PendingReconnectRoleId = roleId;
+        session.UserId = userId;
+        session.RoleId = 0L;
+        session.ReconnectToken = newToken;
         res.Token = newToken;
 
-        Log.Info($"重连成功 UserId:{userId}");
+        Log.Info($"重连成功 UserId:{userId} RoleId:{roleId}");
+        await Task.CompletedTask;
     }
 }

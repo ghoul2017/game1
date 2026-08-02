@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 namespace Client.Expedition
 {
     /// <summary>
-    /// 创建并同步 T1 灰盒世界、敌人、资源、出口、目标标记和 Boss 危险区。
+    /// 创建并同步灰盒世界、当前房间内容、目标标记和 Boss 危险区。
     /// </summary>
     public sealed class ExpeditionWorldView : MonoBehaviour
     {
@@ -18,11 +18,14 @@ namespace Client.Expedition
         private Renderer[] _enemyRenderers;
         private GameObject _exitObject;
         private Renderer _exitRenderer;
+        private GameObject _gameplayRoot;
         private MaterialPropertyBlock _propertyBlock;
         private int _bossViewCount;
         private int _normalEnemyViewCount;
+        private int _renderedRoomId;
         private GameObject[] _resourceObjects;
         private Renderer[] _resourceRenderers;
+        private ExpeditionRoomView _roomView;
         private SquadView _squad;
         private GameObject _targetMarker;
         private GameObject _warning;
@@ -39,27 +42,40 @@ namespace Client.Expedition
 
         public bool WarningVisible => _warning.activeSelf;
 
+        public ExpeditionRoomView RoomView => _roomView;
+
+        public Camera WorldCamera => _camera;
+
         public void Initialize(ExpeditionRun run)
         {
             _propertyBlock = new MaterialPropertyBlock();
             CreateLighting();
             CreateGround(run);
             CreateSquad(run);
-            CreateEnemies(run);
-            CreateResources(run);
-            CreateExit(run);
+            RebuildGameplayViews(run);
             CreateMarkers();
+            CreateRoomView(run);
             CreateCamera(run);
         }
 
         public void Synchronize(ExpeditionRun run, IReadOnlyList<ExpeditionEvent> events)
         {
+            int currentRoomId = run.UsesRoomGraph ? run.CurrentRoomId : 0;
+            if (_renderedRoomId != currentRoomId)
+            {
+                RebuildGameplayViews(run);
+            }
+
             _squad.Synchronize(run.Members);
             SynchronizeEnemies(run);
             SynchronizeResources(run);
             SynchronizeExit(run);
             SynchronizeTarget(run);
             ConsumeWarningEvents(run, events);
+            if (_roomView != null)
+            {
+                _roomView.Synchronize(run);
+            }
         }
 
         public void Render(ExpeditionRun run, float deltaTime)
@@ -111,7 +127,7 @@ namespace Client.Expedition
             _squad.Initialize(run.Members, run.SquadX, run.SquadY);
         }
 
-        private void CreateEnemies(ExpeditionRun run)
+        private void CreateEnemies(ExpeditionRun run, Transform parent)
         {
             _enemyObjects = new GameObject[run.Enemies.Count];
             _enemyRenderers = new Renderer[run.Enemies.Count];
@@ -134,13 +150,14 @@ namespace Client.Expedition
                     isBoss ? $"Boss_{enemy.Id}" : $"Enemy_{enemy.Id}",
                     new Vector3(enemy.X, isBoss ? 1.25f : 0.7f, enemy.Y),
                     isBoss ? new Vector3(2.5f, 2.5f, 2.5f) : new Vector3(1.4f, 1.4f, 1.4f),
-                    isBoss ? new Color(0.75f, 0.08f, 0.15f) : new Color(1.0f, 0.35f, 0.2f));
+                    isBoss ? new Color(0.75f, 0.08f, 0.15f) : new Color(1.0f, 0.35f, 0.2f),
+                    parent);
                 _enemyObjects[index] = enemyObject;
                 _enemyRenderers[index] = enemyObject.GetComponent<Renderer>();
             }
         }
 
-        private void CreateResources(ExpeditionRun run)
+        private void CreateResources(ExpeditionRun run, Transform parent)
         {
             _resourceObjects = new GameObject[run.Resources.Count];
             _resourceRenderers = new Renderer[run.Resources.Count];
@@ -153,21 +170,79 @@ namespace Client.Expedition
                     $"Resource_{resource.Id}",
                     new Vector3(resource.X, 0.4f, resource.Y),
                     new Vector3(1.3f, 0.4f, 1.3f),
-                    new Color(1.0f, 0.78f, 0.12f));
+                    new Color(1.0f, 0.78f, 0.12f),
+                    parent);
                 _resourceObjects[index] = resourceObject;
                 _resourceRenderers[index] = resourceObject.GetComponent<Renderer>();
             }
         }
 
-        private void CreateExit(ExpeditionRun run)
+        private void CreateExit(ExpeditionRun run, Transform parent)
         {
             _exitObject = CreatePrimitive(
                 PrimitiveType.Cylinder,
                 "ExpeditionExit",
                 new Vector3(run.ExitX, 0.08f, run.ExitY),
                 new Vector3(run.ExitRadius * 2.0f, 0.08f, run.ExitRadius * 2.0f),
-                new Color(0.18f, 0.2f, 0.22f));
+                new Color(0.18f, 0.2f, 0.22f),
+                parent);
             _exitRenderer = _exitObject.GetComponent<Renderer>();
+        }
+
+        private void RebuildGameplayViews(ExpeditionRun run)
+        {
+            if (_gameplayRoot != null)
+            {
+                _gameplayRoot.SetActive(false);
+                Destroy(_gameplayRoot);
+            }
+
+            _gameplayRoot = new GameObject("CurrentRoomGameplay");
+            _gameplayRoot.transform.SetParent(transform, false);
+            _bossViewCount = 0;
+            _normalEnemyViewCount = 0;
+            _exitObject = null;
+            _exitRenderer = null;
+            CreateEnemies(run, _gameplayRoot.transform);
+            CreateResources(run, _gameplayRoot.transform);
+            if (!run.UsesRoomGraph)
+            {
+                CreateExit(run, _gameplayRoot.transform);
+            }
+
+            _renderedRoomId = run.UsesRoomGraph ? run.CurrentRoomId : 0;
+            if (_squad != null)
+            {
+                _squad.Render(run, 0.0f);
+            }
+
+            if (_camera != null)
+            {
+                _camera.transform.position = _squad.LeaderPosition + new Vector3(0.0f, 15.0f, -11.0f);
+            }
+
+            if (_targetMarker != null)
+            {
+                _targetMarker.SetActive(false);
+            }
+
+            if (_warning != null)
+            {
+                _warning.SetActive(false);
+            }
+        }
+
+        private void CreateRoomView(ExpeditionRun run)
+        {
+            if (!run.UsesRoomGraph)
+            {
+                return;
+            }
+
+            GameObject roomObject = new GameObject("ExpeditionRoomView");
+            roomObject.transform.SetParent(transform, false);
+            _roomView = roomObject.AddComponent<ExpeditionRoomView>();
+            _roomView.Initialize(run);
         }
 
         private void CreateMarkers()
@@ -245,6 +320,11 @@ namespace Client.Expedition
 
         private void SynchronizeExit(ExpeditionRun run)
         {
+            if (_exitRenderer == null)
+            {
+                return;
+            }
+
             Color color = run.ExitOpen
                 ? new Color(0.1f, 1.0f, 0.35f)
                 : new Color(0.18f, 0.2f, 0.22f);
@@ -264,12 +344,24 @@ namespace Client.Expedition
             if (run.TargetKind == ExpeditionTargetKind.Enemy)
             {
                 ExpeditionEnemy enemy = FindEnemy(run, run.TargetId);
+                if (enemy == null)
+                {
+                    _targetMarker.SetActive(false);
+                    return;
+                }
+
                 x = enemy.X;
                 y = enemy.Y;
             }
             else
             {
                 ExpeditionResource resource = FindResource(run, run.TargetId);
+                if (resource == null)
+                {
+                    _targetMarker.SetActive(false);
+                    return;
+                }
+
                 x = resource.X;
                 y = resource.Y;
             }
@@ -286,6 +378,11 @@ namespace Client.Expedition
                 if (current.Kind == ExpeditionEventKind.BossWarningStarted)
                 {
                     ExpeditionEnemy boss = FindEnemy(run, current.SourceId);
+                    if (boss == null)
+                    {
+                        continue;
+                    }
+
                     _warning.transform.position = new Vector3(current.X, 0.07f, current.Y);
                     _warning.transform.localScale = new Vector3(
                         boss.BossWarningRadius * 2.0f,
@@ -307,11 +404,12 @@ namespace Client.Expedition
             string objectName,
             Vector3 position,
             Vector3 scale,
-            Color color)
+            Color color,
+            Transform parent = null)
         {
             GameObject result = GameObject.CreatePrimitive(primitiveType);
             result.name = objectName;
-            result.transform.SetParent(transform, false);
+            result.transform.SetParent(parent == null ? transform : parent, false);
             result.transform.position = position;
             result.transform.localScale = scale;
             Collider collider = result.GetComponent<Collider>();
@@ -363,7 +461,8 @@ namespace Client.Expedition
                 return false;
             }
 
-            return FindEnemy(run, current.TargetId).Kind == ExpeditionEnemyKind.Boss;
+            ExpeditionEnemy enemy = FindEnemy(run, current.TargetId);
+            return enemy != null && enemy.Kind == ExpeditionEnemyKind.Boss;
         }
     }
 }

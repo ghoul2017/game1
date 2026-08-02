@@ -29,7 +29,7 @@ for (int i = 0; i < args.Length; i++)
     }
 }
 
-var runner = new TestRunner
+TestRunner runner = new TestRunner
 {
     Host = host,
     Port = port
@@ -37,19 +37,37 @@ var runner = new TestRunner
 
 // 注册测试场景
 if (scenarioName == null || scenarioName == "login_test")
+{
     runner.AddScenario(new LoginTest());
+}
+
 if (scenarioName == null || scenarioName == "task_persistence_test")
+{
     runner.AddScenario(new TaskPersistenceTest());
+}
+
+// 下列场景会创建独立持久化数据，只在显式指定时执行。
+if (scenarioName == "expedition_authority_test")
+{
+    runner.AddScenario(new ExpeditionAuthorityTest());
+}
+
+if (scenarioName == "arena_idempotency_test")
+{
+    runner.AddScenario(new ArenaIdempotencyTest());
+}
 
 if (runner.ScenarioCount == 0)
 {
-    Console.WriteLine("用法: robot [--host 127.0.0.1] [--port 9000] [--scenario login_test|task_persistence_test]");
+    Console.WriteLine(
+        "用法: robot [--host 127.0.0.1] [--port 9000] " +
+        "[--scenario login_test|task_persistence_test|expedition_authority_test|arena_idempotency_test]");
     return 1;
 }
 
 try
 {
-    var exitCode = await runner.RunAll();
+    int exitCode = await runner.RunAll();
     return exitCode;
 }
 catch (Exception ex)

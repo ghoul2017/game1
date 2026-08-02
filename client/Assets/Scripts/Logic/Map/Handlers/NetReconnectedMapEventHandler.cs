@@ -6,12 +6,18 @@ namespace Client.Logic
     {
         public void Handle(EventType.NetReconnectedEvent e)
         {
+            if (ClientRuntimeMode.UsesOnlineExpeditionEntry)
+            {
+                // 重连 EnterGameReq 会再次产生 EnterGameNtf，由唯一角色入口恢复远征。
+                return;
+            }
+
             _ = ReenterCurrentMap();
         }
 
         private static async System.Threading.Tasks.Task ReenterCurrentMap()
         {
-            var mapData = GameData.CurrentMap;
+            EnterMapData mapData = GameData.CurrentMap;
             if (mapData != null)
             {
                 await MapController.Instance.EnterMap(mapData.MapCfgId, mapData.Line);

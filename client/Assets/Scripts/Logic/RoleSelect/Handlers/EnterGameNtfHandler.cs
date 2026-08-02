@@ -9,7 +9,7 @@ namespace Client.Logic
     {
         protected override async Task ExecuteAsync(TcpSession session, EnterGameNtf ntf)
         {
-            var controller = RoleSelectController.Instance;
+            RoleSelectController controller = RoleSelectController.Instance;
             GameData.CurrentRole = new RoleData
             {
                 RoleId = ntf.RoleId,
@@ -22,6 +22,16 @@ namespace Client.Logic
             // Robot 复用 Logic 消息注册，但不拥有 Unity 客户端的 NetClient 生命周期。
             if (NetClient.Instance == null)
             {
+                await Task.CompletedTask;
+                return;
+            }
+
+            if (ClientRuntimeMode.UsesOnlineExpeditionEntry)
+            {
+                controller.StatusText = "正在进入在线远征...";
+                controller.HasError = false;
+                EventBus.Instance.Publish(new EventType.RoleSelectDataChangedEvent());
+                EventBus.Instance.Publish(new EventType.RoleEnteredEvent { RoleId = ntf.RoleId });
                 await Task.CompletedTask;
                 return;
             }
@@ -47,9 +57,9 @@ namespace Client.Logic
                     controller.HasError = true;
                 }
             }
-            catch (System.Exception ex)
+            catch (System.Exception exception)
             {
-                controller.StatusText = "进入地图失败: " + ex.Message;
+                controller.StatusText = $"进入地图失败: {exception.Message}";
                 controller.HasError = true;
             }
 

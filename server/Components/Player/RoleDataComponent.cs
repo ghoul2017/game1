@@ -1,4 +1,3 @@
-using MongoDB.Bson.Serialization.Attributes;
 using Shared.Core.ECS;
 
 namespace Game.Components.Player;
@@ -33,7 +32,4 @@ public class RoleDataComponent : Component
     /// <summary>创建时间（Unix时间戳毫秒）</summary>
     public long CreateTime { get; set; }
 
-    /// <summary>最近一次重连Token，用于单次有效验证</summary>
-    [BsonIgnore]
-    public string LastToken { get; set; } = "";
 }

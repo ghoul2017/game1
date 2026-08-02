@@ -209,6 +209,7 @@ public class MongoDb
         BsonClassMap.RegisterClassMap<RoleBagComponent>();
         BsonClassMap.RegisterClassMap<RoleMailComponent>();
         BsonClassMap.RegisterClassMap<RoleTaskComponent>();
+        BsonClassMap.RegisterClassMap<PlayerExpeditionComponent>();
         BsonClassMap.RegisterClassMap<PlayerOnlineComponent>();
     }
 

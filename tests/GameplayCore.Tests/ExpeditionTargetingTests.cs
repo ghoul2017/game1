@@ -115,5 +115,63 @@ namespace GameplayCore.Tests
             Assert.Equal(ExpeditionTargetKind.None, run.TargetKind);
             Assert.Equal(0, run.TargetId);
         }
+
+        [Fact]
+        public void InteractionTargetCanChooseFartherEligibleEnemy()
+        {
+            ExpeditionSetup setup = ExpeditionTestFactory.CreateSetup();
+            setup.Members = new[] { ExpeditionTestFactory.CreateMember(1, attackRange: 0.1f) };
+            setup.Enemies = new[]
+            {
+                ExpeditionTestFactory.CreateNormalEnemy(10, 1.0f, attackRange: 0.1f),
+                ExpeditionTestFactory.CreateNormalEnemy(20, 2.0f, attackRange: 0.1f),
+                ExpeditionTestFactory.CreateBoss()
+            };
+            ExpeditionRun run = ExpeditionRun.Start(setup);
+
+            ExpeditionTestFactory.Advance(run, interactionTargetId: 20);
+
+            Assert.Equal(ExpeditionTargetKind.Enemy, run.TargetKind);
+            Assert.Equal(20, run.TargetId);
+        }
+
+        [Fact]
+        public void NearbyEnemyThreatOverridesRequestedResource()
+        {
+            ExpeditionSetup setup = ExpeditionTestFactory.CreateSetup();
+            setup.Members = new[] { ExpeditionTestFactory.CreateMember(1, attackRange: 0.1f) };
+            setup.Enemies = new[]
+            {
+                ExpeditionTestFactory.CreateNormalEnemy(10, 1.0f, attackRange: 0.1f),
+                ExpeditionTestFactory.CreateBoss()
+            };
+            setup.Resources = new[] { ExpeditionTestFactory.CreateResource(800, 1.5f, interactionRange: 0.1f) };
+            ExpeditionRun run = ExpeditionRun.Start(setup);
+
+            ExpeditionTestFactory.Advance(run, interactionTargetId: 800);
+
+            Assert.Equal(ExpeditionTargetKind.Enemy, run.TargetKind);
+            Assert.Equal(10, run.TargetId);
+        }
+
+        [Fact]
+        public void InvalidOrDistantInteractionTargetFallsBackToAutomaticSelection()
+        {
+            ExpeditionSetup setup = ExpeditionTestFactory.CreateSetup();
+            setup.TargetAcquireRadius = 2.0f;
+            setup.Members = new[] { ExpeditionTestFactory.CreateMember(1, attackRange: 0.1f) };
+            setup.Enemies = new[]
+            {
+                ExpeditionTestFactory.CreateNormalEnemy(10, 1.0f, attackRange: 0.1f),
+                ExpeditionTestFactory.CreateNormalEnemy(20, 6.0f, attackRange: 0.1f),
+                ExpeditionTestFactory.CreateBoss()
+            };
+            ExpeditionRun run = ExpeditionRun.Start(setup);
+
+            ExpeditionTestFactory.Advance(run, interactionTargetId: 20);
+
+            Assert.Equal(ExpeditionTargetKind.Enemy, run.TargetKind);
+            Assert.Equal(10, run.TargetId);
+        }
     }
 }

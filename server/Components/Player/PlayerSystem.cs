@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Game.Components.Bag;
+using Game.Components.User;
 using Game.Database;
 using Shared.Common.Protos;
 using Shared.Core;
@@ -52,12 +53,24 @@ public static class PlayerSystem
     /// <summary>玩家下线（内部）</summary>
     public static void RemovePlayer(this PlayerComponent self, PlayerEntity player)
     {
-        var online = player.GetComponent<PlayerOnlineComponent>();
-        var roleData = player.GetComponent<RoleDataComponent>();
+        PlayerOnlineComponent online = player.GetComponent<PlayerOnlineComponent>();
+        RoleDataComponent roleData = player.GetComponent<RoleDataComponent>();
 
-        self.Players.Remove(player.Id);
-        self.PlayersByUserId.Remove(online.UserId);
-        if (!string.IsNullOrEmpty(roleData.Name))
+        if (self.Players.TryGetValue(player.Id, out PlayerEntity? rolePlayer) &&
+            ReferenceEquals(rolePlayer, player))
+        {
+            self.Players.Remove(player.Id);
+        }
+
+        if (self.PlayersByUserId.TryGetValue(online.UserId, out PlayerEntity? userPlayer) &&
+            ReferenceEquals(userPlayer, player))
+        {
+            self.PlayersByUserId.Remove(online.UserId);
+        }
+
+        if (!string.IsNullOrEmpty(roleData.Name) &&
+            self.PlayersByName.TryGetValue(roleData.Name, out PlayerEntity? namedPlayer) &&
+            ReferenceEquals(namedPlayer, player))
         {
             self.PlayersByName.Remove(roleData.Name);
         }
@@ -76,6 +89,30 @@ public static class PlayerSystem
     public static PlayerEntity? GetByRoleName(this PlayerComponent self, string name)
     {
         return self.PlayersByName.TryGetValue(name, out var p) ? p : null;
+    }
+
+    /// <summary>按双向绑定解析当前会话的权威玩家，拒绝只伪造或遗留 RoleId 的陈旧会话。</summary>
+    public static PlayerEntity? GetBySession(this PlayerComponent self, TcpSession session)
+    {
+        if (session.RoleId == 0L || !self.Players.TryGetValue(session.RoleId, out PlayerEntity? player))
+        {
+            return null;
+        }
+
+        PlayerOnlineComponent online = player.GetComponent<PlayerOnlineComponent>();
+        return ReferenceEquals(online.Session, session) ? player : null;
+    }
+
+    /// <summary>未选角会话可进入任意所属角色；已选角会话只允许同一权威角色幂等重入。</summary>
+    public static bool CanEnterRole(this PlayerComponent self, TcpSession session, long requestedRoleId)
+    {
+        if (session.RoleId == 0L)
+        {
+            return true;
+        }
+
+        PlayerEntity? player = self.GetBySession(session);
+        return player != null && player.Id == requestedRoleId;
     }
 
     public static bool IsOnline(this PlayerComponent self, long roleId) => self.Players.ContainsKey(roleId);
@@ -110,9 +147,59 @@ public static class PlayerSystem
     public static async Task<(PlayerEntity player, string token)?> EnterGame(
         this PlayerComponent self, long roleId, long userId, TcpSession session, string name, int level, int job)
     {
+        if (!self.CanEnterRole(session, roleId) || !UserHelper.IsCurrentSession(session, userId))
+        {
+            return null;
+        }
+
+        PlayerEntity? currentPlayer = self.GetBySession(session);
+        if (currentPlayer != null && currentPlayer.Id == roleId)
+        {
+            PlayerOnlineComponent currentOnline = currentPlayer.GetComponent<PlayerOnlineComponent>();
+            if (currentOnline.UserId != userId)
+            {
+                return null;
+            }
+
+            RoleDataComponent currentRoleData = currentPlayer.GetComponent<RoleDataComponent>();
+            string currentToken = ReconnectTokenRegistry.Instance.IssueOrReuse(
+                userId,
+                roleId,
+                session.ReconnectToken);
+            session.ReconnectToken = currentToken;
+            session.Send(new EnterGameNtf
+            {
+                RoleId = roleId,
+                Name = currentRoleData.Name,
+                Level = currentRoleData.Level,
+                Job = currentRoleData.Job,
+            });
+            return (currentPlayer, currentToken);
+        }
+
         PlayerEntity? player = await PlayerPersistenceSystem.LoadPlayerAsync(roleId);
+        if (!self.CanEnterRole(session, roleId) || !UserHelper.IsCurrentSession(session, userId))
+        {
+            return null;
+        }
+
         bool isNewPlayer = player == null;
         player ??= PlayerEntity.Create(roleId, userId, name, level, job);
+
+        if (!isNewPlayer && player.EnsureExpeditionComponent())
+        {
+            player.MarkDirty();
+        }
+
+        if (isNewPlayer)
+        {
+            await MongoDb.Instance.InsertAsync(player);
+            Log.Info($"首次进入游戏，创建玩家数据 RoleId:{roleId}");
+            if (!self.CanEnterRole(session, roleId) || !UserHelper.IsCurrentSession(session, userId))
+            {
+                return null;
+            }
+        }
 
         PlayerOnlineComponent online = player.GetComponent<PlayerOnlineComponent>();
         online.UserId = userId;
@@ -120,20 +207,15 @@ public static class PlayerSystem
         online.LastActiveTime = session.LastActiveTime;
         online.LoginIp = session.RemoteIp;
         online.Session = session;
-
-        if (isNewPlayer)
+        if (!isNewPlayer)
         {
-            await MongoDb.Instance.InsertAsync(player);
-            Log.Info($"首次进入游戏，创建玩家数据 RoleId:{roleId}");
-        }
-        else
             online.MarkDirty();
+        }
 
         RoleDataComponent roleData = player.GetComponent<RoleDataComponent>();
-        string token = TokenSigner.Instance.Generate(userId, roleId);
+        string token = ReconnectTokenRegistry.Instance.IssueOrReuse(userId, roleId, session.ReconnectToken);
         session.RoleId = roleId;
         session.ReconnectToken = token;
-        roleData.LastToken = token;
 
         self.AddPlayer(player);
         await EventBus.Instance.PublishAsync(new EventType.PlayerOnlineEvent { Player = player });
@@ -207,7 +289,12 @@ public static class PlayerSystem
         }
 
         self.SendToPlayer(roleId, new ExpChangedNtf { Exp = roleAttr.Exp, Level = roleAttr.Level });
-        EventBus.Instance.Publish(new EventType.PlayerExpChangedEvent { RoleId = roleId, Exp = roleAttr.Exp, Level = roleAttr.Level });
+        EventBus.Instance.Publish(new EventType.PlayerExpChangedEvent
+        {
+            RoleId = roleId,
+            Exp = roleAttr.Exp,
+            Level = roleAttr.Level
+        });
     }
 
     /// <summary>发放金币给玩家</summary>

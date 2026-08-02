@@ -5,7 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 CURRENT_STEP="初始化"
-RESULTS_DIR="tests/GameplayCore.Tests/bin/TestResults"
+GAMEPLAY_RESULTS_DIR="tests/GameplayCore.Tests/bin/TestResults"
+PRODUCT_RESULTS_DIR="tests/ProductContent.Tests/bin/TestResults"
+SERVER_RESULTS_DIR="tests/Server.Tests/bin/TestResults"
+SHARED_RESULTS_DIR="tests/Shared.Tests/bin/TestResults"
 
 report_error() {
     local exit_code=$?
@@ -43,10 +46,18 @@ run_step "客户端 Logic/shared 依赖边界" bash scripts/check-client-boundar
 
 run_step "还原 GameplayCore 测试依赖" \
     dotnet restore tests/GameplayCore.Tests/GameplayCore.Tests.csproj
+run_step "还原 ProductContent 测试依赖" \
+    dotnet restore tests/ProductContent.Tests/ProductContent.Tests.csproj
+run_step "还原 Shared 测试依赖" \
+    dotnet restore tests/Shared.Tests/Shared.Tests.csproj
+run_step "还原 Server 测试依赖" \
+    dotnet restore tests/Server.Tests/Server.Tests.csproj
 run_step "还原 Robot 项目图" dotnet restore robot/Robot.csproj
 run_step "还原 tools/Server 项目图" dotnet restore tools/tools.csproj
 
 run_step "构建 GameplayCore" dotnet build gameplay-core/GameplayCore.csproj --no-restore
+run_step "构建 ProductContent" dotnet build product-content/ProductContent.csproj --no-restore
+run_step "构建 ProductExpedition" dotnet build product-expedition/ProductExpedition.csproj --no-restore
 run_step "构建 Shared" dotnet build shared/Shared.csproj --no-restore
 run_step "构建 ClientLogic" dotnet build client-logic/ClientLogic.csproj --no-restore
 run_step "构建 Server" dotnet build server/Server.csproj --no-restore
@@ -54,15 +65,39 @@ run_step "构建 Robot" dotnet build robot/Robot.csproj --no-restore
 run_step "构建 tools" dotnet build tools/tools.csproj --no-restore
 run_step "构建 GameplayCore.Tests" \
     dotnet build tests/GameplayCore.Tests/GameplayCore.Tests.csproj --no-restore
+run_step "构建 ProductContent.Tests" \
+    dotnet build tests/ProductContent.Tests/ProductContent.Tests.csproj --no-restore
+run_step "构建 Shared.Tests" \
+    dotnet build tests/Shared.Tests/Shared.Tests.csproj --no-restore
+run_step "构建 Server.Tests" \
+    dotnet build tests/Server.Tests/Server.Tests.csproj --no-restore
 
-mkdir -p "$RESULTS_DIR"
+mkdir -p "$GAMEPLAY_RESULTS_DIR" "$PRODUCT_RESULTS_DIR" "$SERVER_RESULTS_DIR" "$SHARED_RESULTS_DIR"
 run_step "运行 GameplayCore 行为测试" \
     dotnet test tests/GameplayCore.Tests/GameplayCore.Tests.csproj \
         --no-build \
         --no-restore \
         --logger "trx;LogFileName=gameplay-core.trx" \
-        --results-directory "$RESULTS_DIR"
+        --results-directory "$GAMEPLAY_RESULTS_DIR"
+run_step "运行 ProductContent 隔离与规则测试" \
+    dotnet test tests/ProductContent.Tests/ProductContent.Tests.csproj \
+        --no-build \
+        --no-restore \
+        --logger "trx;LogFileName=product-content.trx" \
+        --results-directory "$PRODUCT_RESULTS_DIR"
+run_step "运行 Shared 配置与传输测试" \
+    dotnet test tests/Shared.Tests/Shared.Tests.csproj \
+        --no-build \
+        --no-restore \
+        --logger "trx;LogFileName=shared.trx" \
+        --results-directory "$SHARED_RESULTS_DIR"
+run_step "运行 Server 权威、重连、结算与容量测试" \
+    dotnet test tests/Server.Tests/Server.Tests.csproj \
+        --no-build \
+        --no-restore \
+        --logger "trx;LogFileName=server.trx" \
+        --results-directory "$SERVER_RESULTS_DIR"
 
 run_step "协议一致性检查" bash scripts/check-protocol --no-build --no-restore
 
-printf '\n本地 CI 通过：边界、受管项目构建、纯逻辑测试和协议检查均完成。\n'
+printf '\n本地 CI 通过：边界、受管项目构建、行为/隔离/配置/传输测试和协议检查均完成。\n'

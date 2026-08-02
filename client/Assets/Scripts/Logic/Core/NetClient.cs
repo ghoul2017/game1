@@ -60,6 +60,11 @@ namespace Client.Logic
         public int CurrentReconnectAttempt => _reconnectAttempts;
         public int MaxReconnectAttempt => maxReconnectAttempts;
 
+        /// <summary>
+        /// 平台层可在初始化时替换会话创建方式；Server、Robot 和原生客户端继续使用 Socket 默认实现。
+        /// </summary>
+        public Func<string, int, Task<TcpSession>> SessionFactory { get; set; }
+
         public float ReconnectCountdown =>
             _state == ConnState.Reconnecting ? Math.Max(0f, _nextReconnectTime - _currentTime) : 0f;
 
@@ -80,6 +85,9 @@ namespace Client.Logic
         private float _nextReconnectTime;
         private bool _userDisconnect;
         private bool _hadSession;
+        private readonly object _connectionAttemptLock = new object();
+        private int _connectionAttemptGeneration;
+        private TcpSession _completedConnectionAttempt;
 
         internal bool UserDisconnect
         {
@@ -104,6 +112,10 @@ namespace Client.Logic
             Instance = this;
 
             Context.Client.AddComponent<NetworkComponent>();
+            if (SessionFactory == null)
+            {
+                SessionFactory = Context.Network.ConnectAsync;
+            }
         }
 
         /// <summary>
@@ -129,8 +141,8 @@ namespace Client.Logic
             // Reconnect timer
             if (_state == ConnState.Reconnecting && _currentTime >= _nextReconnectTime)
             {
-                Log.Info(string.Format("[NetClient] Reconnecting ({0}/{1})...", _reconnectAttempts, maxReconnectAttempts));
-                _ = StartConnectAsync();
+                Log.Info($"[NetClient] Reconnecting ({_reconnectAttempts}/{maxReconnectAttempts})...");
+                BeginConnectAttempt();
             }
 
             // Handshake timeout
@@ -162,7 +174,8 @@ namespace Client.Logic
 
         public void Dispose()
         {
-            _running = false;
+            _userDisconnect = true;
+            CancelPendingConnectAttempt();
             BagController.Instance.ResetForRole(0);
             DisposeSession(LogoutReason.NetDisconnected, "Destroyed");
             if (Instance == this) Instance = null;
@@ -182,13 +195,13 @@ namespace Client.Logic
             _userDisconnect = false;
             _hadSession = false;
             _reconnectAttempts = 0;
-            _state = ConnState.Connecting;
-            _ = StartConnectAsync();
+            BeginConnectAttempt();
         }
 
         public void Disconnect()
         {
             _userDisconnect = true;
+            CancelPendingConnectAttempt();
             DisposeSession(LogoutReason.NetDisconnected, "User disconnect");
         }
 
@@ -227,25 +240,66 @@ namespace Client.Logic
 
         // ==================== Connect / Disconnect ====================
 
-        private async System.Threading.Tasks.Task StartConnectAsync()
+        private void BeginConnectAttempt()
         {
+            int generation;
+            lock (_connectionAttemptLock)
+            {
+                _running = true;
+                generation = ++_connectionAttemptGeneration;
+            }
+
             _state = ConnState.Connecting;
-            _running = true;
+            _ = StartConnectAsync(generation);
+        }
+
+        private async System.Threading.Tasks.Task StartConnectAsync(int generation)
+        {
             try
             {
-                var session = await Context.Network.ConnectAsync(host, port);
-                _mainQueue.Enqueue(() => OnConnectSuccess(session));
+                TcpSession session = await SessionFactory(host, port);
+                bool accepted;
+                lock (_connectionAttemptLock)
+                {
+                    accepted = _running && generation == _connectionAttemptGeneration;
+                    if (accepted)
+                    {
+                        _completedConnectionAttempt = session;
+                    }
+                }
+
+                if (!accepted)
+                {
+                    session.Dispose();
+                    return;
+                }
+
+                _mainQueue.Enqueue(() => OnConnectSuccess(session, generation));
             }
             catch (Exception ex)
             {
-                _mainQueue.Enqueue(() => ProcessConnectFailure(ex.Message));
+                _mainQueue.Enqueue(() => ProcessConnectFailure(ex.Message, generation));
             }
         }
 
-        private void OnConnectSuccess(TcpSession session)
+        private void OnConnectSuccess(TcpSession session, int generation)
         {
-            if (!_running)
+            bool accepted;
+            lock (_connectionAttemptLock)
+            {
+                accepted = _running && generation == _connectionAttemptGeneration &&
+                    ReferenceEquals(_completedConnectionAttempt, session);
+                if (ReferenceEquals(_completedConnectionAttempt, session))
+                {
+                    _completedConnectionAttempt = null;
+                }
+            }
+
+            if (!accepted)
+            {
+                session.Dispose();
                 return;
+            }
 
             _session = session;
             _session.PostToMainThread = action => _mainQueue.Enqueue(() =>
@@ -261,11 +315,19 @@ namespace Client.Logic
             _lastSendTime = _currentTime;
             Log.Info("[NetClient] TCP connected, sending handshake...");
 
-            _ = StartHandshakeAsync();
+            _ = StartHandshakeAsync(session);
         }
 
-        private void ProcessConnectFailure(string reason)
+        private void ProcessConnectFailure(string reason, int generation)
         {
+            lock (_connectionAttemptLock)
+            {
+                if (!_running || generation != _connectionAttemptGeneration)
+                {
+                    return;
+                }
+            }
+
             Log.Warn("[NetClient] Connect failed: " + reason);
 
             if (autoReconnect && !_userDisconnect && _reconnectAttempts < maxReconnectAttempts)
@@ -276,7 +338,7 @@ namespace Client.Logic
                     maxReconnectDelay);
                 _nextReconnectTime = _currentTime + delay;
                 _state = ConnState.Reconnecting;
-                Log.Info(string.Format("[NetClient] Retry in {0}s ({1}/{2})", delay, _reconnectAttempts, maxReconnectAttempts));
+                Log.Info($"[NetClient] Retry in {delay}s ({_reconnectAttempts}/{maxReconnectAttempts})");
             }
             else
             {
@@ -284,6 +346,20 @@ namespace Client.Logic
                 BagController.Instance.ResetForRole(0);
                 EventBus.Instance.Publish(new EventType.NetErrorEvent { Reason = reason });
             }
+        }
+
+        private void CancelPendingConnectAttempt()
+        {
+            TcpSession completedSession;
+            lock (_connectionAttemptLock)
+            {
+                _running = false;
+                _connectionAttemptGeneration++;
+                completedSession = _completedConnectionAttempt;
+                _completedConnectionAttempt = null;
+            }
+
+            completedSession?.Dispose();
         }
 
         private void OnSessionDisconnected(TcpSession session, LogoutReason reason)
@@ -337,7 +413,8 @@ namespace Client.Logic
                     maxReconnectDelay);
                 _nextReconnectTime = _currentTime + delay;
                 _state = ConnState.Reconnecting;
-                Log.Info(string.Format("[NetClient] Disconnected, reconnect in {0}s ({1}/{2})", delay, _reconnectAttempts, maxReconnectAttempts));
+                Log.Info(
+                    $"[NetClient] Disconnected, reconnect in {delay}s ({_reconnectAttempts}/{maxReconnectAttempts})");
             }
             else
             {
@@ -368,11 +445,15 @@ namespace Client.Logic
 
         // ==================== Handshake ====================
 
-        private async Task StartHandshakeAsync()
+        private async Task StartHandshakeAsync(TcpSession session)
         {
             try
             {
-                HandshakeRes res = await CallAsync<HandshakeRes>(new HandshakeReq());
+                HandshakeRes res = await session.CallAsync<HandshakeRes>(new HandshakeReq());
+                if (!IsCurrentSession(session))
+                {
+                    return;
+                }
 
                 if (!string.IsNullOrEmpty(res.ErrorMessage))
                 {
@@ -384,7 +465,7 @@ namespace Client.Logic
 
                 if (_hadSession && !string.IsNullOrEmpty(GameData.Token) && GameData.CurrentRole != null)
                 {
-                    await ReconnectAsync();
+                    await ReconnectAsync(session);
                 }
                 else
                 {
@@ -395,6 +476,11 @@ namespace Client.Logic
             }
             catch (Exception ex)
             {
+                if (!IsCurrentSession(session))
+                {
+                    return;
+                }
+
                 Log.Warn("[NetClient] 握手失败: " + ex.Message);
                 _hadSession = false;
                 DisposeSession(LogoutReason.NetDisconnected, "握手失败: " + ex.Message);
@@ -403,13 +489,18 @@ namespace Client.Logic
 
         // ==================== Reconnect ====================
 
-        private async Task ReconnectAsync()
+        private async Task ReconnectAsync(TcpSession session)
         {
             Log.Info("[NetClient] Handshake OK, sending ReconnectReq...");
-            var req = new ReconnectReq();
+            ReconnectReq req = new ReconnectReq();
             req.Token = GameData.Token;
             req.RoleId = GameData.CurrentRole.RoleId;
-            ReconnectRes res = await CallAsync<ReconnectRes>(req);
+            ReconnectRes res = await session.CallAsync<ReconnectRes>(req);
+            if (!IsCurrentSession(session))
+            {
+                return;
+            }
+
             _hadSession = false;
 
             if (string.IsNullOrEmpty(res.ErrorMessage))
@@ -420,14 +511,20 @@ namespace Client.Logic
 
                 if (GameData.CurrentRole != null)
                 {
-                    EnterGameRes enterGameRes = await CallAsync<EnterGameRes>(
+                    EnterGameRes enterGameRes = await session.CallAsync<EnterGameRes>(
                         new EnterGameReq { RoleId = GameData.CurrentRole.RoleId });
-                    if (!string.IsNullOrEmpty(enterGameRes.ErrorMessage))
+                    if (!IsCurrentSession(session))
                     {
-                        BagController.Instance.ResetForRole(0);
-                        EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = enterGameRes.ErrorMessage });
                         return;
                     }
+
+                    if (!string.IsNullOrEmpty(enterGameRes.ErrorMessage))
+                    {
+                        FailReconnectAfterEnterGame(session, enterGameRes.ErrorMessage);
+                        return;
+                    }
+
+                    GameData.Token = enterGameRes.Token;
                 }
 
                 EventBus.Instance.Publish(new EventType.NetReconnectedEvent());
@@ -443,6 +540,30 @@ namespace Client.Logic
                 _state = ConnState.Connected;
                 EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = res.ErrorMessage });
             }
+        }
+
+        private void FailReconnectAfterEnterGame(TcpSession session, string message)
+        {
+            if (!IsCurrentSession(session))
+            {
+                return;
+            }
+
+            Log.Warn("[NetClient] Reconnect enter game failed: " + message);
+            _userDisconnect = true;
+            _hadSession = false;
+            GameData.Token = "";
+            GameData.CurrentRole = null;
+            GameData.CurrentMap = null;
+            BagController.Instance.ResetForRole(0);
+            CancelPendingConnectAttempt();
+            DisposeSession(LogoutReason.NetDisconnected, "Reconnect enter game failed: " + message);
+            EventBus.Instance.Publish(new EventType.NetReconnectFailedEvent { Message = message });
+        }
+
+        private bool IsCurrentSession(TcpSession session)
+        {
+            return ReferenceEquals(_session, session) && session.IsConnected;
         }
     }
 }

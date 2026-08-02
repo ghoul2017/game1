@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Game;
 using Game.Components.Player;
@@ -25,13 +26,16 @@ public abstract class PlayerRpcMessageHandler<TReq, TRes> : IClassMessageHandler
         using (var ms = new MemoryStream(payload))
             req = Serializer.Deserialize<TReq>(ms);
 
-        var res = new TRes();
-        var player = Context.Players.GetByRoleId(session.RoleId);
+        TRes res = new TRes();
+        PlayerEntity? player = Context.Players.GetBySession(session);
         if (player == null)
         {
-            var errorMessageProperty = typeof(TRes).GetProperty("ErrorMessage");
+            PropertyInfo? errorMessageProperty = typeof(TRes).GetProperty("ErrorMessage");
             if (errorMessageProperty != null && errorMessageProperty.CanWrite)
-                errorMessageProperty.SetValue(res, "玩家不在线");
+            {
+                errorMessageProperty.SetValue(res, "玩家会话已失效");
+            }
+
             return res;
         }
 

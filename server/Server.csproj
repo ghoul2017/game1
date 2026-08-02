@@ -26,6 +26,8 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\gameplay-core\GameplayCore.csproj" />
+        <ProjectReference Include="..\product-expedition\ProductExpedition.csproj" />
         <ProjectReference Include="..\shared\Shared.csproj" />
     </ItemGroup>
 

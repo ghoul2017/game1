@@ -11,7 +11,7 @@ using UnityEngine.TestTools;
 namespace Client.Expedition.Tests
 {
     /// <summary>
-    /// 验证 T1 场景隔离、触摸适配、灰盒状态、固定 Tick、警告表现和重开清理。
+    /// 验证 T1 手感回归以及 T2 结算、升级、第二局的本地运行闭环。
     /// </summary>
     public sealed class ExpeditionHandfeelPlayModeTests
     {
@@ -200,6 +200,113 @@ namespace Client.Expedition.Tests
             Assert.That(Object.FindObjectsOfType<LocalExpeditionHost>(), Has.Length.EqualTo(1));
         }
 
+        [UnityTest]
+        public IEnumerator HudShowsActionsResultAndRestartButtonCreatesOneFreshRun()
+        {
+            LocalExpeditionHost previousHost = _entry.ActiveHost;
+            previousHost.enabled = false;
+            float secondsPerTick = 1.0f / previousHost.Run.TicksPerSecond;
+            bool attackWasVisible = false;
+            bool collectionWasVisible = false;
+
+            for (int tick = 0; tick < 3000 && !previousHost.Run.HasEnded; tick++)
+            {
+                previousHost.AdvanceFrame(secondsPerTick, GetDriveDirection(previousHost.Run));
+                attackWasVisible |= previousHost.Hud.LastEventText.Contains("攻击敌人");
+                collectionWasVisible |= previousHost.Hud.LastEventText.Contains("采集局内资源");
+            }
+
+            Assert.That(previousHost.Run.Phase, Is.EqualTo(ExpeditionPhase.Completed));
+            Assert.That(attackWasVisible, Is.True);
+            Assert.That(collectionWasVisible, Is.True);
+            Assert.That(previousHost.Hud.ResultVisible, Is.True);
+            Assert.That(previousHost.Hud.ResultText, Does.Contain("远征完成"));
+            Assert.That(previousHost.Hud.ResultText, Does.Contain("局内资源"));
+
+            GameObject previousRoot = _entry.ActiveRunRoot;
+            previousHost.Hud.RestartButton.onClick.Invoke();
+            LocalExpeditionHost currentHost = _entry.ActiveHost;
+            currentHost.enabled = false;
+            yield return null;
+
+            Assert.That(previousRoot == null, Is.True);
+            Assert.That(currentHost, Is.Not.SameAs(previousHost));
+            Assert.That(currentHost.Run.Tick, Is.EqualTo(0L));
+            Assert.That(currentHost.Run.CollectedResource, Is.EqualTo(0L));
+            Assert.That(Object.FindObjectsOfType<LocalExpeditionHost>(), Has.Length.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator VerticalSliceSettlesUpgradesAndStartsStrongerSecondRun()
+        {
+            _entry.StartVerticalSlice();
+            LocalCampaignHost campaign = _entry.VerticalSliceHost;
+            LocalExpeditionHost firstHost = campaign.ActiveHost;
+            firstHost.enabled = false;
+            long firstRunId = firstHost.Run.RunId;
+            int firstDamage = firstHost.Run.Members[0].AttackDamage;
+            float secondsPerTick = 1.0f / firstHost.Run.TicksPerSecond;
+            int maximumRouteMarkers = 0;
+            bool dangerHintWasVisible = false;
+
+            for (int tick = 0; tick < 3000 && !firstHost.Run.HasEnded; tick++)
+            {
+                firstHost.AdvanceFrame(secondsPerTick, GetDriveDirection(firstHost.Run));
+                maximumRouteMarkers = Mathf.Max(
+                    maximumRouteMarkers,
+                    firstHost.World.RoomView.RouteMarkerCount);
+                dangerHintWasVisible |= firstHost.World.RoomView.HasDangerHint;
+            }
+
+            Assert.That(firstHost.Run.Phase, Is.EqualTo(ExpeditionPhase.Completed));
+            Assert.That(maximumRouteMarkers, Is.GreaterThanOrEqualTo(6));
+            Assert.That(dangerHintWasVisible, Is.True);
+            Assert.That(firstHost.Hud.ResultVisible, Is.True);
+
+            firstHost.Hud.RestartButton.onClick.Invoke();
+            Assert.That(campaign.IsAtBase, Is.True);
+            Assert.That(campaign.ActiveHost, Is.Null);
+            Assert.That(campaign.Session.State.LatestSettlement.RunId, Is.EqualTo(firstRunId));
+            Assert.That(campaign.Session.State.BankedResource, Is.GreaterThanOrEqualTo(campaign.Session.UpgradeCost));
+            Assert.That(campaign.BaseView.SettlementText, Does.Contain("远征成功"));
+            Assert.That(campaign.BaseView.UpgradeButton.interactable, Is.True);
+
+            campaign.BaseView.UpgradeButton.onClick.Invoke();
+            Assert.That(campaign.Session.State.FacilityLevel, Is.EqualTo(1));
+            Assert.That(campaign.LatestUpgradeReceipt.PreviousDamage, Is.EqualTo(firstDamage));
+            Assert.That(campaign.LatestUpgradeReceipt.CurrentDamage, Is.GreaterThan(firstDamage));
+            Assert.That(campaign.BaseView.UpgradeResultText, Does.Contain("升级完成"));
+
+            campaign.BaseView.DepartButton.onClick.Invoke();
+            LocalExpeditionHost secondHost = campaign.ActiveHost;
+            secondHost.enabled = false;
+            yield return null;
+
+            Assert.That(campaign.IsAtBase, Is.False);
+            Assert.That(secondHost.Run.RunId, Is.Not.EqualTo(firstRunId));
+            Assert.That(secondHost.Run.Tick, Is.EqualTo(0L));
+            Assert.That(secondHost.Run.CollectedResource, Is.EqualTo(0L));
+            Assert.That(secondHost.Run.Members[0].AttackDamage, Is.GreaterThan(firstDamage));
+            Assert.That(Object.FindObjectsOfType<LocalExpeditionHost>(), Has.Length.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator VerticalSliceSceneStartsItsOwnCampaignHostFromFirstBuildEntry()
+        {
+            SceneManager.LoadScene("ExpeditionVerticalSliceScene", LoadSceneMode.Single);
+            yield return null;
+
+            Scene scene = SceneManager.GetActiveScene();
+            ExpeditionVerticalSliceEntry entry = Object.FindObjectOfType<ExpeditionVerticalSliceEntry>();
+            Assert.That(scene.path, Is.EqualTo("Assets/Scenes/ExpeditionVerticalSliceScene.unity"));
+            Assert.That(SceneUtility.GetBuildIndexByScenePath(scene.path), Is.EqualTo(1));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry.CampaignHost, Is.Not.Null);
+            Assert.That(entry.CampaignHost.ActiveHost, Is.Not.Null);
+            Assert.That(Object.FindObjectsOfType<LocalCampaignHost>(), Has.Length.EqualTo(1));
+            Assert.That(Object.FindObjectsOfType<LocalExpeditionHost>(), Has.Length.EqualTo(1));
+        }
+
         private static ExpeditionEnemy FindBoss(ExpeditionRun run)
         {
             for (int index = 0; index < run.Enemies.Count; index++)
@@ -220,6 +327,106 @@ namespace Client.Expedition.Tests
                 if (!run.Members[index].IsAlive)
                 {
                     return run.Members[index];
+                }
+            }
+
+            return null;
+        }
+
+        private static Vector2 GetDriveDirection(ExpeditionRun run)
+        {
+            ExpeditionEnemy warningBoss = FindActiveWarningBoss(run);
+            if (warningBoss != null)
+            {
+                Vector2 away = new Vector2(
+                    run.SquadX - warningBoss.WarningX,
+                    run.SquadY - warningBoss.WarningY);
+                return away.sqrMagnitude < 0.01f ? Vector2.down : away.normalized;
+            }
+
+            if (run.TargetKind == ExpeditionTargetKind.Enemy)
+            {
+                ExpeditionEnemy enemy = FindEnemy(run, run.TargetId);
+                return MoveToward(run, enemy.X, enemy.Y, 2.5f);
+            }
+
+            if (run.TargetKind == ExpeditionTargetKind.Resource)
+            {
+                ExpeditionResource resource = FindResource(run, run.TargetId);
+                return MoveToward(run, resource.X, resource.Y, 2.5f);
+            }
+
+            if (run.UsesRoomGraph)
+            {
+                ExpeditionVisibleExit exit = FindForwardExit(run);
+                return exit.IsOpen ? MoveToward(run, exit.X, exit.Y, 0.0f) : Vector2.up;
+            }
+
+            return run.ExitOpen
+                ? MoveToward(run, run.ExitX, run.ExitY, 0.0f)
+                : Vector2.up;
+        }
+
+        private static ExpeditionVisibleExit FindForwardExit(ExpeditionRun run)
+        {
+            ExpeditionVisibleExit result = default;
+            for (int index = 0; index < run.VisibleExits.Count; index++)
+            {
+                ExpeditionVisibleExit candidate = run.VisibleExits[index];
+                if (!candidate.IsOpen || candidate.TargetRoomId <= run.CurrentRoomId)
+                {
+                    continue;
+                }
+
+                if (!result.IsOpen || candidate.TargetRoomId < result.TargetRoomId)
+                {
+                    result = candidate;
+                }
+            }
+
+            return result;
+        }
+
+        private static Vector2 MoveToward(ExpeditionRun run, float targetX, float targetY, float stoppingDistance)
+        {
+            Vector2 delta = new Vector2(targetX - run.SquadX, targetY - run.SquadY);
+            return delta.magnitude <= stoppingDistance ? Vector2.zero : delta.normalized;
+        }
+
+        private static ExpeditionEnemy FindEnemy(ExpeditionRun run, int id)
+        {
+            for (int index = 0; index < run.Enemies.Count; index++)
+            {
+                if (run.Enemies[index].Id == id)
+                {
+                    return run.Enemies[index];
+                }
+            }
+
+            return null;
+        }
+
+        private static ExpeditionEnemy FindActiveWarningBoss(ExpeditionRun run)
+        {
+            for (int index = 0; index < run.Enemies.Count; index++)
+            {
+                ExpeditionEnemy enemy = run.Enemies[index];
+                if (enemy.Kind == ExpeditionEnemyKind.Boss && enemy.WarningActive)
+                {
+                    return enemy;
+                }
+            }
+
+            return null;
+        }
+
+        private static ExpeditionResource FindResource(ExpeditionRun run, int id)
+        {
+            for (int index = 0; index < run.Resources.Count; index++)
+            {
+                if (run.Resources[index].Id == id)
+                {
+                    return run.Resources[index];
                 }
             }
 

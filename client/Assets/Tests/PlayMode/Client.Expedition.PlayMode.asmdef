@@ -4,7 +4,10 @@
     "references": [
         "Client.Expedition",
         "Client.Expedition.WeChat",
-        "GameplayCore"
+        "Client.ProductProfile",
+        "GameplayCore",
+        "ProductContent",
+        "ProductExpedition"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

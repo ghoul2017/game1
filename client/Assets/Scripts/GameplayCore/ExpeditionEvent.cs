@@ -10,7 +10,8 @@ namespace GameplayCore
         None = 0,
         Member = 1,
         Enemy = 2,
-        Resource = 3
+        Resource = 3,
+        Room = 4
     }
 
     /// <summary>
@@ -32,7 +33,13 @@ namespace GameplayCore
         BossWarningDodged = 11,
         ExitOpened = 12,
         Completed = 13,
-        Failed = 14
+        Failed = 14,
+        RoomDiscovered = 15,
+        RoomChanged = 16,
+        RoomCleared = 17,
+        RouteMarked = 18,
+        DangerHint = 19,
+        RoomRewarded = 20
     }
 
     /// <summary>

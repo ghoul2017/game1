@@ -17,4 +17,7 @@ public class User : IEntity
 
     [BsonIgnore]
     public TcpSession? Session { get; set; }
+
+    [BsonIgnore]
+    public long PendingReconnectRoleId { get; set; }
 }

@@ -24,9 +24,11 @@ public abstract class PlayerNtfMessageHandler<TNtf> : IClassMessageHandler
         using (var ms = new MemoryStream(payload))
             ntf = Serializer.Deserialize<TNtf>(ms);
 
-        var player = Context.Players.GetByRoleId(session.RoleId);
+        PlayerEntity? player = Context.Players.GetBySession(session);
         if (player == null)
+        {
             return null;
+        }
 
         player.RefreshOnlineActivity(session.LastActiveTime);
         await ExecuteAsync(player, ntf);

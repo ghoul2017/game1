@@ -36,6 +36,11 @@ namespace Shared.Core.Network
         /// <summary>会话断开回调。上层注册此回调清理业务对象上的 session 引用。</summary>
         public Action<TcpSession, LogoutReason>? SessionDisconnected { get; set; }
 
+        /// <summary>
+        /// 会话的单写者调度器。设置后，业务消息与断线清理都通过同一队列顺序执行。
+        /// </summary>
+        public Action<Action>? SessionDispatcher { get; set; }
+
         public NetworkComponent()
         {
             _router = new MessageRouter();
@@ -82,6 +87,7 @@ namespace Shared.Core.Network
                     }
 
                     _sessionMap[session.SessionId] = session;
+                    session.PostToMainThread = SessionDispatcher;
                     session.OnDisconnected += OnSessionDisconnected;
                     session.StartReceive();
 
@@ -107,6 +113,7 @@ namespace Shared.Core.Network
 
         private void OnSessionDisconnected(TcpSession session, LogoutReason reason)
         {
+            // TcpSession 已经把该回调排在本 Session 的已接收业务消息之后，不能再次独立投递。
             // 通知上层清理业务对象上的 session 引用
             SessionDisconnected?.Invoke(session, reason);
 
@@ -133,10 +140,37 @@ namespace Shared.Core.Network
                 null);
             var session = new TcpSession(socket, _router);
             _sessionMap[session.SessionId] = session;
+            session.PostToMainThread = SessionDispatcher;
             session.OnDisconnected += OnSessionDisconnected;
             session.StartReceive();
 
             Log.Info($"客户端连接 {host}:{port} SessionId:{session.SessionId}，当前连接数: {_sessionMap.Count}");
+            return session;
+        }
+
+        /// <summary>
+        /// 客户端模式：接管已经连接的平台字节传输，并复用现有封包、RPC 与消息路由。
+        /// </summary>
+        public TcpSession AttachClientTransport(IByteTransport transport)
+        {
+            if (transport == null)
+            {
+                throw new ArgumentNullException(nameof(transport));
+            }
+
+            if (!transport.IsConnected)
+            {
+                throw new InvalidOperationException("平台字节传输尚未连接");
+            }
+
+            TcpSession session = new TcpSession(transport, _router);
+            _sessionMap[session.SessionId] = session;
+            session.PostToMainThread = SessionDispatcher;
+            session.OnDisconnected += OnSessionDisconnected;
+            session.StartReceive();
+
+            Log.Info($"客户端平台传输已连接 {transport.RemoteIp} SessionId:{session.SessionId}，" +
+                $"当前连接数: {_sessionMap.Count}");
             return session;
         }
 

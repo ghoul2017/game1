@@ -6,15 +6,18 @@ using UnityEngine.EventSystems;
 namespace Client.Expedition
 {
     /// <summary>
-    /// 在干净场景中组装隔离于旧 RPG 的 T1 灰盒局，并负责销毁旧局后立即重开。
+    /// 组装隔离于旧 RPG 的 T1 灰盒局，并提供切入 T2 完整闭环的兼容入口。
     /// </summary>
     public sealed class ExpeditionHandfeelEntry : MonoBehaviour
     {
         private GameObject _activeRunRoot;
+        private GameObject _verticalSliceRoot;
 
         public LocalExpeditionHost ActiveHost { get; private set; }
 
         public GameObject ActiveRunRoot => _activeRunRoot;
+
+        public LocalCampaignHost VerticalSliceHost { get; private set; }
 
         private void Awake()
         {
@@ -25,6 +28,14 @@ namespace Client.Expedition
 
         public void RestartExpedition()
         {
+            if (_verticalSliceRoot != null)
+            {
+                _verticalSliceRoot.SetActive(false);
+                Destroy(_verticalSliceRoot);
+                _verticalSliceRoot = null;
+                VerticalSliceHost = null;
+            }
+
             if (_activeRunRoot != null)
             {
                 _activeRunRoot.SetActive(false);
@@ -47,6 +58,35 @@ namespace Client.Expedition
             LocalExpeditionHost host = _activeRunRoot.AddComponent<LocalExpeditionHost>();
             host.Initialize(run, input, world, hud);
             ActiveHost = host;
+        }
+
+        public void StartVerticalSlice()
+        {
+            StartVerticalSlice(T2ExpeditionCampaignFactory.Create());
+        }
+
+        public void StartVerticalSlice(ExpeditionCampaignDefinition definition)
+        {
+            if (_activeRunRoot != null)
+            {
+                _activeRunRoot.SetActive(false);
+                Destroy(_activeRunRoot);
+                _activeRunRoot = null;
+                ActiveHost = null;
+            }
+
+            if (_verticalSliceRoot != null)
+            {
+                _verticalSliceRoot.SetActive(false);
+                Destroy(_verticalSliceRoot);
+            }
+
+            _verticalSliceRoot = new GameObject("ExpeditionVerticalSlice");
+            _verticalSliceRoot.transform.SetParent(transform, false);
+            ExpeditionVerticalSliceEntry verticalEntry =
+                _verticalSliceRoot.AddComponent<ExpeditionVerticalSliceEntry>();
+            verticalEntry.Initialize(definition);
+            VerticalSliceHost = verticalEntry.CampaignHost;
         }
 
         private void CreateEventSystem()

@@ -1,0 +1,20 @@
+{
+    "name": "Client.Expedition.Editor",
+    "rootNamespace": "Client.Expedition.Editor",
+    "references": [
+        "Client.Expedition",
+        "Client.ProductProfile",
+        "ProductExpedition"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

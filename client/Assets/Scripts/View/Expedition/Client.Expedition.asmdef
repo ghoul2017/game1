@@ -2,7 +2,9 @@
     "name": "Client.Expedition",
     "rootNamespace": "Client.Expedition",
     "references": [
+        "Client.ProductProfile",
         "GameplayCore",
+        "ProductExpedition",
         "Unity.ugui"
     ],
     "includePlatforms": [],

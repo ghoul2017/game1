@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Game.Database;
@@ -16,9 +17,9 @@ public sealed class LoginReqHandler : RpcMessageHandler<LoginReq, LoginRes>
 
     protected override async Task ExecuteAsync(TcpSession session, LoginReq req, LoginRes res)
     {
-        var userComponent = Context.Server.GetComponent<UserComponent>();
+        UserComponent userComponent = Context.Server.GetComponent<UserComponent>();
 
-        var username = req.Username;
+        string username = req.Username;
         Log.Info($"登录请求 Session:{session.SessionId} User:{username}");
 
         if (session.UserId != 0)
@@ -27,17 +28,7 @@ public sealed class LoginReqHandler : RpcMessageHandler<LoginReq, LoginRes>
             return;
         }
 
-        if (userComponent.Usernames.TryGetValue(username, out var oldUser))
-        {
-            if (oldUser.Session != null)
-            {
-                UserHelper.KickUser(oldUser.Session, LogoutReason.AnotherSession);
-            }
-            userComponent.Users.Remove(oldUser.Id);
-            userComponent.Usernames.Remove(oldUser.Username);
-        }
-
-        var account = await MongoDb.Instance.QueryFirstOrDefaultAsync<User>(p => p.Username == username);
+        User? account = await MongoDb.Instance.QueryFirstOrDefaultAsync<User>(p => p.Username == username);
         if (account == null)
         {
             account = new User
@@ -57,7 +48,22 @@ public sealed class LoginReqHandler : RpcMessageHandler<LoginReq, LoginRes>
             return;
         }
 
-        var user = new User
+        List<UserRole> roles = await MongoDb.Instance.QueryAsync<UserRole>(r => r.UserId == account.Id);
+
+        // 只有凭据已经验证成功，才允许替换同账号的在线会话和废除其重连令牌。
+        ReconnectTokenRegistry.Instance.InvalidateUser(account.Id);
+        if (userComponent.Usernames.TryGetValue(username, out User? oldUser))
+        {
+            if (oldUser.Session != null)
+            {
+                UserHelper.KickUser(oldUser.Session, LogoutReason.AnotherSession);
+            }
+
+            userComponent.Users.Remove(oldUser.Id);
+            userComponent.Usernames.Remove(oldUser.Username);
+        }
+
+        User user = new User
         {
             Id = account.Id,
             Username = username,
@@ -70,10 +76,8 @@ public sealed class LoginReqHandler : RpcMessageHandler<LoginReq, LoginRes>
         userComponent.Usernames.Add(user.Username, user);
         session.UserId = user.Id;
 
-        var token = TokenSigner.Instance.Generate(account.Id);
+        string token = TokenSigner.Instance.Generate(account.Id);
         session.ReconnectToken = token;
-
-        var roles = await MongoDb.Instance.QueryAsync<UserRole>(r => r.UserId == account.Id);
 
         res.PlayerId = account.Id;
         res.Token = token;

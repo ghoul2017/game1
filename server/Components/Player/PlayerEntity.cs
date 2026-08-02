@@ -56,11 +56,23 @@ public class PlayerEntity : Entity, IEntity
         entity.AddComponent(new RoleBagComponent { Capacity = 100 });
         entity.AddComponent<RoleMailComponent>();
         entity.AddComponent<RoleTaskComponent>();
+        entity.AddComponent<PlayerExpeditionComponent>();
 
         PlayerOnlineComponent online = entity.AddComponent<PlayerOnlineComponent>();
         online.UserId = userId;
         online.LoginTime = DateTime.UtcNow;
         online.LastActiveTime = DateTime.UtcNow;
         return entity;
+    }
+
+    internal bool EnsureExpeditionComponent()
+    {
+        if (TryGetComponent<PlayerExpeditionComponent>() != null)
+        {
+            return false;
+        }
+
+        AddComponent<PlayerExpeditionComponent>();
+        return true;
     }
 }
