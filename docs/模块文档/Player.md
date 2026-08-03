@@ -35,7 +35,7 @@ Player 模块管理在线玩家聚合 `PlayerEntity`、会话绑定和内存索�
 
 `RoleDataComponent.Exp` 当前没有生产者，`LastLogoutTime` 也没有在断线链路写入。
 
-客户端入场协议只包含角色 ID、名称、RoleData 等级和职业，没有发送 RoleAttribute 快照。`GameData.CurrentHp/MaxHp` 因而以 0/100 的本地默认值开始；MainPanel 的经验条、金币和钻石也是固定展示文本。服务端会发送 `ExpChangedNtf`、`GoldChangedNtf`、`LevelUpNtf`、`ItemGainNtf` 和 `MpChangedNtf`，但当前客户端没有对应 Handler。
+客户端入场协议只包含角色 ID、名称、RoleData 等级和职业，没有发送 RoleAttribute 快照。`GameData.CurrentHp/MaxHp` 因而以 0/100 的本地默认值开始；MainPanel 的经验条、金币和钻石也是固定展示文本。服务端会发送 `ExpChangedNtf`、`GoldChangedNtf`、`LevelUpNtf` 和 `ItemGainNtf`，但当前客户端没有对应 Handler；`MpChangedNtf` 目前只有协议定义，服务端和客户端都没有生产、消费链路。
 
 `RoleAttributeComponent.ToFightAttribute()` 在创建 `MapPlayerEntity` 时复制一份战斗属性。之后战斗伤害和 `FightHelper.Revive` 修改地图实体的 `FightAttribute`，经验升级及 HP/MP 药品修改持久化 `RoleAttributeComponent`，两者没有双向同步。离图后重建投影会再次从 RoleAttributeComponent 复制，可能覆盖之前的战斗 HP 状态。新角色的 `Hp/MaxHp` 暂时为 10 亿，这是 Demo 测试语义，正式数值阶段前必须复核。
 
