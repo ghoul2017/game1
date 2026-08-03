@@ -49,7 +49,7 @@ Git Bash 可以直接执行同一门禁：
 bash scripts/check-ci
 ```
 
-该入口只执行依赖边界、受管 .NET 项目构建、纯逻辑测试和协议一致性检查，不启动 Server、Robot、
+该入口只执行依赖边界、受管 .NET 项目构建和纯逻辑测试，不启动 Server、Robot、
 MongoDB 或 Unity。测试结果写入已忽略的 `tests/GameplayCore.Tests/bin/TestResults/`。
 
 本机已经由 Unity 生成 `Assembly-CSharp*.csproj` 时，可以追加完整 solution 构建：
@@ -75,7 +75,6 @@ dotnet build client-logic/ClientLogic.csproj
 dotnet build robot/Robot.csproj
 dotnet build tools/tools.csproj
 bash scripts/check-client-boundary
-bash scripts/check-protocol
 ```
 
 背包、任务和持久化行为通过 Robot 连接真实服务端验证。Robot 登录时可能自动注册账号并写入 MongoDB，必须在获得对应环境和数据授权后运行。完整步骤和测试边界见：

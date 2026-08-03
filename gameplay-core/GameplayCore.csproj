@@ -1,18 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <LangVersion>9.0</LangVersion>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>disable</Nullable>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <AssemblyName>GameplayCore</AssemblyName>
-    <RootNamespace>GameplayCore</RootNamespace>
-  </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="../client/Assets/Scripts/GameplayCore/**/*.cs"
-             Exclude="../client/Assets/Scripts/GameplayCore/**/bin/**/*.cs;
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>9.0</LangVersion>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+        <AssemblyName>GameplayCore</AssemblyName>
+        <RootNamespace>GameplayCore</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="../client/Assets/Scripts/GameplayCore/**/*.cs"
+                 Exclude="../client/Assets/Scripts/GameplayCore/**/bin/**/*.cs;
                       ../client/Assets/Scripts/GameplayCore/**/obj/**/*.cs"
-             Link="%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
+                 Link="%(RecursiveDir)%(Filename)%(Extension)"/>
+    </ItemGroup>
 </Project>

@@ -9,12 +9,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="protobuf-net" Version="3.2.45" />
+        <PackageReference Include="protobuf-net" Version="3.2.45"/>
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Remove="..\client\Assets\Scripts\shared\**\bin\**\*.cs" />
-        <Compile Remove="..\client\Assets\Scripts\shared\**\obj\**\*.cs" />
+        <Compile Remove="..\client\Assets\Scripts\shared\**\bin\**\*.cs"/>
+        <Compile Remove="..\client\Assets\Scripts\shared\**\obj\**\*.cs"/>
         <Compile Include="..\client\Assets\Scripts\shared\**\*.cs">
             <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
         </Compile>
