@@ -4,11 +4,11 @@
 
 ## 定位
 
-Chat 模块提供玩家间文字通信——世界频道、私聊、系统广播。它是 Module 级组件，无数据库持久化，纯内存操作。作为最简单的业务模块，也是唯一不被其他模块依赖的独立模块。
+Chat 模块提供世界频道、私聊和服务端系统广播。它是 Module 级运行时组件，不做数据库持久化；世界频道冷却只保存在当前服务进程内。
 
 ## 核心设计
 
-### Module 级、无状态
+### Module 级运行时状态
 
 ChatComponent 挂载在 `Context.Server` 上，只维护世界聊天冷却记录（`Dictionary<long, long>`），不需要持久化。玩家下线时清除冷却。
 
@@ -17,7 +17,7 @@ ChatComponent 挂载在 `Context.Server` 上，只维护世界聊天冷却记录
 | 频道 | 常量 | 分发方式 | 特殊规则 |
 |------|------|---------|---------|
 | World | 1 | `Context.Players.Broadcast` | 3 秒冷却 |
-| Private | 3 | `Context.Players.SendToPlayer` | 不能私聊自己 |
+| Private | 3 | `Context.Players.SendToPlayer` | 目标必须在线，不能私聊自己，只推送给接收方 |
 
 系统广播（Channel=2）只能由服务端发起，不通过玩家请求。
 
@@ -39,9 +39,11 @@ ChatReq(channel, content, targetName)
   ├── 2. 截断超长内容（MaxContentLength=500）
   ├── 3. 按频道分发：
   │     ├── World：检查冷却 → 更新冷却时间 → 构造 ChatNtf → Broadcast
-  │     └── Private：校验目标名非空且不是自己 → 查找目标 → 构造 ChatNtf → SendToPlayer
+  │     └── Private：校验目标名非空且不是自己 → 查找在线目标 → 构造 ChatNtf → SendToPlayer
   └── 4. 直接填充 ChatAck，成功时完成消息分发
 ```
+
+服务端不会把私聊 `ChatNtf` 回发给发送者。客户端 `ChatController.SendChat` 当前只设置频道和内容，没有填写 `TargetName`；因此界面虽然有“私聊”按钮，实际请求会被服务端以“无效的私聊目标”拒绝。
 
 ## 跨模块协作
 
@@ -50,10 +52,12 @@ ChatReq(channel, content, targetName)
 | Player | 单向 | Broadcast / SendToPlayer / GetByRoleName 查找私聊目标 |
 | EventBus | 单向 | PlayerOfflineEvent → 清除世界聊天冷却 |
 
-Chat 不被任何其他业务模块依赖——它是终端模块。
+`SendSystemBroadcast` 会向全部在线玩家发送 `SystemChatNtf`，但当前服务端没有业务调用方。
 
-## 已知局限
+## 已知问题与边界
 
 1. **无聊天记录**：消息不持久化，离线玩家收不到历史消息
-2. **无频道扩展**：缺少队伍频道、公会频道等
-3. **无内容过滤**：没有敏感词屏蔽
+2. **客户端私聊未闭环**：没有输入或选择目标名的链路，`TargetName` 始终为空；服务端成功私聊时也不回显给发送者
+3. **系统广播未接入**：协议、客户端 Handler 和服务端方法存在，但没有服务端生产者
+4. **无频道扩展**：缺少队伍频道、公会频道等
+5. **无内容过滤**：没有敏感词屏蔽

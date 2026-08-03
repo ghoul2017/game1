@@ -6,7 +6,7 @@
 
 Map 模块管理游戏地图——地图实例、玩家进/出/切换地图、移动同步、AOI 视野广播。它是所有空间概念的载体：玩家和怪物通过地图获得坐标，通过 AOI 获得视野可见性。
 
-地图是**纯内存对象**，不持久化。服务重启后从配置重建。
+地图是**纯内存对象**，不持久化。服务重启后由 `MapSystem.InitDefaultMaps` 重建；当前三张地图的尺寸和出生点在代码中硬编码，不由 `Map.csv` 创建。
 
 ## 核心设计
 
@@ -72,9 +72,10 @@ EnterMap(roleId, cfgId, line, playerEntity)
   ├── 1. MapPlayerEntity.Create（创建地图投影，含 FightUnitComponent）
   ├── 2. map.AddObject → AOI 注册 + 广播进入视野
   ├── 3. PlayerMapEntities 索引注册
-  ├── 4. SendVisibleObjects → 推送视野内所有对象快照
-  └── 5. PublishAsync(PlayerEnterMapEvent)
+  └── 4. EnterMapAndNotify → EnterMapNtf + 当前视野 MapObjectsNtf
 ```
+
+`EnterMapReq` 首次进图成功后同步发布 `PlayerEnterMapEvent`。玩家已经在地图时，请求走 `NotifyCurrentMap` 重发权威进图通知和视野快照，不重复创建地图投影或发布进图事件。
 
 ### 移动
 
@@ -92,9 +93,10 @@ MapMove(roleId, newX, newY)
 QuitMap(roleId)
   │
   ├── 1. map.RemoveObject → AOI 移除 + 广播离开视野
-  ├── 2. PlayerMapEntities 索引移除
-  └── 3. PublishAsync(PlayerLeaveMapEvent) → Fight 注销战斗单元
+  └── 2. PlayerMapEntities 索引移除
 ```
+
+`PlayerLeaveMapEvent` 虽然已定义，但当前主动离图、下线退图和切图链路都没有发布它。地图投影持有的 `FightUnitComponent` 随实体移除，不依赖事件注销。
 
 ## AOI 视野管理
 
@@ -113,6 +115,8 @@ QuitMap(roleId)
 ```
 
 ### 默认地图
+
+以下数据来自 `MapSystem.InitDefaultMaps`，不是服务端从 `Map.csv` 动态创建的结果。客户端地图列表和表现仍读取 `MapConfig`，两侧数据需要人工保持一致。
 
 | 名称 | CfgId | 尺寸 | 出生点 |
 |------|-------|------|--------|
@@ -142,10 +146,14 @@ QuitMap(roleId)
 | Fight | 双向 | MapPlayerEntity 挂载 FightUnitComponent；OnUnitKilled → 移除对象 |
 | Monster | 双向 | MonsterEntity 继承 MapObjectEntity；刷怪/AI/掉落由 GameMap 扩展方法管理 |
 | Player | 单向 | `SendToPlayer` 推送地图通知 |
-| Config | 单向 | 读取 `MapConfig` 驱动地图参数 |
+| Config | 单向 | 客户端读取 `MapConfig` 驱动地图列表和表现；服务端默认地图参数当前硬编码 |
 
 ## 已知局限
 
 1. **多线暂不实现**：InitDefaultMaps 仅创建 Line=1，短期只维护单线地图
 2. **无碰撞检测**：移动只做边界校验，无寻路和碰撞
 3. **动态地图**：地图在启动时固定创建，无运行时动态创建
+4. **配置双轨**：服务端硬编码地图与客户端 `Map.csv` 没有自动一致性检查或热更新重建
+5. **生命周期事件不完整**：只有首次 `EnterMapReq` 发布 `PlayerEnterMapEvent`，切图和离图没有成对事件
+6. **怪物广播查图失败**：`BroadcastToAoiWatchers(objectId, ...)` 通过玩家索引 `GetPlayerMap` 查地图；传入怪物 ID 时直接返回
+7. **坐标信任边界不足**：`MapMoveReq` 只校验地图边界，不校验单次位移或速度；`ChangeMapReq` 接受任意正数 X/Y，进入目标地图前不做边界校验

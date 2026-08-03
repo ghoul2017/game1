@@ -14,20 +14,17 @@ Monster 模块负责管理游戏中所有怪物的生命周期——从生成到
 
 怪物继承 `MapObjectEntity`，天然拥有坐标、AOI 可见性、地图广播等能力。进入地图时自动通知周围玩家，离开时自动移除——这些全部由 Map 模块的 AOI 系统处理。
 
-### 刷怪和 AI 属于地图
+### GameMap 持有状态，MonsterHelper 承载行为
 
-刷怪、AI 更新、死亡处理、掉落发放、刷新计时——这些逻辑全部由 `GameMap` 承载。每张地图独立管理自己的怪物和 AI 定时器，无需全局 MonsterComponent 做中转。
+每张 `GameMap` 持有怪物字典、刷新计时、随机数和 AI 定时器；刷怪、AI、死亡、掉落和刷新行为由 `MonsterHelper` 的 `GameMap` 扩展方法实现。当前没有全局 MonsterComponent。
 
 ```
 GameMap
-├── _monsters          // 怪物字典
-├── _spawnTimers       // 刷新计时器
-├── _random            // 共享随机数
+├── _monsters          // 私有怪物字典
+├── SpawnTimers        // map+line+cfgId → 下次刷新时间
+├── Random             // 地图共享随机数
 ├── _aiTimer           // 1秒 AI 定时器
-├── InitMonsters()     // 初始化刷怪
-├── SpawnMonster()     // 生成怪物
-├── OnMonsterKilled()  // 死亡+掉落+刷新
-└── UpdateAllMonsters()// AI 状态机
+└── MonsterHelper      // Init/Spawn/Killed/AI 扩展方法
 ```
 
 ### 三层 Component 分离
@@ -50,6 +47,7 @@ FightUnitComponent 在 `MonsterEntity.Create` 时直接创建，不再需要 Reg
 | `MonsterInfoComponent.cs` | 怪物静态信息 |
 | `MonsterAiComponent.cs` | AI 运行时状态 |
 | `AiState.cs` | AI 状态枚举 |
+| `MonsterHelper.cs` | GameMap 扩展方法：刷怪、AI、死亡、掉落和刷新 |
 
 已删除旧的全局 `MonsterComponent.cs` 和 `MonsterHandlers.cs`；当前怪物实体行为由 `MonsterEntity`、`MonsterAiComponent` 与 `MonsterHelper` 协作完成。
 
@@ -102,14 +100,14 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 
 | AiType | 名称 | Idle 行为 | 巡逻 | 说明 |
 |--------|------|-----------|------|------|
-| 1 | 被动 | 原地等待，视野内发现玩家才追击 | 不巡逻 | 适合鹿、兔子等无害生物 |
+| 1 | 被动 | 原地等待，视野内发现玩家就追击 | 不巡逻 | “被动”只表示不巡逻，当前仍会主动攻击进入视野的玩家 |
 | 2 | 主动 | 立即开始巡逻 | 刷新区域内随机点 | 适合野狼、哥布林等 |
 | 3 | 守卫 | 立即开始巡逻 | 刷新区域内随机点 | 同主动，数值上区分用途 |
 
 #### 追击与攻击
 
 - **发现目标**：遍历地图所有玩家，切比雪夫距离 ≤ `SightRange` 则锁定
-- **追击**：每步向目标移动 1 格（曼哈顿方向），超出视野则丢失目标回到 Idle
+- **追击**：X/Y 每次各最多移动 1 格，允许斜向移动；超出视野则丢失目标回到 Idle
 - **攻击**：进入 `AttackRange` 后切换到 Attack 状态，2 秒冷却，使用技能 ID=1（普通攻击）
 - **攻击后**：当前实现中，攻击完立即回到 Idle（重新评估目标）
 - **目标丢失**：玩家下线后 GetPlayer 返回 null，AI 自动丢失目标回到 Idle，无需显式清除仇恨
@@ -130,11 +128,11 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 - **金币**：`Random.Next(GoldMin, GoldMax + 1)` 范围随机
 - **物品掉落**：遍历 `DropItems`（逗号分隔的 ConfigId 列表），每件独立判定 `Random.Next(1, 10001) ≤ DropRate`
 
-所有奖励通过 `PlayerSystem.GrantXxxAsync` 发放，GameMap 不直接操作背包或玩家数据。
+所有奖励通过同步的 `PlayerSystem.GrantExp`、`GrantGold` 和 `GrantItem` 发放并标脏，GameMap 不直接操作背包或玩家数据。
 
 ### 5. 定时刷新
 
-每种怪物有独立的刷新间隔（`SpawnInterval` 秒）。死亡时设置定时器，下次 AI 更新循环检查是否到期，到期则补充一只（不超过 `MaxCount`）。
+刷新键是 `mapId_line_cfgId`，同地图同配置只保存一个时间点。每次死亡都会用“当前时间 + SpawnInterval”覆盖该键；到期后每次 AI 更新都会尝试补充一只，`SpawnMonster` 仍限制 `MaxCount`。当前实现没有在刷新成功或达到上限后重置时间，因而到期后会每秒持续尝试生成。
 
 ## 跨模块协作
 
@@ -165,7 +163,7 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 
 ## 配置驱动
 
-怪物的一切行为参数都在 `MonsterConfig` 中定义，策划通过配置表控制：
+怪物的大部分行为参数都在 `MonsterConfig` 中定义；存在配置字段不等于当前运行链已经消费：
 
 | 配置项 | 控制什么 |
 |--------|---------|
@@ -175,13 +173,18 @@ AppStart.RunServerAsync → MapSystem.InitDefaultMaps
 | SpawnInterval | 死亡后多少秒刷新，控制节奏感 |
 | SightRange / AttackRange | AI 视野和攻击距离，决定追击距离和攻击触发 |
 | AiType | 行为模式：被动/主动/守卫 |
+| MoveSpeed | 配置模型存在，但当前 AI 未读取；实际固定每秒最多移动 X/Y 各 1 格 |
 | MaxHp / Attack / Defense | 战斗属性，传入 FightAttribute |
 | Exp / GoldMin/GoldMax | 死亡奖励 |
 | DropItems / DropRate | 物品掉落列表和掉率（万分比） |
 
-## 已知局限
+## 已知问题与边界
 
 1. **单目标仇恨**：AI 只追踪一个目标，`ThreatMap` 未接入，无法实现仇恨转移
 2. **巡逻无路径**：`PatrolTarget` 为随机点，无固定巡逻路线
 3. **攻击后回 Idle**：攻击完立即重置状态而非持续攻击，行为略显机械
 4. **无脱战回血**：怪物脱离战斗后不会回血，下次被攻击时仍是残血
+5. **刷新计时不复位**：到期后每秒重复尝试刷怪；同配置多只怪物死亡只共享并覆盖一个时间点，不能逐只计时
+6. **MoveSpeed 未消费**：不同怪物配置速度不会改变实际移动频率或步长
+7. **怪物攻击广播缺失**：Fight 的 AOI 广播按玩家索引查地图，怪物作为攻击者时客户端收不到普通攻击过程
+8. **掉落表现未闭环**：`MonsterDropNtf` 只有协议定义，没有服务端生产者；经验、金币和物品通知也缺少客户端 Handler
