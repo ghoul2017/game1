@@ -517,7 +517,7 @@ ExpireTime 在本任务中是普通 long 元数据：
 - `docs/模块文档/Mail.md`
 - `docs/计划任务.md`
 - `docs/缺陷列表.md`
-- `docs/工作记录/YYYY-MM.md`
+- 中枢按日期存放的工作记录
 - 中枢 `projects/game1/line-kb/` 中实际受影响条目
 
 ## 实施顺序

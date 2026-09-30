@@ -18,7 +18,7 @@ game1 是一个 2.5D RPG 项目，包含 Unity 客户端、.NET 8 权威服务�
 - `server/`：游戏服务端
 - `robot/`：协议级自动化测试
 - `tools/`：配置和工程工具
-- `docs/`：缺陷、计划任务、工作记录、测试和 Robot 文档
+- `docs/`：缺陷、计划任务、测试和 Robot 文档；工作记录统一保存在中枢
 
 ## 快速启动
 
@@ -85,4 +85,4 @@ bash scripts/check-protocol
 - [缺陷列表](docs/缺陷列表.md)
 - [计划任务](docs/计划任务.md)
 - [测试列表](docs/测试列表.md)
-- [工作记录](docs/工作记录/README.md)
+- [中枢工作记录](https://github.com/ghoul2017/codex/blob/master/docs/工作记录/README.md)
