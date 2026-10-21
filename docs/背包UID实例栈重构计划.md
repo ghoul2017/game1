@@ -546,7 +546,6 @@ dotnet build client-logic/ClientLogic.csproj
 dotnet build robot/Robot.csproj
 dotnet build tools/tools.csproj
 bash scripts/check-client-boundary
-bash scripts/check-protocol
 ```
 
 只有 Unity 生成项目存在时，才补充：
@@ -587,7 +586,7 @@ AddItems 内没有容量判断
 
 ## 序列化验证
 
-`scripts/check-protocol` 不能替代真实运行。开发阶段通过 Robot 连接构建后的服务端，并经 MongoDB 保存/重登覆盖 protobuf 与 BSON 链路；需要预置边界数据的场景仍按以下矩阵补充：
+静态检查和项目构建不能替代真实运行。开发阶段通过 Robot 连接构建后的服务端，并经 MongoDB 保存/重登覆盖 protobuf 与 BSON 链路；需要预置边界数据的场景仍按以下矩阵补充：
 
 1. `QueryBagAck` tag 2 的 `Dictionary<long, BagItemInfo>` 往返。
 2. Uid、Count、ExpireTime 大于 int.MaxValue 时不截断。

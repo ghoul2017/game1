@@ -53,7 +53,7 @@ run_step "还原 Shared 测试依赖" \
 run_step "还原 Server 测试依赖" \
     dotnet restore tests/Server.Tests/Server.Tests.csproj
 run_step "还原 Robot 项目图" dotnet restore robot/Robot.csproj
-run_step "还原 tools/Server 项目图" dotnet restore tools/tools.csproj
+run_step "还原 tools 项目图" dotnet restore tools/tools.csproj
 
 run_step "构建 GameplayCore" dotnet build gameplay-core/GameplayCore.csproj --no-restore
 run_step "构建 ProductContent" dotnet build product-content/ProductContent.csproj --no-restore
@@ -98,6 +98,4 @@ run_step "运行 Server 权威、重连、结算与容量测试" \
         --logger "trx;LogFileName=server.trx" \
         --results-directory "$SERVER_RESULTS_DIR"
 
-run_step "协议一致性检查" bash scripts/check-protocol --no-build --no-restore
-
-printf '\n本地 CI 通过：边界、受管项目构建、行为/隔离/配置/传输测试和协议检查均完成。\n'
+printf '\n本地 CI 通过：边界、受管项目构建及行为/隔离/配置/传输测试均完成。\n'

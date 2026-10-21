@@ -13,7 +13,7 @@ GameTask 管理任务接取、事件驱动进度、提交领奖和放弃。`Role
 | 事件 | 目标类型 | 匹配字段 |
 |------|----------|----------|
 | MonsterKilledEvent | KillMonster (1) | Monster CfgId |
-| PlayerItemGainedEvent | CollectItem (2) | Item ConfigId |
+| PlayerItemGainedEvent | CollectItem (2) | Item ConfigId；当前只由 `PlayerSystem.GrantItem` 生产 |
 | PlayerLevelUpEvent | ReachLevel (4) | Level |
 
 任务发生变化后立即向客户端推送 `TaskChangedNtf`。
@@ -58,6 +58,8 @@ GameTask 管理任务接取、事件驱动进度、提交领奖和放弃。`Role
 
 ## 已知局限
 
-1. 前置任务和最低等级配置尚未接入接取校验。
-2. TalkNpc、EnterScene、UseItem、KillPlayer、CompleteDungeon 等目标尚无事件生产者。
-3. `RewardExp` 和 `RewardGold` 当前未发放；提交只发放 `RewardConfigs/RewardCounts`。
+1. `PreTaskId` 和 `MinLevel` 尚未接入接取校验。
+2. `AcceptNpcId` 和 `SubmitNpcId` 尚未参与接取或提交校验，任务可以直接通过 ID 操作。
+3. TalkNpc、EnterScene、UseItem、KillPlayer、CompleteDungeon 等目标尚无事件生产者。
+4. `RewardExp` 和 `RewardGold` 当前未发放；提交只发放 `RewardConfigs/RewardCounts`。
+5. CollectItem 进度只接收 `PlayerSystem.GrantItem` 产生的事件；邮件附件和任务奖励直接调用 `AddItems`，不会推进收集物品目标。

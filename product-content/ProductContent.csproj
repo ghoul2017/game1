@@ -1,18 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <LangVersion>9.0</LangVersion>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>disable</Nullable>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <AssemblyName>ProductContent</AssemblyName>
-    <RootNamespace>ProductContent</RootNamespace>
-  </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="../client/Assets/Scripts/ProductContent/**/*.cs"
-             Exclude="../client/Assets/Scripts/ProductContent/**/bin/**/*.cs;
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>9.0</LangVersion>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+        <AssemblyName>ProductContent</AssemblyName>
+        <RootNamespace>ProductContent</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="../client/Assets/Scripts/ProductContent/**/*.cs"
+                 Exclude="../client/Assets/Scripts/ProductContent/**/bin/**/*.cs;
                       ../client/Assets/Scripts/ProductContent/**/obj/**/*.cs"
-             Link="%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
+                 Link="%(RecursiveDir)%(Filename)%(Extension)"/>
+    </ItemGroup>
 </Project>
